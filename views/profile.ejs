@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Previous: <link href="/css/output.css" rel="stylesheet"> -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile - Voting App</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/css/animations.css">
+</head>
+<body class="min-h-screen bg-gradient-to-tr from-green-400 via-blue-400 to-purple-500 flex items-center justify-center text-gray-900">
+  <div class="w-full h-full min-h-screen flex flex-col justify-center items-center p-4 md:p-10 rounded-none md:rounded-3xl shadow-2xl bg-white/80 backdrop-blur-lg animate-fade-in">
+  <div class="mb-8 flex flex-col md:flex-row items-center gap-4 w-full max-w-4xl mx-auto">
+      <img src="/images/user-avatar.png" alt="User Avatar" class="w-20 h-20 rounded-full border-4 border-green-400 shadow-lg animate-bounce-once">
+      <div>
+        <h2 class="text-3xl font-extrabold text-green-600 drop-shadow-lg">Welcome, <%= user.name %>!</h2>
+        <p class="text-sm text-gray-600">Your personal voting dashboard</p>
+      </div>
+    </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 w-full max-w-4xl mx-auto">
+      <div class="bg-green-100 rounded-2xl p-6 shadow flex flex-col gap-2">
+        <h3 class="font-bold text-green-700 text-lg mb-2">Your Info</h3>
+        <div class="flex justify-between text-gray-700"><span>Aadhar:</span><span><%= user.aadharCardNumber %></span></div>
+        <div class="flex justify-between text-gray-700"><span>Email:</span><span><%= user.email %></span></div>
+        <div class="flex justify-between text-gray-700"><span>Mobile:</span><span><%= user.mobile %></span></div>
+        <div class="flex justify-between text-gray-700"><span>Address:</span><span><%= user.address %></span></div>
+        <div class="flex justify-between text-gray-700"><span>Role:</span><span><%= user.role %></span></div>
+        <div class="flex justify-between text-gray-700"><span>Registered:</span><span><%= user.createdAt ? user.createdAt.toLocaleDateString() : '' %></span></div>
+      </div>
+      <div class="bg-pink-100 rounded-2xl p-6 shadow flex flex-col gap-2">
+        <h3 class="font-bold text-pink-700 text-lg mb-2">Voting Status</h3>
+        <% if (user.isVoted) { %>
+          <div class="flex items-center gap-2 text-green-700 font-semibold"><span class="material-icons">check_circle</span>Voted</div>
+        <% } else { %>
+          <div class="flex items-center gap-2 text-yellow-700 font-semibold"><span class="material-icons">hourglass_empty</span>Not Voted</div>
+        <% } %>
+      </div>
+    </div>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 w-full max-w-4xl mx-auto">
+      <a href="/candidate" class="dashboard-card bg-yellow-400 text-green-900 rounded-xl p-4 flex flex-col items-center justify-center font-bold shadow hover:bg-pink-500 hover:text-white transition-all duration-300 animate-bounce-once">
+        <span class="material-icons text-3xl mb-2">how_to_vote</span>
+        Vote Now
+      </a>
+      <a href="/candidate/vote/count" class="dashboard-card bg-green-500 text-white rounded-xl p-4 flex flex-col items-center justify-center font-bold shadow hover:bg-yellow-400 hover:text-green-700 transition-all duration-300 animate-bounce-once">
+        <span class="material-icons text-3xl mb-2">bar_chart</span>
+        View Results
+      </a>
+      <a href="/user/edit" class="dashboard-card bg-blue-500 text-white rounded-xl p-4 flex flex-col items-center justify-center font-bold shadow hover:bg-yellow-400 hover:text-blue-700 transition-all duration-300 animate-bounce-once">
+        <span class="material-icons text-3xl mb-2">edit</span>
+        Edit Profile
+      </a>
+      <a href="/user/logout" class="dashboard-card bg-red-600 text-white rounded-xl p-4 flex flex-col items-center justify-center font-bold shadow hover:bg-yellow-400 hover:text-red-700 transition-all duration-300 animate-bounce-once">
+        <span class="material-icons text-3xl mb-2">logout</span>
+        Logout
+      </a>
+    </div>
+  <div class="bg-white/90 rounded-2xl p-6 shadow w-full max-w-4xl mx-auto">
+      <h3 class="font-bold text-green-700 text-lg mb-4">Recent Activity</h3>
+      <ul class="list-disc pl-6 text-gray-700">
+        <% if (user.activity && user.activity.length > 0) { user.activity.slice(0,3).forEach(function(act) { %>
+          <li><%= act %></li>
+        <% }) } else { %>
+          <li>No recent activity.</li>
+        <% } %>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>
