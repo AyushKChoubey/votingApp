@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join <%= booth.name %> - Voting App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/css/animations.css">
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-6xl mx-auto px-6 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-2xl font-bold text-indigo-600">Voting App</a>
+                    <span class="text-gray-300">|</span>
+                    <a href="/booth/dashboard" class="text-gray-600 hover:text-gray-800">Dashboard</a>
+                    <span class="text-gray-300">|</span>
+                    <span class="text-gray-600">Join Booth</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/booth/dashboard" class="text-indigo-600 hover:text-indigo-800">Back to Dashboard</a>
+                    <a href="/logout" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-2xl mx-auto px-6 py-8">
+        <!-- Error Messages -->
+        <% if (error) { %>
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+                <%= error %>
+            </div>
+        <% } %>
+
+        <!-- Booth Info Card -->
+        <div class="bg-white rounded-xl shadow-lg p-8 mb-6 animate-fade-in">
+            <div class="text-center mb-6">
+                <div class="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-10 h-10 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-6m-6 0H3m6 0h6"></path>
+                    </svg>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-900 mb-2">Join Voting Booth</h1>
+                <p class="text-gray-600">You've been invited to participate in voting</p>
+            </div>
+
+            <!-- Booth Details -->
+            <div class="bg-gray-50 rounded-lg p-6 mb-6">
+                <h2 class="text-xl font-semibold text-gray-900 mb-2"><%= booth.name %></h2>
+                <p class="text-gray-600 mb-4"><%= booth.description %></p>
+                
+                <div class="grid md:grid-cols-2 gap-4 text-sm">
+                    <div class="flex items-center text-gray-600">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                        </svg>
+                        <span><%= booth.members ? booth.members.length : 0 %>/<%= booth.maxMembers %> members</span>
+                    </div>
+                    <div class="flex items-center text-gray-600">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                        </svg>
+                        <span><%= booth.candidates ? booth.candidates.length : 0 %> candidates</span>
+                    </div>
+                    <div class="flex items-center text-gray-600">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                        </svg>
+                        <span>Code: <strong><%= code %></strong></span>
+                    </div>
+                    <div class="flex items-center text-gray-600">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span class="<%= booth.status === 'active' ? 'text-green-600' : 'text-red-600' %>">
+                            Status: <%= booth.status %>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Candidates Preview -->
+            <% if (booth.candidates && booth.candidates.length > 0) { %>
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-3">Candidates in this booth:</h3>
+                    <div class="space-y-2">
+                        <% booth.candidates.forEach((candidate, index) => { %>
+                            <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+                                <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
+                                    <span class="text-indigo-600 font-semibold text-sm"><%= index + 1 %></span>
+                                </div>
+                                <div>
+                                    <div class="font-medium text-gray-900"><%= candidate.name %></div>
+                                    <% if (candidate.description) { %>
+                                        <div class="text-sm text-gray-600"><%= candidate.description %></div>
+                                    <% } %>
+                                </div>
+                            </div>
+                        <% }); %>
+                    </div>
+                </div>
+            <% } %>
+
+            <!-- Join Action -->
+            <div class="text-center">
+                <% if (booth.status === 'active') { %>
+                    <form action="/booth/join/<%= code %>" method="POST">
+                        <button type="submit" class="bg-indigo-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors shadow-lg">
+                            <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                            Join This Booth
+                        </button>
+                    </form>
+                    <p class="text-sm text-gray-500 mt-3">
+                        By joining, you'll be able to cast your vote and view results
+                    </p>
+                <% } else { %>
+                    <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded-lg">
+                        <p class="font-medium">Booth Not Available</p>
+                        <p class="text-sm">This booth is currently <strong><%= booth.status %></strong> and not accepting new members.</p>
+                    </div>
+                <% } %>
+            </div>
+        </div>
+
+        <!-- Additional Information -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-3">What happens after joining?</h3>
+            <div class="space-y-3 text-sm text-gray-600">
+                <div class="flex items-start">
+                    <svg class="w-5 h-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span>You'll become a member of this voting booth</span>
+                </div>
+                <div class="flex items-start">
+                    <svg class="w-5 h-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span>You can cast one vote for your preferred candidate</span>
+                </div>
+                <div class="flex items-start">
+                    <svg class="w-5 h-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span>You'll be able to view voting results (if enabled by admin)</span>
+                </div>
+                <div class="flex items-start">
+                    <svg class="w-5 h-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span>The booth will appear in your dashboard for easy access</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Back Link -->
+        <div class="text-center mt-8">
+            <a href="/booth/join" class="text-indigo-600 hover:text-indigo-800 font-medium">
+                ← Join a different booth
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Add smooth animations
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.bg-white');
+            cards.forEach((card, index) => {
+                card.style.animationDelay = `${index * 0.1}s`;
+                card.classList.add('animate-fade-in');
+            });
+        });
+    </script>
+</body>
+</html>

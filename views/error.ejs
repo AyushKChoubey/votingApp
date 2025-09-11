@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error - Voting App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/css/animations.css">
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+    <div class="max-w-lg mx-auto px-6">
+        <div class="bg-white rounded-xl shadow-lg p-8 text-center animate-fade-in">
+            <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg class="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            
+            <h1 class="text-3xl font-bold text-gray-900 mb-4">Oops! Something went wrong</h1>
+            
+            <% if (typeof error !== 'undefined' && error) { %>
+                <p class="text-gray-600 mb-6"><%= error %></p>
+            <% } else { %>
+                <p class="text-gray-600 mb-6">We encountered an unexpected error. Please try again later.</p>
+            <% } %>
+            
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <button onclick="history.back()" class="bg-gray-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-600 transition-colors">
+                    Go Back
+                </button>
+                <a href="/" class="bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors">
+                    Home Page
+                </a>
+                <a href="/booth/dashboard" class="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors">
+                    Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

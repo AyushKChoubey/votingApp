@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= booth.name %> - Voting App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/css/animations.css">
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-6xl mx-auto px-6 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-2xl font-bold text-indigo-600">Voting App</a>
+                    <span class="text-gray-300">|</span>
+                    <a href="/booth/dashboard" class="text-gray-600 hover:text-gray-800">Dashboard</a>
+                    <span class="text-gray-300">|</span>
+                    <span class="text-gray-600"><%= booth.name %></span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <% if (isCreator) { %>
+                        <a href="/booth/<%= booth._id %>/admin" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">Admin Panel</a>
+                    <% } %>
+                    <a href="/booth/dashboard" class="text-indigo-600 hover:text-indigo-800">Back to Dashboard</a>
+                    <a href="/logout" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-4xl mx-auto px-6 py-8">
+        <!-- Booth Header -->
+        <div class="bg-white rounded-xl shadow-lg p-8 mb-8">
+            <div class="flex justify-between items-start mb-6">
+                <div class="flex-1">
+                    <h1 class="text-3xl font-bold text-gray-900 mb-2"><%= booth.name %></h1>
+                    <p class="text-gray-600 mb-4"><%= booth.description %></p>
+                    <div class="flex items-center space-x-6 text-sm text-gray-600">
+                        <div class="flex items-center">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                            </svg>
+                            <%= booth.members.length %>/<%= booth.maxMembers %> members
+                        </div>
+                        <div class="flex items-center">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                            </svg>
+                            <%= booth.candidates.length %> candidates
+                        </div>
+                        <div class="flex items-center">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span class="<%= booth.status === 'active' ? 'text-green-600' : 'text-red-600' %>">
+                                <%= booth.status.charAt(0).toUpperCase() + booth.status.slice(1) %>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex space-x-3">
+                    <a href="/booth/<%= booth._id %>/results" class="bg-purple-100 text-purple-700 px-4 py-2 rounded-lg hover:bg-purple-200 transition-colors">
+                        View Results
+                    </a>
+                </div>
+            </div>
+
+            <!-- Voting Status -->
+            <% if (hasVoted) { %>
+                <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span class="font-medium">You have already voted in this booth!</span>
+                    </div>
+                    <p class="text-sm mt-1">Thank you for participating. You can view the results anytime.</p>
+                </div>
+            <% } else if (booth.status !== 'active') { %>
+                <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded-lg">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L12.732 4.5c-.77-.833-2.186-.833-2.956 0L1.858 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                        </svg>
+                        <span class="font-medium">Voting is not active</span>
+                    </div>
+                    <p class="text-sm mt-1">This booth is currently <%= booth.status %>. Voting is not available at this time.</p>
+                </div>
+            <% } %>
+        </div>
+
+        <% if (!hasVoted && booth.status === 'active') { %>
+            <!-- Voting Section -->
+            <div class="bg-white rounded-xl shadow-lg p-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Cast Your Vote</h2>
+                <p class="text-gray-600 text-center mb-8">Select your preferred candidate and submit your vote. You can only vote once.</p>
+
+                <form id="voteForm" action="/booth/<%= booth._id %>/vote" method="POST">
+                    <div class="space-y-4 mb-8">
+                        <% booth.candidates.forEach((candidate, index) => { %>
+                            <div class="candidate-option">
+                                <label class="flex items-center p-6 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-indigo-300 hover:bg-indigo-50 transition-all duration-200">
+                                    <input type="radio" name="candidateIndex" value="<%= index %>" class="text-indigo-600 focus:ring-indigo-500 h-5 w-5">
+                                    <div class="ml-4 flex-1">
+                                        <div class="flex items-center justify-between">
+                                            <h3 class="text-lg font-semibold text-gray-900"><%= candidate.name %></h3>
+                                            <span class="text-indigo-600 font-medium">Option <%= index + 1 %></span>
+                                        </div>
+                                        <% if (candidate.description) { %>
+                                            <p class="text-gray-600 text-sm mt-1"><%= candidate.description %></p>
+                                        <% } %>
+                                    </div>
+                                </label>
+                            </div>
+                        <% }); %>
+                    </div>
+
+                    <div class="text-center">
+                        <button type="submit" disabled class="bg-indigo-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                            <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            Submit Vote
+                        </button>
+                        <p class="text-sm text-gray-500 mt-3">
+                            Your vote will be recorded securely and cannot be changed.
+                        </p>
+                    </div>
+                </form>
+            </div>
+        <% } else { %>
+            <!-- Candidates Display (Read-only) -->
+            <div class="bg-white rounded-xl shadow-lg p-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Candidates</h2>
+
+                <div class="space-y-4">
+                    <% booth.candidates.forEach((candidate, index) => { %>
+                        <div class="p-6 border-2 border-gray-200 rounded-lg">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-lg font-semibold text-gray-900"><%= candidate.name %></h3>
+                                <span class="text-indigo-600 font-medium">Option <%= index + 1 %></span>
+                            </div>
+                            <% if (candidate.description) { %>
+                                <p class="text-gray-600 text-sm mt-1"><%= candidate.description %></p>
+                            <% } %>
+                            <% if (isCreator || booth.settings.resultsVisibleToVoters) { %>
+                                <div class="mt-3 flex items-center text-sm text-gray-600">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                    </svg>
+                                    <%= candidate.voteCount %> vote<%= candidate.voteCount !== 1 ? 's' : '' %>
+                                </div>
+                            <% } %>
+                        </div>
+                    <% }); %>
+                </div>
+            </div>
+        <% } %>
+
+        <!-- Members Section (for creators) -->
+        <% if (isCreator) { %>
+            <div class="bg-white rounded-xl shadow-lg p-8 mt-8">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">Members (<%= booth.members.length %>)</h2>
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <% booth.members.forEach(member => { %>
+                        <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+                            <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
+                                <span class="text-indigo-600 font-semibold text-sm">
+                                    <%= member.user.name.charAt(0).toUpperCase() %>
+                                </span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium text-gray-900 truncate"><%= member.user.name %></div>
+                                <div class="flex items-center text-sm text-gray-500">
+                                    <% if (member.hasVoted) { %>
+                                        <svg class="w-3 h-3 text-green-500 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        Voted
+                                    <% } else { %>
+                                        <svg class="w-3 h-3 text-gray-400 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        Pending
+                                    <% } %>
+                                </div>
+                            </div>
+                        </div>
+                    <% }); %>
+                </div>
+            </div>
+        <% } %>
+    </div>
+
+    <script>
+        // Enable/disable vote button based on selection
+        const radioButtons = document.querySelectorAll('input[name="candidateIndex"]');
+        const submitButton = document.querySelector('button[type="submit"]');
+        const candidateOptions = document.querySelectorAll('.candidate-option');
+
+        radioButtons.forEach(radio => {
+            radio.addEventListener('change', function() {
+                submitButton.disabled = false;
+                
+                // Update visual feedback
+                candidateOptions.forEach(option => {
+                    const input = option.querySelector('input[type="radio"]');
+                    const label = option.querySelector('label');
+                    if (input.checked) {
+                        label.classList.add('border-indigo-500', 'bg-indigo-50');
+                        label.classList.remove('border-gray-200');
+                    } else {
+                        label.classList.remove('border-indigo-500', 'bg-indigo-50');
+                        label.classList.add('border-gray-200');
+                    }
+                });
+            });
+        });
+
+        // Handle form submission
+        document.getElementById('voteForm')?.addEventListener('submit', function(e) {
+            const selectedCandidate = document.querySelector('input[name="candidateIndex"]:checked');
+            
+            if (!selectedCandidate) {
+                e.preventDefault();
+                alert('Please select a candidate before voting.');
+                return;
+            }
+
+            if (!confirm('Are you sure you want to vote for this candidate? This action cannot be undone.')) {
+                e.preventDefault();
+                return;
+            }
+
+            // Show loading state
+            submitButton.textContent = 'Submitting Vote...';
+            submitButton.disabled = true;
+        });
+
+        // Add fade-in animations
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.bg-white');
+            cards.forEach((card, index) => {
+                card.style.animationDelay = `${index * 0.1}s`;
+                card.classList.add('animate-fade-in');
+            });
+        });
+    </script>
+</body>
+</html>
