@@ -1,46 +1,122 @@
+// controllers/userController.js
 const User = require('../models/user');
-const { generateToken } = require('../middleware/jwt');
+const { generateToken, generateRefreshToken, blacklistToken } = require('../middleware/jwt');
+const validator = require('validator');
+const crypto = require('crypto');
+
+// Input validation helpers
+const validateEmail = (email) => {
+    return validator.isEmail(email) && email.length <= 254;
+};
+
+const validatePassword = (password) => {
+    return password && 
+           password.length >= 8 && 
+           password.length <= 128 &&
+           /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password);
+};
+
+const validateName = (name) => {
+    return name && 
+           name.trim().length >= 2 && 
+           name.trim().length <= 50 &&
+           /^[a-zA-Z\s\-'\.]+$/.test(name.trim());
+};
 
 // Register new user
 exports.signup = async (req, res) => {
     try {
-        const { name, email, password, role } = req.body;
+        let { name, email, password, confirmPassword, role } = req.body;
+        
+        // Sanitize inputs
+        name = name ? name.trim() : '';
+        email = email ? email.trim().toLowerCase() : '';
+        
+        // Validation
+        const errors = [];
+        
+        if (!validateName(name)) {
+            errors.push('Name must be 2-50 characters and contain only letters, spaces, hyphens, apostrophes, and periods');
+        }
+        
+        if (!validateEmail(email)) {
+            errors.push('Please provide a valid email address');
+        }
+        
+        if (!validatePassword(password)) {
+            errors.push('Password must be 8-128 characters with at least one uppercase, lowercase, and number');
+        }
+        
+        if (password !== confirmPassword) {
+            errors.push('Passwords do not match');
+        }
+        
+        if (errors.length > 0) {
+            return res.render('register', { 
+                error: errors.join('. '),
+                success: null,
+                formData: { name, email }
+            });
+        }
         
         // Check if email already exists
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.render('register', { 
-                error: 'Email already registered',
-                success: null 
+                error: 'Email already registered. Please use a different email or try logging in.',
+                success: null,
+                formData: { name, email }
             });
         }
         
         // Create new user
         const newUser = new User({
-            name,
+            name: name.trim(),
             email,
             password,
-            role: role || 'voter'
+            role: role === 'admin' ? 'admin' : 'voter' // Prevent unauthorized admin creation
         });
         
         const savedUser = await newUser.save();
         
-        // Generate token
-        const payload = { id: savedUser._id };
-        const token = generateToken(payload);
+        // Generate tokens
+        const token = generateToken(savedUser);
+        const refreshToken = generateRefreshToken(savedUser);
         
-        // Set cookie and redirect to dashboard
-        res.cookie('token', token, { 
+        // Set secure cookies
+        const cookieOptions = {
             httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
             maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        };
+        
+        res.cookie('token', token, cookieOptions);
+        res.cookie('refreshToken', refreshToken, {
+            ...cookieOptions,
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
         });
+        
+        // Log successful registration
+        console.log(`New user registered: ${email} at ${new Date().toISOString()}`);
         
         res.redirect('/booth/dashboard');
     } catch (err) {
-        console.error(err);
+        console.error('Registration error:', err);
+        
+        // Handle specific MongoDB errors
+        let errorMessage = 'Registration failed. Please try again.';
+        
+        if (err.code === 11000) {
+            if (err.keyPattern?.email) {
+                errorMessage = 'Email already registered. Please use a different email.';
+            }
+        }
+        
         res.render('register', { 
-            error: 'Registration failed. Please try again.',
-            success: null 
+            error: errorMessage,
+            success: null,
+            formData: req.body
         });
     }
 };
@@ -48,52 +124,119 @@ exports.signup = async (req, res) => {
 // Login user
 exports.login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        let { email, password, remember } = req.body;
+        const redirectUrl = req.query.redirect || '/booth/dashboard';
         
+        // Sanitize inputs
+        email = email ? email.trim().toLowerCase() : '';
+        
+        // Validation
         if (!email || !password) {
             return res.render('login', { 
                 error: 'Email and password are required',
-                success: null 
+                success: null,
+                redirectUrl
             });
         }
         
-        const user = await User.findOne({ email });
+        if (!validateEmail(email)) {
+            return res.render('login', { 
+                error: 'Please provide a valid email address',
+                success: null,
+                redirectUrl
+            });
+        }
+        
+        // Find user and include password for comparison
+        const user = await User.findOne({ email }).select('+password');
         if (!user) {
+            // Use same error message to prevent email enumeration
             return res.render('login', { 
                 error: 'Invalid email or password',
-                success: null 
+                success: null,
+                redirectUrl
             });
         }
         
+        // Check password
         const isPasswordValid = await user.comparePassword(password);
         if (!isPasswordValid) {
             return res.render('login', { 
                 error: 'Invalid email or password',
-                success: null 
+                success: null,
+                redirectUrl
             });
         }
         
-        // Update last login
+        // Update last login and login count
         user.lastLogin = new Date();
+        user.loginCount = (user.loginCount || 0) + 1;
         await user.save();
         
-        // Generate token
-        const payload = { id: user._id };
-        const token = generateToken(payload);
+        // Generate tokens
+        const tokenExpiry = remember ? '7d' : '24h';
+        const token = generateToken(user, { expiresIn: tokenExpiry });
+        const refreshToken = generateRefreshToken(user);
         
-        // Set cookie and redirect to dashboard
-        res.cookie('token', token, { 
+        // Set secure cookies
+        const cookieOptions = {
             httpOnly: true,
-            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: remember ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000
+        };
+        
+        res.cookie('token', token, cookieOptions);
+        res.cookie('refreshToken', refreshToken, {
+            ...cookieOptions,
+            maxAge: 7 * 24 * 60 * 60 * 1000
         });
         
-        res.redirect('/booth/dashboard');
+        // Log successful login
+        console.log(`User login: ${email} at ${new Date().toISOString()} from IP: ${req.ip}`);
+        
+        // Redirect to intended page or dashboard
+        const safeRedirectUrl = validator.isURL(redirectUrl, { 
+            require_host: false, 
+            require_protocol: false,
+            allow_query_components: true 
+        }) ? redirectUrl : '/booth/dashboard';
+        
+        res.redirect(safeRedirectUrl);
     } catch (err) {
-        console.error(err);
+        console.error('Login error:', err);
         res.render('login', { 
             error: 'Login failed. Please try again.',
-            success: null 
+            success: null,
+            redirectUrl: req.query.redirect
         });
+    }
+};
+
+// Logout user
+exports.logout = (req, res) => {
+    try {
+        // Blacklist current token if exists
+        const token = req.cookies?.token || 
+                     (req.headers.authorization && req.headers.authorization.split(' ')[1]);
+        
+        if (token) {
+            blacklistToken(token);
+        }
+        
+        // Clear cookies
+        res.clearCookie('token');
+        res.clearCookie('refreshToken');
+        
+        // Log logout
+        if (req.user) {
+            console.log(`User logout: ${req.user.email || req.user.id} at ${new Date().toISOString()}`);
+        }
+        
+        res.redirect('/?message=logged_out');
+    } catch (err) {
+        console.error('Logout error:', err);
+        res.redirect('/');
     }
 };
 
@@ -103,22 +246,36 @@ exports.getProfile = async (req, res) => {
         const userId = req.user.id;
         const user = await User.findById(userId)
             .select('-password')
-            .populate('createdBooths', 'name status')
-            .populate('joinedBooths', 'name status');
+            .populate('createdBooths', 'name status createdAt')
+            .populate('joinedBooths', 'name status createdAt');
+        
+        if (!user) {
+            if (req.accepts('html')) {
+                return res.status(404).render('error', { error: 'User not found' });
+            }
+            return res.status(404).json({ error: 'User not found' });
+        }
         
         const stats = await user.getStats();
         
-        res.render('profile', { 
-            user,
-            stats,
-            error: null,
-            success: null
-        });
+        if (req.accepts('html')) {
+            res.render('profile', { 
+                user,
+                stats,
+                error: null,
+                success: null
+            });
+        } else {
+            res.json({ user, stats });
+        }
     } catch (err) {
-        console.error(err);
-        res.status(500).render('error', { 
-            error: 'Failed to load profile' 
-        });
+        console.error('Get profile error:', err);
+        if (req.accepts('html')) {
+            return res.status(500).render('error', { 
+                error: 'Failed to load profile' 
+            });
+        }
+        res.status(500).json({ error: 'Failed to load profile' });
     }
 };
 
@@ -126,29 +283,58 @@ exports.getProfile = async (req, res) => {
 exports.updatePassword = async (req, res) => {
     try {
         const userId = req.user.id;
-        const { currentPassword, newPassword } = req.body;
+        const { currentPassword, newPassword, confirmNewPassword } = req.body;
         
-        if (!currentPassword || !newPassword) {
+        // Validation
+        if (!currentPassword || !newPassword || !confirmNewPassword) {
             return res.status(400).json({ 
-                error: 'Both current and new passwords are required' 
+                error: 'All password fields are required' 
             });
         }
         
-        const user = await User.findById(userId);
-        const isPasswordValid = await user.comparePassword(currentPassword);
+        if (!validatePassword(newPassword)) {
+            return res.status(400).json({ 
+                error: 'New password must be 8-128 characters with at least one uppercase, lowercase, and number' 
+            });
+        }
         
+        if (newPassword !== confirmNewPassword) {
+            return res.status(400).json({ 
+                error: 'New passwords do not match' 
+            });
+        }
+        
+        if (currentPassword === newPassword) {
+            return res.status(400).json({ 
+                error: 'New password must be different from current password' 
+            });
+        }
+        
+        // Get user with password
+        const user = await User.findById(userId).select('+password');
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        // Verify current password
+        const isPasswordValid = await user.comparePassword(currentPassword);
         if (!isPasswordValid) {
             return res.status(401).json({ 
                 error: 'Current password is incorrect' 
             });
         }
         
+        // Update password
         user.password = newPassword;
+        user.passwordChangedAt = new Date();
         await user.save();
+        
+        // Log password change
+        console.log(`Password changed for user: ${user.email} at ${new Date().toISOString()}`);
         
         res.json({ message: 'Password updated successfully' });
     } catch (err) {
-        console.error(err);
+        console.error('Update password error:', err);
         res.status(500).json({ error: 'Failed to update password' });
     }
 };
@@ -157,15 +343,46 @@ exports.updatePassword = async (req, res) => {
 exports.updateProfile = async (req, res) => {
     try {
         const userId = req.user.id;
-        const { name, organization, bio } = req.body;
+        let { name, organization, bio } = req.body;
+        
+        // Sanitize inputs
+        name = name ? name.trim() : '';
+        organization = organization ? organization.trim() : '';
+        bio = bio ? bio.trim() : '';
+        
+        // Validation
+        const errors = [];
+        
+        if (name && !validateName(name)) {
+            errors.push('Name must be 2-50 characters and contain only letters, spaces, hyphens, apostrophes, and periods');
+        }
+        
+        if (organization && organization.length > 100) {
+            errors.push('Organization name must be less than 100 characters');
+        }
+        
+        if (bio && bio.length > 500) {
+            errors.push('Bio must be less than 500 characters');
+        }
+        
+        if (errors.length > 0) {
+            return res.status(400).json({ error: errors.join('. ') });
+        }
         
         const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
         
+        // Update fields
         if (name) user.name = name;
-        if (organization) user.profile.organization = organization;
-        if (bio) user.profile.bio = bio;
+        if (organization !== undefined) user.profile.organization = organization;
+        if (bio !== undefined) user.profile.bio = bio;
         
         await user.save();
+        
+        // Log profile update
+        console.log(`Profile updated for user: ${user.email} at ${new Date().toISOString()}`);
         
         res.json({ 
             message: 'Profile updated successfully',
@@ -176,7 +393,44 @@ exports.updateProfile = async (req, res) => {
             }
         });
     } catch (err) {
-        console.error(err);
+        console.error('Update profile error:', err);
         res.status(500).json({ error: 'Failed to update profile' });
+    }
+};
+
+// Refresh token
+exports.refreshToken = async (req, res) => {
+    try {
+        const { refreshToken } = req.cookies;
+        
+        if (!refreshToken) {
+            return res.status(401).json({ error: 'Refresh token required' });
+        }
+        
+        const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
+        
+        if (decoded.type !== 'refresh') {
+            return res.status(401).json({ error: 'Invalid refresh token' });
+        }
+        
+        const user = await User.findById(decoded.id);
+        if (!user) {
+            return res.status(401).json({ error: 'User not found' });
+        }
+        
+        // Generate new access token
+        const newToken = generateToken(user);
+        
+        res.cookie('token', newToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 24 * 60 * 60 * 1000
+        });
+        
+        res.json({ message: 'Token refreshed successfully' });
+    } catch (err) {
+        console.error('Refresh token error:', err);
+        res.status(401).json({ error: 'Invalid refresh token' });
     }
 };

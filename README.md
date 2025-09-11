@@ -1,319 +1,390 @@
 # Secure Voting Application
 
-A comprehensive, secure voting application built with Node.js, Express, MongoDB, and EJS. Perfect for organizations, schools, and communities to conduct fair and transparent elections.
+A comprehensive, secure voting application built with Node.js, Express, MongoDB, and EJS templating. This application provides a complete booth management system with real-time voting capabilities, advanced security features, and production-ready deployment configurations.
 
-## Features
+## 🚀 Features
 
-### 🏛️ User Roles
-- **Admin (Booth Creator)**: Create booths, set candidates, manage members, view results
-- **Voter (Member)**: Join booths, vote once per booth, view results (if enabled)
+### Core Voting System
+- **Multi-Booth Management**: Create and manage multiple independent voting booths
+- **Secure Authentication**: JWT-based authentication with refresh tokens
+- **Role-Based Access**: Admin, moderator, and voter roles with different permissions
+- **Real-time Results**: Live vote counting and results display
+- **Flexible Voting Rules**: Configure anonymous voting, vote changes, and result visibility
 
-### 🗳️ Booth System
-- **Secure Booth Creation**: Each booth has unique invite codes and links
-- **Member Management**: Control who can join with email domain restrictions
-- **Flexible Settings**: Configure voting periods, result visibility, and member limits
-- **Real-time Updates**: Live member count and voting status
+### Security Features
+- **Rate Limiting**: Comprehensive rate limiting for all endpoints
+- **Input Validation**: Extensive validation and sanitization
+- **XSS Protection**: Built-in cross-site scripting prevention
+- **CSRF Protection**: Request origin validation
+- **Security Headers**: Helmet.js integration with CSP
+- **Account Locking**: Automatic account lockout after failed attempts
+- **Password Security**: Bcrypt hashing with configurable rounds
 
-### 🔒 Security Features
-- **JWT Authentication**: Secure token-based authentication
-- **One Vote Per Booth**: Enforced with MongoDB unique indexes
-- **Audit Trail**: Complete voting history with timestamps and IP tracking
-- **Rate Limiting**: Prevent abuse with configurable limits
-- **Password Security**: Bcrypt hashing for user passwords
+### Advanced Booth Features
+- **Invite System**: Unique invite codes and shareable links
+- **Member Management**: Add/remove members, view participation
+- **Email Domain Restrictions**: Limit access by email domains
+- **Time-based Voting**: Set start/end times for voting periods
+- **Capacity Limits**: Set maximum members per booth
+- **Settings Customization**: Fine-tune booth behavior
 
-### 📊 Results & Analytics
-- **Real-time Results**: Live vote counting and progress tracking
-- **Visual Charts**: Chart.js integration for result visualization
-- **Export Options**: Print and share results
-- **Detailed Statistics**: Participation rates and voting analytics
+### Admin Features
+- **Dashboard**: Comprehensive admin panel for booth management
+- **Analytics**: Vote statistics and participation metrics
+- **Member Control**: Remove members, reset invite codes
+- **Audit Trail**: Complete voting history and logs
 
-## Tech Stack
+## 🛠️ Technology Stack
 
 - **Backend**: Node.js, Express.js
 - **Database**: MongoDB with Mongoose ODM
-- **Frontend**: EJS templating, Tailwind CSS
-- **Authentication**: JWT (JSON Web Tokens)
-- **Charts**: Chart.js
-- **Security**: bcrypt, cookie-parser
+- **Authentication**: JWT tokens with refresh mechanism
+- **Templating**: EJS with Bootstrap styling
+- **Security**: Helmet, express-rate-limit, bcrypt
+- **Validation**: Validator.js, express-mongo-sanitize
+- **Development**: Nodemon, ESLint, Prettier
 
-## Quick Start
+## 📋 Prerequisites
 
-### Prerequisites
-- Node.js (v14 or higher)
-- MongoDB (local or cloud instance)
-- Git
+- Node.js 16.0.0 or higher
+- MongoDB 4.4 or higher
+- npm 8.0.0 or higher
 
-### Installation
+## 🚀 Quick Start
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/AyushKChoubey/votingApp.git
-   cd votingApp
-   ```
+### 1. Clone and Install
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+```bash
+git clone <repository-url>
+cd secure-voting-app
+npm install
+```
 
-3. **Environment Setup**
-   ```bash
-   cp .env.example .env
-   ```
-   
-   Edit `.env` file with your configuration:
-   ```env
-   NODE_ENV=development
-   PORT=3000
-   MONGODB_URI=mongodb://localhost:27017/votingapp
-   JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-   ```
+### 2. Environment Setup
 
-4. **Start MongoDB**
-   - If using local MongoDB: `mongod`
-   - If using MongoDB Atlas: Update MONGODB_URI in .env
+```bash
+cp .env.example .env
+# Edit .env with your configuration
+```
 
-5. **Build CSS (if using custom Tailwind)**
-   ```bash
-   npm run build:css
-   ```
+**Required Environment Variables:**
+```env
+NODE_ENV=production
+PORT=3000
+MONGODB_URL=your-mongodb-connection-string
+JWT_SECRET=your-super-secret-jwt-key-min-32-chars
+JWT_REFRESH_SECRET=your-refresh-secret-key
+```
 
-6. **Start the application**
-   ```bash
-   npm start
-   ```
-   
-   For development with auto-restart:
-   ```bash
-   npm install -g nodemon
-   nodemon server.js
-   ```
+### 3. Database Setup
 
-7. **Open your browser**
-   Navigate to `http://localhost:3000`
+```bash
+# Run migrations
+npm run migrate
 
-## Usage Guide
+# Seed with sample data (development only)
+npm run seed
+```
 
-### For Administrators (Booth Creators)
+### 4. Start Application
 
-1. **Register/Login**: Create an account or login
-2. **Create a Booth**: 
-   - Go to Dashboard → "Create New Booth"
-   - Set booth name, description, and candidates
-   - Configure settings (results visibility, member limits, etc.)
-3. **Share Invite**: Copy the invite link or share the booth code
-4. **Manage Members**: View who joined, remove members if needed
-5. **Monitor Voting**: Track real-time voting progress
-6. **View Results**: Access detailed results and analytics
+```bash
+# Development
+npm run dev
 
-### For Voters (Members)
+# Production
+npm start
+```
 
-1. **Register/Login**: Create an account or login
-2. **Join a Booth**:
-   - Use invite link (click and join automatically)
-   - Or enter booth code manually
-3. **Cast Your Vote**: Select your preferred candidate
-4. **View Results**: See voting results (if enabled by admin)
-
-## Project Structure
+## 🏗️ Project Structure
 
 ```
-votingApp/
-├── controllers/          # Business logic
-│   ├── boothControler.js # Booth operations
-│   ├── candidateController.js
+secure-voting-app/
+├── controllers/          # Request handlers
+│   ├── boothController.js
 │   └── userController.js
 ├── middleware/           # Custom middleware
-│   └── jwt.js           # JWT authentication
-├── models/              # Database schemas
-│   ├── booth.js         # Booth model
-│   ├── candidate.js     # Candidate model
-│   ├── user.js          # User model
-│   └── vote.js          # Vote model
-├── routes/              # API routes
-│   ├── boothRoutes.js   # Booth-related routes
-│   ├── candidateRoutes.js
+│   ├── jwt.js           # Authentication middleware
+│   └── security.js      # Security middleware
+├── models/              # Database models
+│   ├── booth.js
+│   ├── user.js
+│   └── vote.js
+├── routes/              # Route definitions
+│   ├── boothRoutes.js
 │   └── userRoutes.js
 ├── views/               # EJS templates
-│   ├── booth/           # Booth-specific pages
-│   ├── error.ejs        # Error page
-│   └── index.ejs        # Home page
-├── public/              # Static files
-│   └── css/             # Stylesheets
+│   ├── booth/
+│   ├── user/
+│   └── layouts/
+├── public/              # Static assets
+│   ├── css/
+│   ├── js/
+│   └── images/
+├── scripts/             # Utility scripts
+│   ├── migrate.js
+│   ├── seed.js
+│   ├── cleanup.js
+│   └── backup.js
+├── logs/                # Application logs
 ├── server.js            # Main application file
-└── db.js               # Database connection
+└── ecosystem.config.js  # PM2 configuration
 ```
 
-## API Documentation
+## 📊 API Endpoints
 
-### Authentication Endpoints
-- `POST /user/register` - Register new user
+### Authentication
+- `POST /user/register` - User registration
 - `POST /user/login` - User login
+- `GET /user/logout` - User logout
 - `GET /user/profile` - Get user profile
-- `GET /logout` - Logout user
+- `PUT /user/profile` - Update user profile
+- `PUT /user/profile/password` - Change password
 
-### Booth Endpoints
+### Booth Management
 - `GET /booth/dashboard` - User dashboard
-- `GET /booth/create` - Create booth page
+- `GET /booth/create` - Create booth form
 - `POST /booth/create` - Create new booth
-- `GET /booth/join` - Join booth page
-- `GET /booth/join/:code` - Join via invite link
-- `POST /booth/join/:code` - Join booth
 - `GET /booth/:id` - View booth details
-- `POST /booth/:id/vote` - Cast vote
+- `GET /booth/:id/admin` - Admin panel
 - `GET /booth/:id/results` - View results
-- `GET /booth/:id/admin` - Admin panel (creator only)
-- `POST /booth/:id/reset-code` - Reset invite code
+- `POST /booth/:id/vote` - Cast vote
+- `GET /booth/join/:code` - Join booth via code
+- `POST /booth/join/:code` - Process booth join
 
-## Security Considerations
+### API Routes (JSON)
+- `GET /api/v1/booth/user/booths` - Get user's booths
+- `GET /api/v1/booth/:id` - Get booth details
+- `GET /api/v1/booth/:id/results` - Get booth results
+- `POST /api/v1/booth/:id/reset-code` - Reset invite code
 
-- **Environment Variables**: Never commit `.env` files
-- **JWT Secret**: Use a strong, unique secret for production
-- **Database Security**: Enable MongoDB authentication
-- **HTTPS**: Use HTTPS in production
-- **Rate Limiting**: Configure appropriate limits
-- **Input Validation**: All inputs are validated and sanitized
+## 🔐 Security Features
 
-## Database Schema
+### Authentication Security
+- JWT tokens with configurable expiration
+- Refresh token mechanism
+- Token blacklisting for logout
+- Account lockout after failed attempts
+- Password strength requirements
+- Secure password hashing with bcrypt
 
-### User Model
-- Authentication fields (email, password)
-- Profile information
-- References to created/joined booths
-- Security fields (verification, reset tokens)
+### Request Security
+- Rate limiting on all endpoints
+- Input validation and sanitization
+- MongoDB injection prevention
+- XSS protection headers
+- CSRF protection for forms
+- Security headers with Helmet.js
 
-### Booth Model
-- Basic info (name, description, creator)
-- Invite system (code, link generation)
-- Member management
-- Settings (visibility, restrictions)
-- Vote tracking
+### Data Security
+- Encrypted password storage
+- Secure cookie configuration
+- Input length limits
+- File type restrictions
+- SQL injection prevention
 
-### Vote Model
-- Audit trail with user, booth, candidate references
-- Metadata (IP, user agent, timestamp)
-- Unique constraints to prevent duplicate voting
+## 🚀 Production Deployment
 
-## Contributing
+### Option 1: PM2 Deployment
+
+```bash
+# Install PM2 globally
+npm install -g pm2
+
+# Start with PM2
+npm run pm2:start
+
+# Monitor
+pm2 monit
+
+# View logs
+pm2 logs voting-app
+```
+
+### Option 2: Docker Deployment
+
+```bash
+# Build image
+npm run docker:build
+
+# Run container
+npm run docker:run
+
+# Or use docker-compose
+docker-compose up -d
+```
+
+### Option 3: Manual Deployment
+
+```bash
+# Set environment
+export NODE_ENV=production
+
+# Install production dependencies
+npm ci --only=production
+
+# Start application
+npm start
+```
+
+## 🔧 Configuration
+
+### Environment Variables
+
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `NODE_ENV` | Environment mode | development | No |
+| `PORT` | Server port | 3000 | No |
+| `MONGODB_URL` | MongoDB connection string | - | Yes |
+| `JWT_SECRET` | JWT signing secret | - | Yes |
+| `JWT_REFRESH_SECRET` | Refresh token secret | JWT_SECRET | No |
+| `ALLOWED_ORIGINS` | CORS allowed origins | localhost:3000 | No |
+| `BCRYPT_ROUNDS` | Password hashing rounds | 12 | No |
+
+### Database Configuration
+
+The application uses MongoDB with the following collections:
+- `users` - User accounts and profiles
+- `booths` - Voting booth configurations
+- `votes` - Individual vote records
+
+### Security Configuration
+
+- **Rate Limiting**: Configurable limits for different endpoints
+- **Session Security**: Secure cookie settings for production
+- **CORS**: Configurable origins for cross-origin requests
+- **CSP**: Content Security Policy headers
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run specific test file
+npm test -- controllers/userController.test.js
+```
+
+## 📝 Logging
+
+The application includes comprehensive logging:
+- Request/response logging with Morgan
+- Error logging with stack traces
+- Security event logging
+- Performance monitoring logs
+
+Logs are stored in the `logs/` directory:
+- `app.log` - General application logs
+- `error.log` - Error logs only
+- `access.log` - HTTP access logs
+
+## 🔧 Maintenance Scripts
+
+### Database Migration
+```bash
+npm run migrate
+```
+
+### Database Seeding
+```bash
+npm run seed
+```
+
+### Database Cleanup
+```bash
+node scripts/cleanup.js
+```
+
+### Database Backup
+```bash
+node scripts/backup.js
+```
+
+## 📈 Monitoring and Health Checks
+
+The application includes built-in monitoring:
+
+- **Health Check Endpoint**: `GET /health`
+- **Performance Metrics**: Memory usage, response times
+- **Error Tracking**: Automatic error logging and reporting
+- **Uptime Monitoring**: Process monitoring with PM2
+
+## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+2. Create a feature branch: `git checkout -b feature-name`
+3. Commit changes: `git commit -am 'Add feature'`
+4. Push to branch: `git push origin feature-name`
+5. Submit a pull request
 
-## Troubleshooting
+### Code Standards
+- ESLint configuration for code quality
+- Prettier for code formatting
+- Husky for pre-commit hooks
+- Jest for testing
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🆘 Troubleshooting
 
 ### Common Issues
 
-1. **MongoDB Connection Error**
-   - Ensure MongoDB is running
-   - Check MONGODB_URI in .env file
-   - Verify network connectivity
+**MongoDB Connection Issues**
+```bash
+# Check MongoDB status
+mongosh --eval "db.runCommand('ping')"
 
-2. **JWT Authentication Failed**
-   - Check JWT_SECRET in .env
-   - Clear browser cookies and login again
+# Verify connection string
+echo $MONGODB_URL
+```
 
-3. **Port Already in Use**
-   - Change PORT in .env file
-   - Kill process using the port: `lsof -ti:3000 | xargs kill`
+**JWT Token Issues**
+```bash
+# Verify JWT secrets are set
+echo $JWT_SECRET
+echo $JWT_REFRESH_SECRET
+```
 
-4. **CSS Not Loading**
-   - Run `npm run build:css`
-   - Check static file serving configuration
+**Port Already in Use**
+```bash
+# Find process using port
+lsof -ti:3000
 
-## License
+# Kill process
+kill -9 <PID>
+```
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+### Performance Optimization
 
-## Support
+1. **Database Indexes**: Ensure proper indexing for queries
+2. **Connection Pooling**: Configure MongoDB connection pool
+3. **Caching**: Implement Redis for session storage
+4. **Static Assets**: Use CDN for static file serving
+5. **Compression**: Enable gzip compression
 
-For support, please create an issue in the GitHub repository or contact the maintainers.
+### Security Checklist
+
+- [ ] Update all dependencies regularly
+- [ ] Use strong JWT secrets (32+ characters)
+- [ ] Enable HTTPS in production
+- [ ] Configure proper CORS origins
+- [ ] Set up proper firewall rules
+- [ ] Monitor for security vulnerabilities
+- [ ] Regular security audits with `npm audit`
+
+## 📞 Support
+
+For support and questions:
+- Create an issue on GitHub
+- Check existing documentation
+- Review the troubleshooting guide
+- Contact the development team
 
 ---
 
-**Made with ❤️ for secure and transparent voting**
-
-Welcome to the Voting App! This is a modern, secure, and user-friendly web application for online voting, built with Node.js, Express, MongoDB, EJS, and Tailwind CSS.
-
-## Features
-- User registration and login (Aadhar number as username)
-- Admin and voter roles
-- Candidate management (add, update, delete)
-- Secure voting (one vote per user, admins cannot vote)
-- Real-time results display
-- Beautiful, responsive UI with Tailwind CSS
-- JWT-based authentication and authorization
-
-## Getting Started
-
-### Prerequisites
-- Node.js & npm
-- MongoDB (local or cloud)
-
-### Installation
-1. Clone this repository:
-   ```bash
-   git clone <your-repo-url>
-   cd votingApp
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Set up your `.env` file:
-   ```env
-   MONGODB_URI=<your-mongodb-uri>
-   JWT_SECRET=<your-secret-key>
-   PORT=3000
-   ```
-4. Start the server:
-   ```bash
-   npm start
-   ```
-5. Open your browser and go to `http://localhost:3000`
-
-## Usage
-- Register as a voter or admin using your Aadhar number.
-- Login to access your profile and vote for candidates.
-- Admins can manage candidates.
-- View live results and candidate lists.
-
-## Folder Structure
-```
-votingApp/
-├── controllers/
-├── middleware/
-├── models/
-├── public/
-├── routes/
-├── views/
-├── server.js
-├── package.json
-├── README.md
-```
-
-## Tech Stack
-- Node.js
-- Express
-- MongoDB & Mongoose
-- EJS (server-side rendering)
-- Tailwind CSS (modern UI)
-- JWT (authentication)
-
-## Contributing
-Pull requests are welcome! For major changes, please open an issue first to discuss what you would like to change.
-
-## License
-This project is licensed under the ISC License.
-
----
-
-Enjoy secure and easy online voting! 🚀
-
-//possible errors 
-
-1. tailwind cli not installed properly so using tailwind cdn
-2. adhar number throws err when trying to register {sorted just success and err log to be on register page}
-3. login not performing well { logic fixed message for login succesful}
+**Made with ❤️ for secure, transparent voting**
