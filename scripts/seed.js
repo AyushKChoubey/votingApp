@@ -9,13 +9,15 @@ async function seed() {
     try {
         console.log('🌱 Starting database seeding...');
         
-        // Connect to MongoDB
-        await mongoose.connect(process.env.MONGODB_URL, {
+        // Connect to MongoDB using the same logic as db.js
+        const mongoURL = process.env.MONGODB_URL || process.env.MONGODB_URL_LOCAL || 'mongodb://localhost:27017/votingApp';
+        await mongoose.connect(mongoURL, {
             useNewUrlParser: true,
             useUnifiedTopology: true
         });
         
         console.log('✅ Connected to MongoDB');
+        console.log(`📍 Database URL: ${mongoURL}`);
         
         // Clear existing data (WARNING: This will delete all data!)
         if (process.env.NODE_ENV !== 'production') {
@@ -44,16 +46,18 @@ async function seed() {
         // Create test users
         console.log('👥 Creating test users...');
         const testUsers = [];
-        for (let i = 1; i <= 5; i++) {
+        const userNames = ['Alice Smith', 'Bob Johnson', 'Carol Williams', 'David Brown', 'Emma Davis'];
+        
+        for (let i = 0; i < 5; i++) {
             const user = new User({
-                name: `Test User ${i}`,
-                email: `user${i}@test.com`,
+                name: userNames[i],
+                email: `user${i + 1}@test.com`,
                 password: 'TestPass123!',
                 role: 'voter',
                 isEmailVerified: true,
                 profile: {
-                    bio: `This is test user ${i}`,
-                    organization: `Test Organization ${i}`
+                    bio: `This is a test user profile for ${userNames[i]}`,
+                    organization: `Test Organization`
                 }
             });
             await user.save();

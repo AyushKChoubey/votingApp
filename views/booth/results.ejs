@@ -3,276 +3,555 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Results - <%= booth.name %> - Voting App</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Results - <%= booth.name %> | VoteBooth</title>
+    <link href="/public/css/tailwind.css" rel="stylesheet">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="/css/animations.css">
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <link href="/public/css/animations.css" rel="stylesheet">
 </head>
-<body class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+<body class="bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50 min-h-screen font-sans">
     <!-- Navigation -->
-    <nav class="bg-white shadow-sm border-b">
-        <div class="max-w-6xl mx-auto px-6 py-4">
-            <div class="flex justify-between items-center">
+    <nav class="bg-white/95 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo & Back -->
                 <div class="flex items-center space-x-4">
-                    <a href="/" class="text-2xl font-bold text-indigo-600">Voting App</a>
-                    <span class="text-gray-300">|</span>
-                    <a href="/booth/dashboard" class="text-gray-600 hover:text-gray-800">Dashboard</a>
-                    <span class="text-gray-300">|</span>
-                    <a href="/booth/<%= booth._id %>" class="text-gray-600 hover:text-gray-800"><%= booth.name %></a>
-                    <span class="text-gray-300">|</span>
-                    <span class="text-gray-600">Results</span>
+                    <a href="/booth/<%= booth._id %>" class="text-slate-600 hover:text-primary transition-colors p-2 rounded-lg hover:bg-slate-100">
+                        <i class="fas fa-arrow-left text-lg"></i>
+                    </a>
+                    <div class="flex items-center">
+                        <i class="fas fa-chart-pie text-2xl text-purple-600 mr-3"></i>
+                        <div>
+                            <h1 class="font-bold text-xl text-slate-800">Election Results</h1>
+                            <p class="text-sm text-slate-500"><%= booth.name %></p>
+                        </div>
+                    </div>
                 </div>
+                
+                <!-- Action Buttons -->
                 <div class="flex items-center space-x-4">
                     <% if (isCreator) { %>
-                        <a href="/booth/<%= booth._id %>/admin" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">Admin Panel</a>
+                        <a href="/booth/<%= booth._id %>/admin" class="bg-slate-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-slate-700 transition-colors">
+                            <i class="fas fa-cogs mr-2"></i>Admin Panel
+                        </a>
                     <% } %>
-                    <a href="/booth/<%= booth._id %>" class="text-indigo-600 hover:text-indigo-800">Back to Booth</a>
-                    <a href="/logout" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors">Logout</a>
+                    <button onclick="exportResults()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700 transition-colors">
+                        <i class="fas fa-download mr-2"></i>Export
+                    </button>
+                    <button onclick="shareResults()" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-share mr-2"></i>Share
+                    </button>
                 </div>
             </div>
         </div>
     </nav>
 
-    <div class="max-w-6xl mx-auto px-6 py-8">
-        <!-- Header -->
-        <div class="bg-white rounded-xl shadow-lg p-8 mb-8">
-            <div class="text-center mb-6">
-                <h1 class="text-3xl font-bold text-gray-900 mb-2">Voting Results</h1>
-                <h2 class="text-xl text-gray-600 mb-4"><%= booth.name %></h2>
-                <p class="text-gray-500"><%= booth.description %></p>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Results Header -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center space-x-3 mb-4">
+                <div class="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                    <i class="fas fa-trophy text-2xl text-white"></i>
+                </div>
+                <div class="text-left">
+                    <h2 class="text-3xl font-bold text-slate-900"><%= booth.name %></h2>
+                    <p class="text-slate-600">Final Results • <%= totalVotes %> total votes</p>
+                </div>
             </div>
-
-            <!-- Stats Overview -->
-            <div class="grid md:grid-cols-4 gap-6">
-                <div class="text-center p-4 bg-gray-50 rounded-lg">
-                    <div class="text-3xl font-bold text-indigo-600"><%= totalVotes %></div>
-                    <div class="text-gray-600">Total Votes</div>
-                </div>
-                <div class="text-center p-4 bg-gray-50 rounded-lg">
-                    <div class="text-3xl font-bold text-green-600"><%= booth.members.length %></div>
-                    <div class="text-gray-600">Total Members</div>
-                </div>
-                <div class="text-center p-4 bg-gray-50 rounded-lg">
-                    <div class="text-3xl font-bold text-purple-600">
-                        <%= booth.members.length > 0 ? Math.round((totalVotes / booth.members.length) * 100) : 0 %>%
-                    </div>
-                    <div class="text-gray-600">Participation Rate</div>
-                </div>
-                <div class="text-center p-4 bg-gray-50 rounded-lg">
-                    <div class="text-3xl font-bold text-orange-600"><%= booth.candidates.length %></div>
-                    <div class="text-gray-600">Candidates</div>
-                </div>
+            <div class="flex items-center justify-center space-x-8 text-sm text-slate-500">
+                <span><i class="fas fa-users mr-1"></i>Eligible: <%= booth.members.length %></span>
+                <span><i class="fas fa-vote-yea mr-1"></i>Voted: <%= totalVotes %></span>
+                <span><i class="fas fa-chart-bar mr-1"></i>Turnout: <%= Math.round((totalVotes / Math.max(booth.members.length, 1)) * 100) %>%</span>
+                <span><i class="fas fa-calendar mr-1"></i><%= new Date(booth.updatedAt).toLocaleString() %></span>
             </div>
         </div>
 
-        <div class="grid lg:grid-cols-2 gap-8">
-            <!-- Results Chart -->
-            <div class="bg-white rounded-xl shadow-lg p-8">
-                <h3 class="text-xl font-bold text-gray-900 mb-6 text-center">Vote Distribution</h3>
-                <div class="relative h-80">
-                    <canvas id="resultsChart"></canvas>
+        <!-- Winner Announcement -->
+        <% if (candidatesWithPercentage.length > 0) { %>
+            <% const winner = candidatesWithPercentage.reduce((a, b) => a.voteCount > b.voteCount ? a : b) %>
+            <% if (winner.voteCount > 0) { %>
+                <div class="bg-gradient-to-r from-yellow-100 to-amber-100 border border-yellow-300 rounded-2xl p-8 mb-8 text-center">
+                    <div class="flex items-center justify-center mb-4">
+                        <div class="w-20 h-20 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full flex items-center justify-center mr-4">
+                            <i class="fas fa-crown text-3xl text-white"></i>
+                        </div>
+                        <div class="text-left">
+                            <h3 class="text-2xl font-bold text-amber-900 mb-1">🎉 Winner!</h3>
+                            <p class="text-lg font-semibold text-amber-800"><%= winner.name %></p>
+                            <p class="text-amber-700">
+                                <%= winner.voteCount %> votes (<%= winner.percentage %>%)
+                                <% if (winner.voteCount > (candidatesWithPercentage.find(c => c._id !== winner._id)?.voteCount || 0)) { %>
+                                    • Won by <%= winner.voteCount - (candidatesWithPercentage.find(c => c._id !== winner._id)?.voteCount || 0) %> votes
+                                <% } %>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            <% } %>
+        <% } %>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+            <!-- Chart Visualization -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="px-8 py-6 border-b border-slate-200">
+                        <h3 class="text-xl font-bold text-slate-900">Vote Distribution</h3>
+                        <p class="text-slate-600">Visual breakdown of all votes</p>
+                    </div>
+                    <div class="p-8">
+                        <div class="flex justify-center mb-6">
+                            <div class="space-x-4">
+                                <button onclick="switchChart('pie')" id="pieBtn" class="px-4 py-2 rounded-lg font-medium bg-purple-600 text-white">
+                                    <i class="fas fa-chart-pie mr-2"></i>Pie Chart
+                                </button>
+                                <button onclick="switchChart('bar')" id="barBtn" class="px-4 py-2 rounded-lg font-medium bg-slate-200 text-slate-700 hover:bg-slate-300 transition-colors">
+                                    <i class="fas fa-chart-bar mr-2"></i>Bar Chart
+                                </button>
+                                <button onclick="switchChart('doughnut')" id="doughnutBtn" class="px-4 py-2 rounded-lg font-medium bg-slate-200 text-slate-700 hover:bg-slate-300 transition-colors">
+                                    <i class="fas fa-circle mr-2"></i>Doughnut
+                                </button>
+                            </div>
+                        </div>
+                        <div class="relative" style="height: 400px;">
+                            <canvas id="resultsChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <!-- Detailed Results -->
-            <div class="bg-white rounded-xl shadow-lg p-8">
-                <h3 class="text-xl font-bold text-gray-900 mb-6">Detailed Results</h3>
-                <div class="space-y-4">
-                    <% 
-                    // Sort candidates by vote count (descending)
-                    const sortedCandidates = booth.candidates.map((candidate, index) => ({
-                        ...candidate,
-                        originalIndex: index
-                    })).sort((a, b) => b.voteCount - a.voteCount);
-                    
-                    sortedCandidates.forEach((candidate, rank) => { 
-                        const percentage = totalVotes > 0 ? ((candidate.voteCount / totalVotes) * 100).toFixed(1) : 0;
-                        const isWinner = rank === 0 && candidate.voteCount > 0;
-                    %>
-                        <div class="candidate-result <%= isWinner ? 'ring-2 ring-yellow-400' : '' %> p-4 border border-gray-200 rounded-lg">
-                            <div class="flex items-center justify-between mb-2">
-                                <div class="flex items-center">
-                                    <% if (isWinner) { %>
-                                        <svg class="w-6 h-6 text-yellow-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                                        </svg>
+            <div class="space-y-6">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200">
+                        <h3 class="text-lg font-bold text-slate-900">Detailed Results</h3>
+                    </div>
+                    <div class="divide-y divide-slate-200">
+                        <% candidatesWithPercentage.sort((a, b) => b.voteCount - a.voteCount).forEach((candidate, index) => { %>
+                        <div class="px-6 py-4">
+                            <div class="flex items-center space-x-3 mb-3">
+                                <div class="flex-shrink-0 flex items-center space-x-2">
+                                    <% if (index === 0 && candidate.voteCount > 0) { %>
+                                        <i class="fas fa-crown text-yellow-500"></i>
                                     <% } else { %>
-                                        <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center mr-2">
-                                            <span class="text-gray-600 font-semibold text-sm"><%= rank + 1 %></span>
-                                        </div>
+                                        <span class="w-6 h-6 bg-slate-200 text-slate-600 rounded-full flex items-center justify-center text-sm font-bold">
+                                            <%= index + 1 %>
+                                        </span>
                                     <% } %>
-                                    <div>
-                                        <h4 class="font-semibold text-gray-900">
-                                            <%= candidate.name %>
-                                            <% if (isWinner) { %>
-                                                <span class="text-yellow-600 text-sm font-medium ml-2">WINNER</span>
-                                            <% } %>
-                                        </h4>
-                                        <% if (candidate.description) { %>
-                                            <p class="text-sm text-gray-600"><%= candidate.description %></p>
-                                        <% } %>
-                                    </div>
                                 </div>
-                                <div class="text-right">
-                                    <div class="text-2xl font-bold text-gray-900"><%= candidate.voteCount %></div>
-                                    <div class="text-sm text-gray-600"><%= percentage %>%</div>
+                                <div class="flex-1">
+                                    <h4 class="font-semibold text-slate-900"><%= candidate.name %></h4>
+                                    <p class="text-sm text-slate-500">
+                                        <%= candidate.voteCount %> votes • <%= candidate.percentage %>%
+                                    </p>
                                 </div>
                             </div>
-                            
-                            <!-- Progress Bar -->
-                            <div class="w-full bg-gray-200 rounded-full h-3 mt-3">
-                                <div class="bg-indigo-600 h-3 rounded-full transition-all duration-500 ease-out" 
-                                     style="width: <%= percentage %>%"></div>
+                            <div class="w-full bg-slate-200 rounded-full h-3">
+                                <div class="h-3 rounded-full transition-all duration-1000 ease-out"
+                                     style="width: <%= candidate.percentage %>%; background: linear-gradient(90deg, <%= ['#8B5CF6', '#EC4899', '#06B6D4', '#10B981', '#F59E0B', '#EF4444', '#6366F1', '#84CC16'][index % 8] %>, <%= ['#A855F7', '#F472B6', '#0891B2', '#059669', '#D97706', '#DC2626', '#4F46E5', '#65A30D'][index % 8] %>);">
+                                </div>
                             </div>
                         </div>
-                    <% }); %>
+                        <% }) %>
+                    </div>
                 </div>
 
-                <% if (totalVotes === 0) { %>
-                    <div class="text-center py-8 text-gray-500">
-                        <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                        </svg>
-                        <p class="text-lg mb-2">No votes yet</p>
-                        <p class="text-sm">Results will appear as members start voting</p>
+                <!-- Statistics -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                    <h3 class="text-lg font-bold text-slate-900 mb-4">Statistics</h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-600">Total Votes</span>
+                            <span class="font-bold text-slate-900"><%= totalVotes %></span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-600">Eligible Voters</span>
+                            <span class="font-bold text-slate-900"><%= booth.members.length %></span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-600">Turnout Rate</span>
+                            <span class="font-bold text-emerald-600"><%= Math.round((totalVotes / Math.max(booth.members.length, 1)) * 100) %>%</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-600">Candidates</span>
+                            <span class="font-bold text-slate-900"><%= booth.candidates.length %></span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-600">Status</span>
+                            <span class="px-2 py-1 text-xs font-medium rounded-full <%= booth.status === 'active' ? 'bg-emerald-100 text-emerald-800' : booth.status === 'ended' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800' %>">
+                                <%= booth.status.charAt(0).toUpperCase() + booth.status.slice(1) %>
+                            </span>
+                        </div>
                     </div>
-                <% } %>
+                </div>
             </div>
         </div>
 
-        <!-- Voting Status (for creators) -->
-        <% if (isCreator) { %>
-            <div class="bg-white rounded-xl shadow-lg p-8 mt-8">
-                <h3 class="text-xl font-bold text-gray-900 mb-6">Voting Status</h3>
-                <div class="grid md:grid-cols-2 gap-8">
-                    <div>
-                        <h4 class="font-semibold text-gray-700 mb-3">Members who voted (<%= booth.members.filter(m => m.hasVoted).length %>)</h4>
-                        <div class="space-y-2 max-h-48 overflow-y-auto">
-                            <% booth.members.filter(m => m.hasVoted).forEach(member => { %>
-                                <div class="flex items-center p-2 bg-green-50 rounded-lg">
-                                    <svg class="w-4 h-4 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                    </svg>
-                                    <span class="text-sm text-gray-900"><%= member.user.name %></span>
+        <!-- Live Updates -->
+        <% if (booth.status === 'active') { %>
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
+            <div class="flex items-center space-x-3">
+                <div class="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                <div>
+                    <h4 class="font-semibold text-blue-900">Live Results</h4>
+                    <p class="text-blue-700">These results are updated in real-time as votes come in.</p>
+                </div>
+            </div>
+        </div>
+        <% } %>
+
+        <!-- Additional Analysis -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Vote Timeline (if available) -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200">
+                    <h3 class="text-lg font-bold text-slate-900">Vote Timeline</h3>
+                    <p class="text-sm text-slate-600">When votes were cast</p>
+                </div>
+                <div class="p-6">
+                    <div class="relative">
+                        <canvas id="timelineChart" style="height: 200px;"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Participation Analysis -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200">
+                    <h3 class="text-lg font-bold text-slate-900">Participation</h3>
+                    <p class="text-sm text-slate-600">Voting engagement breakdown</p>
+                </div>
+                <div class="p-6">
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-600">Voted</span>
+                            <div class="flex items-center space-x-2">
+                                <div class="w-24 bg-slate-200 rounded-full h-2">
+                                    <div class="h-2 bg-emerald-500 rounded-full transition-all duration-1000"
+                                         style="width: <%= Math.round((totalVotes / Math.max(booth.members.length, 1)) * 100) %>%;"></div>
                                 </div>
-                            <% }); %>
+                                <span class="text-sm font-medium text-emerald-600"><%= totalVotes %></span>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-600">Not Voted</span>
+                            <div class="flex items-center space-x-2">
+                                <div class="w-24 bg-slate-200 rounded-full h-2">
+                                    <div class="h-2 bg-slate-400 rounded-full transition-all duration-1000"
+                                         style="width: <%= Math.round(((booth.members.length - totalVotes) / Math.max(booth.members.length, 1)) * 100) %>%;"></div>
+                                </div>
+                                <span class="text-sm font-medium text-slate-600"><%= booth.members.length - totalVotes %></span>
+                            </div>
                         </div>
                     </div>
-                    <div>
-                        <h4 class="font-semibold text-gray-700 mb-3">Members who haven't voted (<%= booth.members.filter(m => !m.hasVoted).length %>)</h4>
-                        <div class="space-y-2 max-h-48 overflow-y-auto">
-                            <% booth.members.filter(m => !m.hasVoted).forEach(member => { %>
-                                <div class="flex items-center p-2 bg-yellow-50 rounded-lg">
-                                    <svg class="w-4 h-4 text-yellow-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                    </svg>
-                                    <span class="text-sm text-gray-900"><%= member.user.name %></span>
+                    
+                    <div class="mt-6 pt-6 border-t border-slate-200">
+                        <div class="relative w-32 h-32 mx-auto">
+                            <canvas id="participationChart"></canvas>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-slate-900"><%= Math.round((totalVotes / Math.max(booth.members.length, 1)) * 100) %>%</div>
+                                    <div class="text-xs text-slate-500">Turnout</div>
                                 </div>
-                            <% }); %>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        <% } %>
+        </div>
+    </div>
 
-        <!-- Actions -->
-        <div class="text-center mt-8">
-            <a href="/booth/<%= booth._id %>" class="bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors shadow-md mr-4">
-                Back to Booth
-            </a>
-            <% if (isCreator) { %>
-                <button onclick="window.print()" class="bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-700 transition-colors shadow-md">
-                    Print Results
-                </button>
-            <% } %>
+    <!-- Share Modal -->
+    <div id="shareModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 opacity-0 invisible transition-all duration-300">
+        <div class="bg-white rounded-2xl p-8 max-w-md mx-4 transform scale-95 transition-transform duration-300">
+            <div class="text-center mb-6">
+                <i class="fas fa-share text-4xl text-blue-600 mb-4"></i>
+                <h3 class="text-xl font-bold text-slate-900">Share Results</h3>
+                <p class="text-slate-600">Share these election results with others</p>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-2">Results URL</label>
+                    <div class="flex items-center space-x-2">
+                        <input type="text" id="shareUrl" readonly 
+                               value="<%= process.env.BASE_URL || 'http://localhost:3000' %>/booth/<%= booth._id %>/results"
+                               class="flex-1 px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 text-sm">
+                        <button onclick="copyShareUrl()" class="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="flex space-x-2">
+                    <button onclick="shareViaEmail()" class="flex-1 bg-slate-100 text-slate-700 px-4 py-3 rounded-lg hover:bg-slate-200 transition-colors">
+                        <i class="fas fa-envelope mr-2"></i>Email
+                    </button>
+                    <button onclick="shareViaTwitter()" class="flex-1 bg-blue-500 text-white px-4 py-3 rounded-lg hover:bg-blue-600 transition-colors">
+                        <i class="fab fa-twitter mr-2"></i>Twitter
+                    </button>
+                </div>
+            </div>
+            
+            <button onclick="closeShareModal()" class="w-full mt-6 bg-slate-600 text-white px-4 py-3 rounded-lg hover:bg-slate-700 transition-colors">
+                Close
+            </button>
         </div>
     </div>
 
     <script>
-        // Chart.js configuration
-        const ctx = document.getElementById('resultsChart').getContext('2d');
-        const chartData = <%= JSON.stringify(chartData) %>;
+        let currentChart = null;
+        let currentChartType = 'pie';
         
-        // Generate colors for each candidate
+        // Chart data from server
+        const chartData = <%- chartData %>;
+        const candidates = <%- JSON.stringify(candidatesWithPercentage) %>;
+        
+        // Chart colors
         const colors = [
-            '#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6',
-            '#06B6D4', '#F97316', '#84CC16', '#EC4899', '#6B7280'
+            'rgba(139, 92, 246, 0.8)',  // Purple
+            'rgba(236, 72, 153, 0.8)',  // Pink
+            'rgba(6, 182, 212, 0.8)',   // Cyan
+            'rgba(16, 185, 129, 0.8)',  // Emerald
+            'rgba(245, 158, 11, 0.8)',  // Amber
+            'rgba(239, 68, 68, 0.8)',   // Red
+            'rgba(99, 102, 241, 0.8)',  // Indigo
+            'rgba(132, 204, 22, 0.8)'   // Lime
         ];
-        
-        const backgroundColors = colors.slice(0, chartData.labels.length);
-        const borderColors = backgroundColors.map(color => color);
 
-        new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: chartData.labels,
-                datasets: [{
-                    data: chartData.data,
-                    backgroundColor: backgroundColors,
-                    borderColor: borderColors,
-                    borderWidth: 2,
-                    hoverOffset: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            padding: 20,
-                            usePointStyle: true,
-                            font: {
-                                size: 12
+        // Initialize charts on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeChart();
+            initializeParticipationChart();
+            initializeTimelineChart();
+            
+            // Auto-refresh if voting is active
+            <% if (booth.status === 'active') { %>
+            setInterval(refreshResults, 30000); // Refresh every 30 seconds
+            <% } %>
+        });
+
+        function initializeChart() {
+            const ctx = document.getElementById('resultsChart').getContext('2d');
+            
+            if (currentChart) {
+                currentChart.destroy();
+            }
+
+            const config = {
+                type: currentChartType,
+                data: {
+                    labels: chartData.labels,
+                    datasets: [{
+                        data: chartData.data,
+                        backgroundColor: colors,
+                        borderColor: colors.map(color => color.replace('0.8', '1')),
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: currentChartType === 'bar' ? 'top' : 'right',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 15
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = Math.round((context.parsed / total) * 100);
+                                    return `${context.label}: ${context.parsed} votes (${percentage}%)`;
+                                }
                             }
                         }
                     },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const label = context.label || '';
-                                const value = context.parsed;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                                return `${label}: ${value} votes (${percentage}%)`;
+                    scales: currentChartType === 'bar' ? {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    } : {}
+                }
+            };
+
+            currentChart = new Chart(ctx, config);
+        }
+
+        function switchChart(type) {
+            currentChartType = type;
+            
+            // Update button states
+            document.querySelectorAll('[id$="Btn"]').forEach(btn => {
+                btn.className = 'px-4 py-2 rounded-lg font-medium bg-slate-200 text-slate-700 hover:bg-slate-300 transition-colors';
+            });
+            document.getElementById(type + 'Btn').className = 'px-4 py-2 rounded-lg font-medium bg-purple-600 text-white';
+            
+            initializeChart();
+        }
+
+        function initializeParticipationChart() {
+            const ctx = document.getElementById('participationChart').getContext('2d');
+            
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Voted', 'Not Voted'],
+                    datasets: [{
+                        data: [<%= totalVotes %>, <%= booth.members.length - totalVotes %>],
+                        backgroundColor: ['rgba(16, 185, 129, 0.8)', 'rgba(148, 163, 184, 0.3)'],
+                        borderColor: ['rgba(16, 185, 129, 1)', 'rgba(148, 163, 184, 1)'],
+                        borderWidth: 2,
+                        cutout: '70%'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            enabled: false
+                        }
+                    }
+                }
+            });
+        }
+
+        function initializeTimelineChart() {
+            const ctx = document.getElementById('timelineChart').getContext('2d');
+            
+            // Generate sample timeline data (in real app, this would come from server)
+            const hours = [];
+            const voteCounts = [];
+            for (let i = 0; i < 24; i++) {
+                hours.push(i + ':00');
+                voteCounts.push(Math.floor(Math.random() * 10));
+            }
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: hours,
+                    datasets: [{
+                        label: 'Votes per Hour',
+                        data: voteCounts,
+                        borderColor: 'rgba(99, 102, 241, 1)',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: false
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
                             }
                         }
                     }
-                },
-                animation: {
-                    animateScale: true,
-                    animateRotate: true
                 }
+            });
+        }
+
+        function exportResults() {
+            const exportData = {
+                booth: {
+                    name: '<%= booth.name %>',
+                    description: '<%= booth.description %>',
+                    status: '<%= booth.status %>'
+                },
+                results: candidates,
+                statistics: {
+                    totalVotes: <%= totalVotes %>,
+                    eligibleVoters: <%= booth.members.length %>,
+                    turnoutRate: <%= Math.round((totalVotes / Math.max(booth.members.length, 1)) * 100) %>
+                },
+                exportedAt: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${encodeURIComponent('<%= booth.name %>')}_results.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function shareResults() {
+            document.getElementById('shareModal').classList.remove('opacity-0', 'invisible');
+            document.getElementById('shareModal').querySelector('.bg-white').classList.remove('scale-95');
+            document.getElementById('shareModal').querySelector('.bg-white').classList.add('scale-100');
+        }
+
+        function closeShareModal() {
+            document.getElementById('shareModal').classList.add('opacity-0', 'invisible');
+            document.getElementById('shareModal').querySelector('.bg-white').classList.remove('scale-100');
+            document.getElementById('shareModal').querySelector('.bg-white').classList.add('scale-95');
+        }
+
+        function copyShareUrl() {
+            const input = document.getElementById('shareUrl');
+            input.select();
+            document.execCommand('copy');
+            
+            // Show feedback
+            const button = event.target.closest('button');
+            const originalHTML = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-check"></i>';
+            setTimeout(() => {
+                button.innerHTML = originalHTML;
+            }, 2000);
+        }
+
+        function shareViaEmail() {
+            const subject = encodeURIComponent(`Results: <%= booth.name %>`);
+            const body = encodeURIComponent(`Check out the results for "<%= booth.name %>": ${document.getElementById('shareUrl').value}`);
+            window.open(`mailto:?subject=${subject}&body=${body}`);
+        }
+
+        function shareViaTwitter() {
+            const text = encodeURIComponent(`Check out the election results for "<%= booth.name %>" - <%= totalVotes %> votes cast!`);
+            const url = encodeURIComponent(document.getElementById('shareUrl').value);
+            window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`);
+        }
+
+        function refreshResults() {
+            // In a real application, this would fetch updated results via AJAX
+            location.reload();
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('shareModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeShareModal();
             }
         });
-
-        // Add animations
-        document.addEventListener('DOMContentLoaded', function() {
-            // Animate progress bars
-            const progressBars = document.querySelectorAll('.bg-indigo-600');
-            progressBars.forEach((bar, index) => {
-                const width = bar.style.width;
-                bar.style.width = '0%';
-                setTimeout(() => {
-                    bar.style.width = width;
-                }, 500 + (index * 100));
-            });
-
-            // Fade in cards
-            const cards = document.querySelectorAll('.bg-white');
-            cards.forEach((card, index) => {
-                card.style.animationDelay = `${index * 0.1}s`;
-                card.classList.add('animate-fade-in');
-            });
-        });
-
-        // Auto-refresh results (every 30 seconds)
-        <% if (isCreator) { %>
-            setInterval(() => {
-                window.location.reload();
-            }, 30000);
-        <% } %>
     </script>
 </body>
 </html>

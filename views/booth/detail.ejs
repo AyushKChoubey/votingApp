@@ -3,249 +3,319 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= booth.name %> - Voting App</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="/css/animations.css">
+    <title><%= booth.name %> | VoteBooth</title>
+    <link href="/public/css/tailwind.css" rel="stylesheet">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/public/css/animations.css" rel="stylesheet">
 </head>
-<body class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+<body class="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 min-h-screen font-sans">
     <!-- Navigation -->
-    <nav class="bg-white shadow-sm border-b">
-        <div class="max-w-6xl mx-auto px-6 py-4">
-            <div class="flex justify-between items-center">
+    <nav class="bg-white/95 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo & Back -->
                 <div class="flex items-center space-x-4">
-                    <a href="/" class="text-2xl font-bold text-indigo-600">Voting App</a>
-                    <span class="text-gray-300">|</span>
-                    <a href="/booth/dashboard" class="text-gray-600 hover:text-gray-800">Dashboard</a>
-                    <span class="text-gray-300">|</span>
-                    <span class="text-gray-600"><%= booth.name %></span>
+                    <a href="/booth/dashboard" class="text-slate-600 hover:text-primary transition-colors p-2 rounded-lg hover:bg-slate-100">
+                        <i class="fas fa-arrow-left text-lg"></i>
+                    </a>
+                    <div class="flex items-center">
+                        <i class="fas fa-vote-yea text-2xl text-primary mr-3"></i>
+                        <div>
+                            <h1 class="font-bold text-xl text-slate-800"><%= booth.name %></h1>
+                            <p class="text-sm text-slate-500">
+                                by <%= booth.creator.name %>
+                                <span class="ml-2 px-2 py-1 text-xs font-medium rounded-full <%= booth.status === 'active' ? 'bg-emerald-100 text-emerald-800' : booth.status === 'draft' ? 'bg-gray-100 text-gray-700' : booth.status === 'paused' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800' %>">
+                                    <%= booth.status.charAt(0).toUpperCase() + booth.status.slice(1) %>
+                                </span>
+                            </p>
+                        </div>
+                    </div>
                 </div>
+                
+                <!-- Action Buttons -->
                 <div class="flex items-center space-x-4">
                     <% if (isCreator) { %>
-                        <a href="/booth/<%= booth._id %>/admin" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">Admin Panel</a>
+                        <a href="/booth/<%= booth._id %>/admin" class="bg-slate-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-slate-700 transition-colors">
+                            <i class="fas fa-cogs mr-2"></i>Admin Panel
+                        </a>
                     <% } %>
-                    <a href="/booth/dashboard" class="text-indigo-600 hover:text-indigo-800">Back to Dashboard</a>
-                    <a href="/logout" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors">Logout</a>
+                    <% if (booth.settings.resultsVisibleToVoters || isCreator) { %>
+                        <a href="/booth/<%= booth._id %>/results" class="bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700 transition-colors">
+                            <i class="fas fa-chart-pie mr-2"></i>Results
+                        </a>
+                    <% } %>
                 </div>
             </div>
         </div>
     </nav>
 
-    <div class="max-w-4xl mx-auto px-6 py-8">
-        <!-- Booth Header -->
-        <div class="bg-white rounded-xl shadow-lg p-8 mb-8">
-            <div class="flex justify-between items-start mb-6">
-                <div class="flex-1">
-                    <h1 class="text-3xl font-bold text-gray-900 mb-2"><%= booth.name %></h1>
-                    <p class="text-gray-600 mb-4"><%= booth.description %></p>
-                    <div class="flex items-center space-x-6 text-sm text-gray-600">
-                        <div class="flex items-center">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
-                            </svg>
-                            <%= booth.members.length %>/<%= booth.maxMembers %> members
-                        </div>
-                        <div class="flex items-center">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                            </svg>
-                            <%= booth.candidates.length %> candidates
-                        </div>
-                        <div class="flex items-center">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            <span class="<%= booth.status === 'active' ? 'text-green-600' : 'text-red-600' %>">
-                                <%= booth.status.charAt(0).toUpperCase() + booth.status.slice(1) %>
-                            </span>
-                        </div>
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Booth Status Banner -->
+        <% if (booth.status !== 'active') { %>
+            <div class="mb-8 rounded-xl p-6 <%= booth.status === 'draft' ? 'bg-gray-50 border border-gray-200' : booth.status === 'paused' ? 'bg-amber-50 border border-amber-200' : 'bg-red-50 border border-red-200' %>">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas <%= booth.status === 'draft' ? 'fa-pause text-gray-500' : booth.status === 'paused' ? 'fa-pause text-amber-500' : 'fa-stop text-red-500' %> text-2xl"></i>
                     </div>
-                </div>
-                <div class="flex space-x-3">
-                    <a href="/booth/<%= booth._id %>/results" class="bg-purple-100 text-purple-700 px-4 py-2 rounded-lg hover:bg-purple-200 transition-colors">
-                        View Results
-                    </a>
-                </div>
-            </div>
-
-            <!-- Voting Status -->
-            <% if (hasVoted) { %>
-                <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
-                    <div class="flex items-center">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        <span class="font-medium">You have already voted in this booth!</span>
-                    </div>
-                    <p class="text-sm mt-1">Thank you for participating. You can view the results anytime.</p>
-                </div>
-            <% } else if (booth.status !== 'active') { %>
-                <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded-lg">
-                    <div class="flex items-center">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L12.732 4.5c-.77-.833-2.186-.833-2.956 0L1.858 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-                        </svg>
-                        <span class="font-medium">Voting is not active</span>
-                    </div>
-                    <p class="text-sm mt-1">This booth is currently <%= booth.status %>. Voting is not available at this time.</p>
-                </div>
-            <% } %>
-        </div>
-
-        <% if (!hasVoted && booth.status === 'active') { %>
-            <!-- Voting Section -->
-            <div class="bg-white rounded-xl shadow-lg p-8">
-                <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Cast Your Vote</h2>
-                <p class="text-gray-600 text-center mb-8">Select your preferred candidate and submit your vote. You can only vote once.</p>
-
-                <form id="voteForm" action="/booth/<%= booth._id %>/vote" method="POST">
-                    <div class="space-y-4 mb-8">
-                        <% booth.candidates.forEach((candidate, index) => { %>
-                            <div class="candidate-option">
-                                <label class="flex items-center p-6 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-indigo-300 hover:bg-indigo-50 transition-all duration-200">
-                                    <input type="radio" name="candidateIndex" value="<%= index %>" class="text-indigo-600 focus:ring-indigo-500 h-5 w-5">
-                                    <div class="ml-4 flex-1">
-                                        <div class="flex items-center justify-between">
-                                            <h3 class="text-lg font-semibold text-gray-900"><%= candidate.name %></h3>
-                                            <span class="text-indigo-600 font-medium">Option <%= index + 1 %></span>
-                                        </div>
-                                        <% if (candidate.description) { %>
-                                            <p class="text-gray-600 text-sm mt-1"><%= candidate.description %></p>
-                                        <% } %>
-                                    </div>
-                                </label>
-                            </div>
-                        <% }); %>
-                    </div>
-
-                    <div class="text-center">
-                        <button type="submit" disabled class="bg-indigo-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
-                            <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            Submit Vote
-                        </button>
-                        <p class="text-sm text-gray-500 mt-3">
-                            Your vote will be recorded securely and cannot be changed.
+                    <div class="ml-4">
+                        <h3 class="text-lg font-semibold <%= booth.status === 'draft' ? 'text-gray-700' : booth.status === 'paused' ? 'text-amber-700' : 'text-red-700' %> mb-1">
+                            <% if (booth.status === 'draft') { %>
+                                Booth Not Started Yet
+                            <% } else if (booth.status === 'paused') { %>
+                                Voting is Paused
+                            <% } else { %>
+                                Voting Has Ended
+                            <% } %>
+                        </h3>
+                        <p class="<%= booth.status === 'draft' ? 'text-gray-600' : booth.status === 'paused' ? 'text-amber-600' : 'text-red-600' %>">
+                            <% if (booth.status === 'draft') { %>
+                                The booth creator hasn't started voting yet. Please wait for them to activate the booth.
+                            <% } else if (booth.status === 'paused') { %>
+                                Voting has been temporarily paused by the booth creator. Please check back later.
+                            <% } else { %>
+                                This voting booth has been closed. You can view the results if they're available.
+                            <% } %>
                         </p>
                     </div>
-                </form>
-            </div>
-        <% } else { %>
-            <!-- Candidates Display (Read-only) -->
-            <div class="bg-white rounded-xl shadow-lg p-8">
-                <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Candidates</h2>
-
-                <div class="space-y-4">
-                    <% booth.candidates.forEach((candidate, index) => { %>
-                        <div class="p-6 border-2 border-gray-200 rounded-lg">
-                            <div class="flex items-center justify-between">
-                                <h3 class="text-lg font-semibold text-gray-900"><%= candidate.name %></h3>
-                                <span class="text-indigo-600 font-medium">Option <%= index + 1 %></span>
-                            </div>
-                            <% if (candidate.description) { %>
-                                <p class="text-gray-600 text-sm mt-1"><%= candidate.description %></p>
-                            <% } %>
-                            <% if (isCreator || booth.settings.resultsVisibleToVoters) { %>
-                                <div class="mt-3 flex items-center text-sm text-gray-600">
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                                    </svg>
-                                    <%= candidate.voteCount %> vote<%= candidate.voteCount !== 1 ? 's' : '' %>
-                                </div>
-                            <% } %>
-                        </div>
-                    <% }); %>
                 </div>
             </div>
         <% } %>
 
-        <!-- Members Section (for creators) -->
-        <% if (isCreator) { %>
-            <div class="bg-white rounded-xl shadow-lg p-8 mt-8">
-                <h2 class="text-xl font-bold text-gray-900 mb-4">Members (<%= booth.members.length %>)</h2>
-                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <% booth.members.forEach(member => { %>
-                        <div class="flex items-center p-3 bg-gray-50 rounded-lg">
-                            <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
-                                <span class="text-indigo-600 font-semibold text-sm">
-                                    <%= member.user.name.charAt(0).toUpperCase() %>
-                                </span>
+        <!-- Booth Info -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 mb-8 overflow-hidden">
+            <div class="px-8 py-6 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <h2 class="text-2xl font-bold text-slate-900 mb-2"><%= booth.name %></h2>
+                        <p class="text-slate-600 mb-4"><%= booth.description %></p>
+                        <div class="flex items-center space-x-6 text-sm text-slate-500">
+                            <span><i class="fas fa-users mr-2"></i><%= booth.members.length %> members</span>
+                            <span><i class="fas fa-vote-yea mr-2"></i><%= stats.totalVotes %> votes cast</span>
+                            <span><i class="fas fa-calendar mr-2"></i>Created <%= new Date(booth.createdAt).toLocaleDateString() %></span>
+                        </div>
+                    </div>
+                    <div class="ml-6">
+                        <div class="text-center">
+                            <div class="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-xl mb-2">
+                                <%= Math.round((stats.totalVotes / Math.max(booth.members.length, 1)) * 100) %>%
                             </div>
-                            <div class="flex-1 min-w-0">
-                                <div class="font-medium text-gray-900 truncate"><%= member.user.name %></div>
-                                <div class="flex items-center text-sm text-gray-500">
-                                    <% if (member.hasVoted) { %>
-                                        <svg class="w-3 h-3 text-green-500 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                        </svg>
-                                        Voted
-                                    <% } else { %>
-                                        <svg class="w-3 h-3 text-gray-400 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                        </svg>
-                                        Pending
-                                    <% } %>
+                            <p class="text-sm text-slate-600 font-medium">Participation</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <% if (booth.status === 'active' && votingStatus.allowed) { %>
+            <!-- Voting Section -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="px-8 py-6 border-b border-slate-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-xl font-bold text-slate-900">Cast Your Vote</h3>
+                            <p class="text-slate-600">
+                                <% if (hasVoted && !booth.settings.allowMultipleVotes) { %>
+                                    You have already voted in this booth.
+                                <% } else if (hasVoted) { %>
+                                    You can change your vote until voting ends.
+                                <% } else { %>
+                                    Choose your preferred candidate below.
+                                <% } %>
+                            </p>
+                        </div>
+                        <% if (hasVoted) { %>
+                            <div class="flex items-center space-x-2 text-emerald-600">
+                                <i class="fas fa-check-circle text-xl"></i>
+                                <span class="font-semibold">Voted</span>
+                            </div>
+                        <% } %>
+                    </div>
+                </div>
+
+                <div class="p-8">
+                    <form method="POST" action="/booth/<%= booth._id %>/vote" id="voteForm">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <% booth.candidates.forEach((candidate, index) => { %>
+                            <label for="candidate-<%= index %>" class="cursor-pointer">
+                                <div class="candidate-option border-2 border-slate-200 rounded-xl p-6 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group">
+                                    <div class="flex items-center space-x-4">
+                                        <input type="radio" 
+                                               id="candidate-<%= index %>" 
+                                               name="candidateId" 
+                                               value="<%= candidate._id %>" 
+                                               class="sr-only candidate-radio"
+                                               <% if (booth.settings.allowMultipleVotes === false && hasVoted) { %>disabled<% } %>>
+                                        <div class="radio-custom w-6 h-6 border-2 border-slate-300 rounded-full flex items-center justify-center group-hover:border-blue-500 transition-colors">
+                                            <div class="w-3 h-3 bg-blue-600 rounded-full opacity-0 radio-inner transition-opacity"></div>
+                                        </div>
+                                        <div class="flex-1">
+                                            <div class="flex items-center space-x-3 mb-2">
+                                                <div class="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                                                    <%= candidate.name.charAt(0).toUpperCase() %>
+                                                </div>
+                                                <div>
+                                                    <h4 class="text-lg font-semibold text-slate-900"><%= candidate.name %></h4>
+                                                    <% if (candidate.description) { %>
+                                                        <p class="text-sm text-slate-600"><%= candidate.description %></p>
+                                                    <% } %>
+                                                </div>
+                                            </div>
+                                            <% if (booth.settings.showVoteCount) { %>
+                                                <div class="flex items-center text-sm text-slate-500">
+                                                    <i class="fas fa-vote-yea mr-1"></i>
+                                                    <span><%= candidate.voteCount %> votes</span>
+                                                </div>
+                                            <% } %>
+                                        </div>
+                                    </div>
                                 </div>
+                            </label>
+                            <% }) %>
+                        </div>
+
+                        <% if (!hasVoted || booth.settings.allowMultipleVotes) { %>
+                            <div class="mt-8 flex justify-center">
+                                <button type="submit" 
+                                        id="voteButton"
+                                        disabled
+                                        class="bg-primary text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none">
+                                    <i class="fas fa-vote-yea mr-3"></i>
+                                    <%= hasVoted ? 'Change Vote' : 'Cast Vote' %>
+                                </button>
+                            </div>
+                        <% } %>
+                    </form>
+                </div>
+            </div>
+        <% } else if (!votingStatus.allowed) { %>
+            <!-- Voting Not Allowed Message -->
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-8 text-center">
+                <i class="fas fa-exclamation-triangle text-4xl text-amber-500 mb-4"></i>
+                <h3 class="text-xl font-semibold text-amber-800 mb-2">Voting Not Available</h3>
+                <p class="text-amber-700"><%= votingStatus.reason || 'Voting is currently not allowed in this booth.' %></p>
+            </div>
+        <% } %>
+
+        <!-- Members List (if booth allows) -->
+        <% if (booth.settings.showMembers || isCreator) { %>
+            <div class="mt-8 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="px-8 py-6 border-b border-slate-200">
+                    <h3 class="text-xl font-bold text-slate-900">Members (<%= booth.members.length %>)</h3>
+                    <p class="text-slate-600">People participating in this booth</p>
+                </div>
+                <div class="divide-y divide-slate-200">
+                    <% booth.members.forEach(member => { %>
+                    <div class="px-8 py-4 flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-medium">
+                                <%= member.user.name.charAt(0).toUpperCase() %>
+                            </div>
+                            <div>
+                                <p class="font-medium text-slate-900"><%= member.user.name %></p>
+                                <p class="text-sm text-slate-500">Joined <%= new Date(member.joinedAt).toLocaleDateString() %></p>
                             </div>
                         </div>
-                    <% }); %>
+                        <div class="flex items-center space-x-2">
+                            <% if (booth.settings.showVoteStatus || isCreator) { %>
+                                <span class="text-xs px-2 py-1 rounded-full <%= member.hasVoted ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600' %>">
+                                    <%= member.hasVoted ? 'Voted' : 'Not Voted' %>
+                                </span>
+                            <% } %>
+                            <% if (member.user._id.toString() === booth.creator._id.toString()) { %>
+                                <span class="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800">Creator</span>
+                            <% } %>
+                        </div>
+                    </div>
+                    <% }) %>
                 </div>
             </div>
         <% } %>
     </div>
 
-    <script>
-        // Enable/disable vote button based on selection
-        const radioButtons = document.querySelectorAll('input[name="candidateIndex"]');
-        const submitButton = document.querySelector('button[type="submit"]');
-        const candidateOptions = document.querySelectorAll('.candidate-option');
+    <!-- Vote Confirmation Modal -->
+    <div id="voteModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 opacity-0 invisible transition-all duration-300">
+        <div class="bg-white rounded-2xl p-8 max-w-md mx-4 transform scale-95 transition-transform duration-300">
+            <div class="text-center">
+                <i class="fas fa-vote-yea text-4xl text-primary mb-4"></i>
+                <h3 class="text-xl font-bold text-slate-900 mb-2">Confirm Your Vote</h3>
+                <p class="text-slate-600 mb-6">Are you sure you want to vote for <span id="selectedCandidate" class="font-semibold"></span>?</p>
+                <div class="flex space-x-4">
+                    <button onclick="cancelVote()" class="flex-1 bg-slate-200 text-slate-700 px-4 py-3 rounded-lg font-medium hover:bg-slate-300 transition-colors">
+                        Cancel
+                    </button>
+                    <button onclick="confirmVote()" class="flex-1 bg-primary text-white px-4 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                        Confirm Vote
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        radioButtons.forEach(radio => {
+    <script>
+        const voteForm = document.getElementById('voteForm');
+        const voteButton = document.getElementById('voteButton');
+        const voteModal = document.getElementById('voteModal');
+        const candidateRadios = document.querySelectorAll('.candidate-radio');
+
+        // Handle radio button selection
+        candidateRadios.forEach(radio => {
             radio.addEventListener('change', function() {
-                submitButton.disabled = false;
+                // Update button state
+                voteButton.disabled = false;
                 
-                // Update visual feedback
-                candidateOptions.forEach(option => {
-                    const input = option.querySelector('input[type="radio"]');
-                    const label = option.querySelector('label');
-                    if (input.checked) {
-                        label.classList.add('border-indigo-500', 'bg-indigo-50');
-                        label.classList.remove('border-gray-200');
+                // Update visual radio buttons
+                candidateRadios.forEach(r => {
+                    const option = r.closest('.candidate-option');
+                    const inner = option.querySelector('.radio-inner');
+                    if (r.checked) {
+                        option.classList.add('border-blue-500', 'bg-blue-50');
+                        inner.classList.add('opacity-100');
                     } else {
-                        label.classList.remove('border-indigo-500', 'bg-indigo-50');
-                        label.classList.add('border-gray-200');
+                        option.classList.remove('border-blue-500', 'bg-blue-50');
+                        inner.classList.remove('opacity-100');
                     }
                 });
             });
         });
 
         // Handle form submission
-        document.getElementById('voteForm')?.addEventListener('submit', function(e) {
-            const selectedCandidate = document.querySelector('input[name="candidateIndex"]:checked');
-            
-            if (!selectedCandidate) {
+        if (voteForm) {
+            voteForm.addEventListener('submit', function(e) {
                 e.preventDefault();
-                alert('Please select a candidate before voting.');
-                return;
-            }
-
-            if (!confirm('Are you sure you want to vote for this candidate? This action cannot be undone.')) {
-                e.preventDefault();
-                return;
-            }
-
-            // Show loading state
-            submitButton.textContent = 'Submitting Vote...';
-            submitButton.disabled = true;
-        });
-
-        // Add fade-in animations
-        document.addEventListener('DOMContentLoaded', function() {
-            const cards = document.querySelectorAll('.bg-white');
-            cards.forEach((card, index) => {
-                card.style.animationDelay = `${index * 0.1}s`;
-                card.classList.add('animate-fade-in');
+                
+                const selectedRadio = document.querySelector('.candidate-radio:checked');
+                if (!selectedRadio) {
+                    alert('Please select a candidate before voting.');
+                    return;
+                }
+                
+                const candidateName = selectedRadio.closest('.candidate-option').querySelector('h4').textContent;
+                document.getElementById('selectedCandidate').textContent = candidateName;
+                
+                // Show modal
+                voteModal.classList.remove('opacity-0', 'invisible');
+                voteModal.querySelector('.bg-white').classList.remove('scale-95');
+                voteModal.querySelector('.bg-white').classList.add('scale-100');
             });
+        }
+
+        function cancelVote() {
+            voteModal.classList.add('opacity-0', 'invisible');
+            voteModal.querySelector('.bg-white').classList.remove('scale-100');
+            voteModal.querySelector('.bg-white').classList.add('scale-95');
+        }
+
+        function confirmVote() {
+            voteForm.submit();
+        }
+
+        // Close modal when clicking outside
+        voteModal.addEventListener('click', function(e) {
+            if (e.target === voteModal) {
+                cancelVote();
+            }
         });
     </script>
 </body>

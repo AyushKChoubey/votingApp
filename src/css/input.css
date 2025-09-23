@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom components */
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-colors;
+  }
+  
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-blue-700;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-200 text-gray-700 hover:bg-gray-300;
+  }
+  
+  .btn-success {
+    @apply bg-success text-white hover:bg-emerald-700;
+  }
+  
+  .btn-danger {
+    @apply bg-danger text-white hover:bg-red-600;
+  }
+  
+  .card {
+    @apply bg-white rounded-xl shadow-sm border border-slate-200 p-6;
+  }
+  
+  .form-input {
+    @apply w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent;
+  }
+  
+  .booth-card {
+    @apply bg-white rounded-xl p-6 shadow-sm border border-slate-200 transition-all duration-300 hover:shadow-md;
+  }
+  
+  .booth-card:hover {
+    transform: translateY(-2px);
+  }
+  
+  .status-badge {
+    @apply px-2 py-1 text-xs font-medium rounded-full;
+  }
+  
+  .status-active {
+    @apply bg-emerald-100 text-emerald-800;
+  }
+  
+  .status-draft {
+    @apply bg-gray-100 text-gray-700;
+  }
+  
+  .status-paused {
+    @apply bg-amber-100 text-amber-800;
+  }
+  
+  .status-ended {
+    @apply bg-red-100 text-red-800;
+  }
+}
+
+/* Custom animations */
+@layer utilities {
+  .fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+  }
+  
+  .slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  @keyframes slideUp {
+    from { 
+      opacity: 0; 
+      transform: translateY(20px); 
+    }
+    to { 
+      opacity: 1; 
+      transform: translateY(0); 
+    }
+  }
+}

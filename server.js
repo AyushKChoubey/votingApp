@@ -102,33 +102,14 @@ app.get('/health', (req, res) => {
     });
 });
 
-// API versioning
-app.use('/api/v1/user', require('./routes/userRoutes'));
-app.use('/api/v1/booth', require('./routes/boothRoutes'));
+// Routes - Simplified and clean structure
+app.use('/', require('./routes/index'));           // Static pages and main routes  
+app.use('/user', require('./routes/userRoutes'));  // User auth and profile routes
+app.use('/booth', require('./routes/boothRoutes')); // Booth functionality routes
 
-// Routes
-app.use('/user', require('./routes/userRoutes'));
-app.use('/booth', require('./routes/boothRoutes'));
-
-// Home page
-app.get('/', (req, res) => {
-    const isLoggedIn = res.locals.user !== null;
-    const message = req.query.message;
-    const error = req.query.error;
-    
-    res.render('index', { 
-        isLoggedIn, 
-        message, 
-        error,
-        title: 'Home - ' + res.locals.APP_NAME
-    });
-});
-
-// About page
-app.get('/about', (req, res) => {
-    res.render('about', { 
-        title: 'About - ' + res.locals.APP_NAME 
-    });
+// Simple favicon handler
+app.get('/favicon.ico', (req, res) => {
+    res.status(204).send(); // No content response
 });
 
 // Logout route
@@ -137,6 +118,7 @@ app.get('/logout', (req, res) => {
     res.clearCookie('refreshToken');
     res.redirect('/?message=logged_out');
 });
+
 
 // API documentation route (in development)
 if (process.env.NODE_ENV !== 'production') {

@@ -3,456 +3,310 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - <%= booth.name %></title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Admin Panel - <%= booth.name %> | VoteBooth</title>
+    <link href="/public/css/tailwind.css" rel="stylesheet">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="/css/styles.css">
-    <link rel="stylesheet" href="/css/animations.css">
+    <link href="/public/css/animations.css" rel="stylesheet">
 </head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
-    <!-- Enhanced Navigation -->
-    <nav class="bg-white shadow-lg mb-8">
+<body class="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 min-h-screen font-sans">
+    <!-- Navigation -->
+    <nav class="bg-white/95 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-50 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center py-4">
-                <!-- Left Navigation -->
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo & Back -->
                 <div class="flex items-center space-x-4">
-                    <a href="/booth/dashboard" class="text-blue-600 hover:text-blue-800 transition-colors flex items-center">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-                        </svg>
-                        Dashboard
+                    <a href="/booth/dashboard" class="text-slate-600 hover:text-primary transition-colors p-2 rounded-lg hover:bg-slate-100">
+                        <i class="fas fa-arrow-left text-lg"></i>
                     </a>
-                    <span class="text-gray-300">|</span>
-                    <a href="/booth/<%= booth._id %>" class="text-blue-600 hover:text-blue-800 transition-colors">
-                        View Booth
-                    </a>
-                    <span class="text-gray-300">|</span>
-                    <span class="text-gray-700 font-medium">Admin Panel</span>
+                    <div class="flex items-center">
+                        <i class="fas fa-cogs text-2xl text-primary mr-3"></i>
+                        <div>
+                            <h1 class="font-bold text-xl text-slate-800">Admin Panel</h1>
+                            <p class="text-sm text-slate-500"><%= booth.name %></p>
+                        </div>
+                    </div>
                 </div>
                 
-                <!-- Right Navigation - Booth Status -->
+                <!-- User Menu -->
                 <div class="flex items-center space-x-4">
-                    <div class="flex items-center space-x-2">
-                        <span class="text-sm text-gray-600">Status:</span>
-                        <span class="px-2 py-1 rounded-full text-xs font-medium 
-                                   <%= booth.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' %>">
-                            <%= booth.status.charAt(0).toUpperCase() + booth.status.slice(1) %>
-                        </span>
-                    </div>
-                    <button onclick="toggleBoothStatus()" 
-                            class="px-3 py-1 text-sm rounded-md transition-colors
-                                   <%= booth.status === 'active' ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200' %>">
-                        <%= booth.status === 'active' ? 'Deactivate' : 'Activate' %>
-                    </button>
+                    <span class="text-sm text-slate-600">Welcome, <%= user.name %></span>
+                    <a href="/booth/<%= booth._id %>" class="bg-primary text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-eye mr-2"></i>View Booth
+                    </a>
                 </div>
             </div>
         </div>
     </nav>
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <!-- Page Header with Actions -->
-        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
-                <div>
-                    <h1 class="text-3xl font-bold text-gray-900 mb-2">
-                        <svg class="w-8 h-8 inline-block mr-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                        </svg>
-                        <%= booth.name %>
-                    </h1>
-                    <p class="text-gray-600"><%= booth.description %></p>
-                    <div class="flex items-center space-x-4 mt-2 text-sm text-gray-500">
-                        <span>Code: <strong class="text-blue-600"><%= booth.inviteCode %></strong></span>
-                        <span>•</span>
-                        <span>Created: <%= new Date(booth.createdAt).toLocaleDateString() %></span>
-                    </div>
-                </div>
-                
-                <!-- Quick Actions -->
-                <div class="flex flex-wrap gap-3">
-                    <a href="/booth/<%= booth._id %>/edit" 
-                       class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                        </svg>
-                        Edit Booth
-                    </a>
-                    
-                    <a href="/booth/<%= booth._id %>/results" 
-                       class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                        </svg>
-                        View Results
-                    </a>
-                    
-                    <button onclick="confirmDelete()" 
-                            class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                        </svg>
-                        Delete Booth
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Statistics Overview -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white rounded-lg shadow-md p-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Header Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
                 <div class="flex items-center">
-                    <div class="p-3 rounded-full bg-blue-100">
-                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-                        </svg>
+                    <div class="p-3 rounded-lg bg-blue-100">
+                        <i class="fas fa-users text-blue-600 text-xl"></i>
                     </div>
                     <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600">Members</p>
-                        <p class="text-2xl font-semibold text-gray-900"><%= booth.members.length %>/<%= booth.maxMembers %></p>
+                        <p class="text-sm font-medium text-slate-600">Total Members</p>
+                        <p class="text-2xl font-bold text-slate-900"><%= booth.members.length %></p>
                     </div>
                 </div>
             </div>
             
-            <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
                 <div class="flex items-center">
-                    <div class="p-3 rounded-full bg-green-100">
-                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                        </svg>
+                    <div class="p-3 rounded-lg bg-emerald-100">
+                        <i class="fas fa-vote-yea text-emerald-600 text-xl"></i>
                     </div>
                     <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600">Total Votes</p>
-                        <p class="text-2xl font-semibold text-gray-900"><%= voteCount %></p>
+                        <p class="text-sm font-medium text-slate-600">Total Votes</p>
+                        <p class="text-2xl font-bold text-slate-900"><%= booth.totalVotes || 0 %></p>
                     </div>
                 </div>
             </div>
             
-            <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
                 <div class="flex items-center">
-                    <div class="p-3 rounded-full bg-purple-100">
-                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                        </svg>
+                    <div class="p-3 rounded-lg bg-amber-100">
+                        <i class="fas fa-chart-bar text-amber-600 text-xl"></i>
                     </div>
                     <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600">Candidates</p>
-                        <p class="text-2xl font-semibold text-gray-900"><%= booth.candidates.length %></p>
+                        <p class="text-sm font-medium text-slate-600">Participation</p>
+                        <p class="text-2xl font-bold text-slate-900"><%= Math.round((booth.totalVotes / Math.max(booth.members.length, 1)) * 100) %>%</p>
                     </div>
                 </div>
             </div>
             
-            <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
                 <div class="flex items-center">
-                    <div class="p-3 rounded-full bg-yellow-100">
-                        <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                        </svg>
+                    <div class="p-3 rounded-lg <%= booth.status === 'active' ? 'bg-emerald-100' : booth.status === 'draft' ? 'bg-gray-100' : 'bg-red-100' %>">
+                        <i class="fas <%= booth.status === 'active' ? 'fa-play text-emerald-600' : booth.status === 'draft' ? 'fa-pause text-gray-600' : 'fa-stop text-red-600' %> text-xl"></i>
                     </div>
                     <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600">Participation</p>
-                        <p class="text-2xl font-semibold text-gray-900">
-                            <%= booth.members.length > 0 ? Math.round((voteCount / booth.members.length) * 100) : 0 %>%
+                        <p class="text-sm font-medium text-slate-600">Status</p>
+                        <p class="text-lg font-bold capitalize <%= booth.status === 'active' ? 'text-emerald-600' : booth.status === 'draft' ? 'text-gray-600' : 'text-red-600' %>">
+                            <%= booth.status %>
                         </p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Main Content Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <!-- Invite Management -->
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
-                    <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"/>
-                    </svg>
-                    Invite Management
-                </h2>
-                
-                <div class="space-y-4">
-                    <!-- Invite Code -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Booth Code</label>
-                        <div class="flex">
-                            <input type="text" id="boothCode" readonly 
-                                   value="<%= booth.inviteCode %>"
-                                   class="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-l-md text-lg font-mono text-center">
-                            <button onclick="copyToClipboard('boothCode')" 
-                                    class="px-4 py-2 bg-blue-600 text-white rounded-r-md hover:bg-blue-700 transition-colors">
-                                Copy
-                            </button>
-                        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Main Controls -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Booth Controls -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200">
+                        <h3 class="text-lg font-semibold text-slate-900">Booth Controls</h3>
+                        <p class="text-sm text-slate-600">Manage your booth settings and status</p>
                     </div>
-                    
-                    <!-- Invite Link -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Invite Link</label>
-                        <div class="flex">
-                            <input type="text" id="inviteLink" readonly 
-                                   value="<%= inviteLink %>"
-                                   class="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-l-md text-sm">
-                            <button onclick="copyToClipboard('inviteLink')" 
-                                    class="px-4 py-2 bg-green-600 text-white rounded-r-md hover:bg-green-700 transition-colors">
-                                Copy
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Reset Invite Code -->
-                    <form action="/booth/<%= booth._id %>/reset-code" method="POST" onsubmit="return confirm('Reset invite code? Current links will become invalid.')">
-                        <button type="submit" class="w-full px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 transition-colors">
-                            Reset Invite Code
-                        </button>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Quick Candidate Overview -->
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
-                    <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                    </svg>
-                    Candidate Overview
-                </h2>
-                
-                <div class="space-y-3">
-                    <% booth.candidates.forEach((candidate, index) => { %>
-                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                        <div>
-                            <p class="font-medium text-gray-900"><%= candidate.name %></p>
-                            <% if (candidate.description) { %>
-                            <p class="text-sm text-gray-600"><%= candidate.description %></p>
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <% if (booth.status === 'draft') { %>
+                            <form method="POST" action="/booth/<%= booth._id %>/start" class="inline">
+                                <button type="submit" class="w-full bg-emerald-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-emerald-700 transition-colors">
+                                    <i class="fas fa-play mr-2"></i>Start Voting
+                                </button>
+                            </form>
+                            <% } else if (booth.status === 'active') { %>
+                            <form method="POST" action="/booth/<%= booth._id %>/pause" class="inline">
+                                <button type="submit" class="w-full bg-amber-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-amber-700 transition-colors">
+                                    <i class="fas fa-pause mr-2"></i>Pause Voting
+                                </button>
+                            </form>
+                            <form method="POST" action="/booth/<%= booth._id %>/end" class="inline">
+                                <button type="submit" class="w-full bg-red-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-red-700 transition-colors" onclick="return confirm('Are you sure you want to end this booth? This cannot be undone.')">
+                                    <i class="fas fa-stop mr-2"></i>End Booth
+                                </button>
+                            </form>
+                            <% } else if (booth.status === 'paused') { %>
+                            <form method="POST" action="/booth/<%= booth._id %>/resume" class="inline">
+                                <button type="submit" class="w-full bg-emerald-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-emerald-700 transition-colors">
+                                    <i class="fas fa-play mr-2"></i>Resume
+                                </button>
+                            </form>
+                            <form method="POST" action="/booth/<%= booth._id %>/end" class="inline">
+                                <button type="submit" class="w-full bg-red-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-red-700 transition-colors" onclick="return confirm('Are you sure you want to end this booth?')">
+                                    <i class="fas fa-stop mr-2"></i>End Booth
+                                </button>
+                            </form>
                             <% } %>
-                        </div>
-                        <div class="text-right">
-                            <p class="font-bold text-lg text-blue-600"><%= candidate.voteCount %></p>
-                            <p class="text-xs text-gray-500">votes</p>
+                            
+                            <a href="/booth/<%= booth._id %>/results" class="w-full bg-slate-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-slate-700 transition-colors text-center">
+                                <i class="fas fa-chart-pie mr-2"></i>View Results
+                            </a>
                         </div>
                     </div>
-                    <% }); %>
                 </div>
-                
-                <div class="mt-4 pt-4 border-t border-gray-200">
-                    <a href="/booth/<%= booth._id %>/results" 
-                       class="block text-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors">
-                        View Detailed Results
-                    </a>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Members Management -->
-        <div class="bg-white rounded-lg shadow-md p-6 mt-8">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
-                <svg class="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/>
-                </svg>
-                Members Management
-            </h2>
-            
-            <% if (booth.members.length === 0) { %>
-                <div class="text-center py-12 text-gray-500">
-                    <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-                    </svg>
-                    <p class="text-lg mb-2 font-medium">No members yet</p>
-                    <p class="text-sm">Share the invite link or code to get members to join this booth</p>
-                </div>
-            <% } else { %>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vote Status</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            <% booth.members.forEach(member => { %>
-                                <tr class="hover:bg-gray-50">
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="flex items-center">
-                                            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                                                <span class="text-blue-600 font-semibold">
-                                                    <%= member.user.name.charAt(0).toUpperCase() %>
-                                                </span>
-                                            </div>
-                                            <div>
-                                                <div class="text-sm font-medium text-gray-900"><%= member.user.name %></div>
-                                                <div class="text-sm text-gray-500"><%= member.user.email %></div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <%= new Date(member.joinedAt).toLocaleDateString() %>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <% if (member.hasVoted) { %>
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                                </svg>
-                                                Voted
-                                            </span>
-                                        <% } else { %>
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
-                                                </svg>
-                                                Pending
-                                            </span>
-                                        <% } %>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <% if (member.user._id.toString() !== booth.creator.toString()) { %>
-                                            <button onclick="removeMember('<%= member.user._id %>', '<%= member.user.name %>')" 
-                                                    class="text-red-600 hover:text-red-900 transition-colors">
-                                                Remove
-                                            </button>
-                                        <% } else { %>
-                                            <span class="text-blue-600 font-medium">Creator</span>
-                                        <% } %>
-                                    </td>
-                                </tr>
-                            <% }); %>
-                        </tbody>
-                    </table>
-                </div>
-            <% } %>
-        </div>
-    </div>
 
-    <!-- Delete Confirmation Modal -->
-    <div id="deleteModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-lg p-6 m-4 max-w-sm w-full">
-            <div class="flex items-center mb-4">
-                <svg class="w-6 h-6 text-red-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/>
-                </svg>
-                <h3 class="text-lg font-semibold text-gray-900">Delete Booth</h3>
+                <!-- Members Management -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200">
+                        <h3 class="text-lg font-semibold text-slate-900">Members (<%= booth.members.length %>)</h3>
+                        <p class="text-sm text-slate-600">Manage booth members and permissions</p>
+                    </div>
+                    <div class="divide-y divide-slate-200">
+                        <% booth.members.forEach(member => { %>
+                        <div class="px-6 py-4 flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-medium text-sm">
+                                    <%= member.user.name.charAt(0).toUpperCase() %>
+                                </div>
+                                <div>
+                                    <p class="font-medium text-slate-900"><%= member.user.name %></p>
+                                    <p class="text-sm text-slate-500"><%= member.user.email %></p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs px-2 py-1 rounded-full <%= member.hasVoted ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600' %>">
+                                    <%= member.hasVoted ? 'Voted' : 'Not Voted' %>
+                                </span>
+                                <span class="text-xs text-slate-500">
+                                    Joined <%= new Date(member.joinedAt).toLocaleDateString() %>
+                                </span>
+                                <form method="POST" action="/booth/<%= booth._id %>/remove-member" class="inline">
+                                    <input type="hidden" name="userId" value="<%= member.user._id %>">
+                                    <button type="submit" class="text-red-600 hover:text-red-800 p-1" onclick="return confirm('Remove this member?')">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        <% }) %>
+                    </div>
+                </div>
             </div>
-            <p class="text-gray-600 mb-6">Are you sure you want to delete this booth? This action cannot be undone and will remove all votes and member data.</p>
-            <div class="flex space-x-3">
-                <button onclick="closeDeleteModal()" class="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors">
-                    Cancel
-                </button>
-                <button onclick="deleteBooth()" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors">
-                    Delete
-                </button>
+
+            <!-- Sidebar -->
+            <div class="space-y-6">
+                <!-- Invite Code -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                    <h3 class="text-lg font-semibold text-slate-900 mb-4">Invite Members</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Invite Code</label>
+                            <div class="flex items-center space-x-2">
+                                <input type="text" readonly value="<%= booth.inviteCode %>" 
+                                       class="flex-1 px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 font-mono text-center text-lg font-bold" 
+                                       id="inviteCode">
+                                <button onclick="copyInviteCode()" class="bg-slate-600 text-white px-3 py-2 rounded-lg hover:bg-slate-700 transition-colors">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Share Link</label>
+                            <div class="flex items-center space-x-2">
+                                <input type="text" readonly value="<%= process.env.BASE_URL || 'http://localhost:3000' %>/booth/join/<%= booth.inviteCode %>" 
+                                       class="flex-1 px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 text-sm" 
+                                       id="shareLink">
+                                <button onclick="copyShareLink()" class="bg-slate-600 text-white px-3 py-2 rounded-lg hover:bg-slate-700 transition-colors">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <button onclick="regenerateCode()" class="w-full bg-amber-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-amber-700 transition-colors">
+                            <i class="fas fa-refresh mr-2"></i>Regenerate Code
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                    <h3 class="text-lg font-semibold text-slate-900 mb-4">Quick Actions</h3>
+                    <div class="space-y-3">
+                        <a href="/booth/<%= booth._id %>/edit" class="w-full flex items-center px-4 py-3 text-slate-700 hover:bg-slate-50 rounded-lg transition-colors">
+                            <i class="fas fa-edit text-slate-500 w-5"></i>
+                            <span class="ml-3">Edit Booth Details</span>
+                        </a>
+                        <button onclick="exportResults()" class="w-full flex items-center px-4 py-3 text-slate-700 hover:bg-slate-50 rounded-lg transition-colors">
+                            <i class="fas fa-download text-slate-500 w-5"></i>
+                            <span class="ml-3">Export Results</span>
+                        </button>
+                        <form method="POST" action="/booth/<%= booth._id %>/delete" class="inline w-full">
+                            <button type="submit" class="w-full flex items-center px-4 py-3 text-red-700 hover:bg-red-50 rounded-lg transition-colors" onclick="return confirm('Are you sure you want to delete this booth? This cannot be undone.')">
+                                <i class="fas fa-trash text-red-500 w-5"></i>
+                                <span class="ml-3">Delete Booth</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- JavaScript -->
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50"></div>
+
     <script>
-        // Copy to clipboard functionality
-        function copyToClipboard(elementId) {
-            const element = document.getElementById(elementId);
-            element.select();
-            element.setSelectionRange(0, 99999); // For mobile devices
-            
-            try {
-                document.execCommand('copy');
-                showNotification('Copied to clipboard!', 'success');
-            } catch (err) {
-                showNotification('Failed to copy', 'error');
-            }
+        function copyInviteCode() {
+            const codeInput = document.getElementById('inviteCode');
+            codeInput.select();
+            document.execCommand('copy');
+            showToast('Invite code copied to clipboard!', 'success');
         }
 
-        // Toggle booth status
-        async function toggleBoothStatus() {
-            try {
-                const response = await fetch('/booth/<%= booth._id %>/toggle-status', {
+        function copyShareLink() {
+            const linkInput = document.getElementById('shareLink');
+            linkInput.select();
+            document.execCommand('copy');
+            showToast('Share link copied to clipboard!', 'success');
+        }
+
+        function regenerateCode() {
+            if (confirm('Regenerate invite code? The old code will become invalid.')) {
+                fetch('/booth/<%= booth._id %>/regenerate-code', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('inviteCode').value = data.inviteCode;
+                        document.getElementById('shareLink').value = 
+                            `<%= process.env.BASE_URL || 'http://localhost:3000' %>/booth/join/${data.inviteCode}`;
+                        showToast('Invite code regenerated successfully!', 'success');
+                    } else {
+                        showToast(data.error || 'Failed to regenerate code', 'error');
+                    }
+                })
+                .catch(error => {
+                    showToast('Failed to regenerate code', 'error');
                 });
-                
-                const result = await response.json();
-                
-                if (response.ok) {
-                    showNotification(`Booth ${result.status}`, 'success');
-                    setTimeout(() => location.reload(), 1000);
-                } else {
-                    showNotification(result.error || 'Failed to update status', 'error');
-                }
-            } catch (error) {
-                showNotification('Network error', 'error');
             }
         }
 
-        // Remove member
-        async function removeMember(memberId, memberName) {
-            if (!confirm(`Remove ${memberName} from this booth?`)) return;
+        function exportResults() {
+            window.open('/booth/<%= booth._id %>/export', '_blank');
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            const bgClass = type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-red-600' : 'bg-blue-600';
             
-            try {
-                const response = await fetch(`/booth/<%= booth._id %>/member/${memberId}/remove`, {
-                    method: 'POST'
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showNotification('Member removed successfully', 'success');
-                    setTimeout(() => location.reload(), 1000);
-                } else {
-                    showNotification(result.error || 'Failed to remove member', 'error');
-                }
-            } catch (error) {
-                showNotification('Network error', 'error');
-            }
-        }
-
-        // Delete booth confirmation
-        function confirmDelete() {
-            document.getElementById('deleteModal').classList.remove('hidden');
-            document.getElementById('deleteModal').classList.add('flex');
-        }
-
-        function closeDeleteModal() {
-            document.getElementById('deleteModal').classList.add('hidden');
-            document.getElementById('deleteModal').classList.remove('flex');
-        }
-
-        async function deleteBooth() {
-            try {
-                const response = await fetch('/booth/<%= booth._id %>/delete', {
-                    method: 'POST'
-                });
-                
-                if (response.ok) {
-                    showNotification('Booth deleted successfully', 'success');
-                    setTimeout(() => window.location.href = '/booth/dashboard', 1500);
-                } else {
-                    const result = await response.json();
-                    showNotification(result.error || 'Failed to delete booth', 'error');
-                    closeDeleteModal();
-                }
-            } catch (error) {
-                showNotification('Network error', 'error');
-                closeDeleteModal();
-            }
-        }
-
-        // Show notification
-        function showNotification(message, type) {
-            // Create notification element
-            const notification = document.createElement('div');
-            notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 transition-all duration-300 ${
-                type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-            }`;
-            notification.textContent = message;
+            toast.className = `${bgClass} text-white px-6 py-3 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 mb-4`;
+            toast.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'} mr-3"></i>
+                    <span>${message}</span>
+                </div>
+            `;
             
-            document.body.appendChild(notification);
+            document.getElementById('toast-container').appendChild(toast);
             
-            // Remove after 3 seconds
             setTimeout(() => {
-                notification.classList.add('opacity-0', 'translate-x-full');
-                setTimeout(() => notification.remove(), 300);
+                toast.style.transform = 'translateX(0)';
+            }, 100);
+            
+            setTimeout(() => {
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(() => toast.remove(), 300);
             }, 3000);
         }
     </script>

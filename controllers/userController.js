@@ -1,8 +1,9 @@
-// controllers/userController.js
+// controllers/userController.js (Complete)
 const User = require('../models/user');
 const { generateToken, generateRefreshToken, blacklistToken } = require('../middleware/jwt');
 const validator = require('validator');
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 
 // Input validation helpers
 const validateEmail = (email) => {
@@ -158,14 +159,31 @@ exports.login = async (req, res) => {
             });
         }
         
+        // Check if account is locked
+        if (user.isLocked) {
+            return res.render('login', { 
+                error: 'Account is temporarily locked due to too many failed login attempts. Please try again later.',
+                success: null,
+                redirectUrl
+            });
+        }
+        
         // Check password
         const isPasswordValid = await user.comparePassword(password);
         if (!isPasswordValid) {
+            // Increment login attempts
+            await user.incLoginAttempts();
+            
             return res.render('login', { 
                 error: 'Invalid email or password',
                 success: null,
                 redirectUrl
             });
+        }
+        
+        // Reset login attempts on successful login
+        if (user.loginAttempts && user.loginAttempts > 0) {
+            await user.resetLoginAttempts();
         }
         
         // Update last login and login count
@@ -233,10 +251,18 @@ exports.logout = (req, res) => {
             console.log(`User logout: ${req.user.email || req.user.id} at ${new Date().toISOString()}`);
         }
         
-        res.redirect('/?message=logged_out');
+        // Handle both API and HTML requests
+        if (req.accepts('html')) {
+            return res.redirect('/?message=logged_out');
+        }
+        
+        res.json({ message: 'Logged out successfully' });
     } catch (err) {
         console.error('Logout error:', err);
-        res.redirect('/');
+        if (req.accepts('html')) {
+            return res.redirect('/');
+        }
+        res.status(500).json({ error: 'Logout failed' });
     }
 };
 
@@ -343,12 +369,15 @@ exports.updatePassword = async (req, res) => {
 exports.updateProfile = async (req, res) => {
     try {
         const userId = req.user.id;
-        let { name, organization, bio } = req.body;
+        let { name, organization, bio, website, mobile, address } = req.body;
         
         // Sanitize inputs
         name = name ? name.trim() : '';
         organization = organization ? organization.trim() : '';
         bio = bio ? bio.trim() : '';
+        website = website ? website.trim() : '';
+        mobile = mobile ? mobile.trim() : '';
+        address = address ? address.trim() : '';
         
         // Validation
         const errors = [];
@@ -365,6 +394,18 @@ exports.updateProfile = async (req, res) => {
             errors.push('Bio must be less than 500 characters');
         }
         
+        if (website && !validator.isURL(website)) {
+            errors.push('Please provide a valid website URL');
+        }
+        
+        if (mobile && !/^\+?[\d\s\-\(\)]+$/.test(mobile)) {
+            errors.push('Please provide a valid mobile number');
+        }
+        
+        if (address && address.length > 200) {
+            errors.push('Address must be less than 200 characters');
+        }
+        
         if (errors.length > 0) {
             return res.status(400).json({ error: errors.join('. ') });
         }
@@ -378,6 +419,9 @@ exports.updateProfile = async (req, res) => {
         if (name) user.name = name;
         if (organization !== undefined) user.profile.organization = organization;
         if (bio !== undefined) user.profile.bio = bio;
+        if (website !== undefined) user.profile.website = website;
+        if (mobile !== undefined) user.mobile = mobile;
+        if (address !== undefined) user.address = address;
         
         await user.save();
         
@@ -389,6 +433,8 @@ exports.updateProfile = async (req, res) => {
             user: {
                 name: user.name,
                 email: user.email,
+                mobile: user.mobile,
+                address: user.address,
                 profile: user.profile
             }
         });
@@ -432,5 +478,113 @@ exports.refreshToken = async (req, res) => {
     } catch (err) {
         console.error('Refresh token error:', err);
         res.status(401).json({ error: 'Invalid refresh token' });
+    }
+};
+
+// Delete account
+exports.deleteAccount = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { password } = req.body;
+        
+        if (!password) {
+            return res.status(400).json({ error: 'Password is required to delete account' });
+        }
+        
+        // Get user with password
+        const user = await User.findById(userId).select('+password');
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        // Verify password
+        const isPasswordValid = await user.comparePassword(password);
+        if (!isPasswordValid) {
+            return res.status(401).json({ error: 'Incorrect password' });
+        }
+        
+        // Delete user's votes
+        const Vote = require('../models/vote');
+        await Vote.deleteMany({ voter: userId });
+        
+        // Delete booths created by user
+        const Booth = require('../models/booth');
+        await Booth.deleteMany({ creator: userId });
+        
+        // Remove user from other booths
+        await Booth.updateMany(
+            { 'members.user': userId },
+            { $pull: { members: { user: userId } } }
+        );
+        
+        // Delete the user
+        await User.findByIdAndDelete(userId);
+        
+        // Clear cookies
+        res.clearCookie('token');
+        res.clearCookie('refreshToken');
+        
+        console.log(`User account deleted: ${user.email} at ${new Date().toISOString()}`);
+        
+        res.json({ message: 'Account deleted successfully' });
+    } catch (err) {
+        console.error('Delete account error:', err);
+        res.status(500).json({ error: 'Failed to delete account' });
+    }
+};
+
+// Get user statistics
+exports.getUserStats = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const user = await User.findById(userId);
+        
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        const stats = await user.getStats();
+        
+        res.json(stats);
+    } catch (err) {
+        console.error('Get user stats error:', err);
+        res.status(500).json({ error: 'Failed to fetch user statistics' });
+    }
+};
+
+// Update user preferences
+exports.updatePreferences = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { emailNotifications, smsNotifications, theme, language } = req.body;
+        
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        // Update preferences
+        if (emailNotifications !== undefined) {
+            user.preferences.emailNotifications = Boolean(emailNotifications);
+        }
+        if (smsNotifications !== undefined) {
+            user.preferences.smsNotifications = Boolean(smsNotifications);
+        }
+        if (theme && ['light', 'dark', 'auto'].includes(theme)) {
+            user.preferences.theme = theme;
+        }
+        if (language) {
+            user.preferences.language = language;
+        }
+        
+        await user.save();
+        
+        res.json({
+            message: 'Preferences updated successfully',
+            preferences: user.preferences
+        });
+    } catch (err) {
+        console.error('Update preferences error:', err);
+        res.status(500).json({ error: 'Failed to update preferences' });
     }
 };

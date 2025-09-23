@@ -49,10 +49,10 @@ const securityHeaders = helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
-            scriptSrc: ["'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdn.tailwindcss.com", "https://cdnjs.cloudflare.com"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdn.tailwindcss.com", "https://cdnjs.cloudflare.com"],
             imgSrc: ["'self'", "data:", "https:"],
-            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
             connectSrc: ["'self'"],
             frameSrc: ["'none'"],
             objectSrc: ["'none'"],
@@ -93,9 +93,33 @@ const csrfProtection = (req, res, next) => {
         // For form submissions, we'll rely on SameSite cookies and origin checking
         const origin = req.get('Origin') || req.get('Referer');
         const host = req.get('Host');
+        const isDevelopment = process.env.NODE_ENV !== 'production';
+        const isLocalhost = host && (host.includes('localhost') || host.includes('127.0.0.1'));
         
-        if (origin && !origin.includes(host)) {
-            return res.status(403).json({ error: 'Invalid request origin' });
+        // Skip CSRF check entirely in development for localhost
+        if (isDevelopment && isLocalhost) {
+            return next();
+        }
+        
+        // Skip CSRF check if no origin is present (direct navigation)
+        if (!origin) {
+            return next();
+        }
+        
+        // In production, perform strict origin checking
+        if (origin && host && !isDevelopment) {
+            try {
+                const originHost = new URL(origin).host;
+                const expectedHost = host;
+                
+                if (originHost !== expectedHost) {
+                    console.warn(`CSRF violation: Origin ${originHost} does not match host ${expectedHost}`);
+                    return res.status(403).json({ error: 'Invalid request origin' });
+                }
+            } catch (error) {
+                console.warn('Invalid origin URL:', origin);
+                return res.status(403).json({ error: 'Invalid request origin' });
+            }
         }
     }
     next();

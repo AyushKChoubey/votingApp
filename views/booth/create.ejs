@@ -3,347 +3,354 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Booth - Voting App</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="/css/animations.css">
+    <title>Create New Booth | VoteBooth</title>
+    <link href="/public/css/tailwind.css" rel="stylesheet">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/public/css/animations.css" rel="stylesheet">
 </head>
-<body class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+<body class="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 min-h-screen font-sans">
     <!-- Navigation -->
-    <nav class="bg-white shadow-sm border-b">
-        <div class="max-w-6xl mx-auto px-6 py-4">
-            <div class="flex justify-between items-center">
+    <nav class="bg-white/95 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo & Back -->
                 <div class="flex items-center space-x-4">
-                    <a href="/" class="text-2xl font-bold text-indigo-600">Voting App</a>
-                    <span class="text-gray-300">|</span>
-                    <a href="/booth/dashboard" class="text-gray-600 hover:text-gray-800">Dashboard</a>
-                    <span class="text-gray-300">|</span>
-                    <span class="text-gray-600">Create Booth</span>
+                    <a href="/booth/dashboard" class="text-slate-600 hover:text-primary transition-colors p-2 rounded-lg hover:bg-slate-100">
+                        <i class="fas fa-arrow-left text-lg"></i>
+                    </a>
+                    <div class="flex items-center">
+                        <i class="fas fa-plus-circle text-2xl text-primary mr-3"></i>
+                        <div>
+                            <h1 class="font-bold text-xl text-slate-800">Create New Booth</h1>
+                            <p class="text-sm text-slate-500">Set up a new voting booth</p>
+                        </div>
+                    </div>
                 </div>
+                
+                <!-- User Menu -->
                 <div class="flex items-center space-x-4">
-                    <a href="/booth/dashboard" class="text-indigo-600 hover:text-indigo-800">Back to Dashboard</a>
-                    <a href="/logout" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors">Logout</a>
+                    <span class="text-sm text-slate-600">Welcome, <%= user && user.name ? user.name : 'User' %></span>
+                    <a href="/booth/dashboard" class="bg-slate-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-slate-700 transition-colors">
+                        <i class="fas fa-dashboard mr-2"></i>Dashboard
+                    </a>
                 </div>
             </div>
         </div>
     </nav>
 
-    <div class="max-w-4xl mx-auto px-6 py-8">
-        <!-- Header -->
-        <div class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">Create a New Voting Booth</h1>
-            <p class="text-gray-600">Set up your voting booth with candidates and settings</p>
-        </div>
-
-        <!-- Error/Success Messages -->
-        <% if (typeof error !== 'undefined' && error) { %>
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-                <%= error %>
-            </div>
-        <% } %>
-        <% if (typeof success !== 'undefined' && success) { %>
-            <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
-                <%= success %>
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Alert Messages -->
+        <% if (error) { %>
+            <div class="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 animate-slide-down">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-circle text-red-500 text-xl"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-red-800 font-medium"><%= error %></p>
+                    </div>
+                </div>
             </div>
         <% } %>
 
-        <form id="createBoothForm" action="/booth/create" method="POST" class="bg-white rounded-xl shadow-lg p-8">
-            <!-- Basic Information -->
-            <div class="mb-8">
-                <h2 class="text-xl font-semibold text-gray-900 mb-4">Basic Information</h2>
-                <div class="grid md:grid-cols-2 gap-6">
-                    <div>
-                        <label for="name" class="block text-sm font-medium text-gray-700 mb-2">Booth Name *</label>
-                        <input type="text" id="name" name="name" required
-                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                               placeholder="e.g., Student Council Elections 2024">
+        <% if (success) { %>
+            <div class="mb-6 bg-emerald-50 border border-emerald-200 rounded-xl p-4 animate-slide-down">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-check-circle text-emerald-500 text-xl"></i>
                     </div>
-                    <div>
-                        <label for="maxMembers" class="block text-sm font-medium text-gray-700 mb-2">Max Members</label>
-                        <input type="number" id="maxMembers" name="maxMembers" min="1" max="10000" value="100"
-                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                               placeholder="100">
+                    <div class="ml-3">
+                        <p class="text-emerald-800 font-medium"><%= success %></p>
                     </div>
-                </div>
-                <div class="mt-6">
-                    <label for="description" class="block text-sm font-medium text-gray-700 mb-2">Description *</label>
-                    <textarea id="description" name="description" rows="3" required
-                              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                              placeholder="Describe what this booth is for and any voting instructions..."></textarea>
                 </div>
             </div>
+        <% } %>
 
-            <!-- Candidates Section -->
-            <div class="mb-8">
-                <h2 class="text-xl font-semibold text-gray-900 mb-4">Candidates</h2>
-                <div id="candidatesContainer">
-                    <div class="candidate-item mb-4 p-4 border border-gray-200 rounded-lg">
-                        <div class="flex justify-between items-center mb-2">
-                            <h3 class="font-medium text-gray-900">Candidate 1</h3>
-                            <button type="button" class="remove-candidate text-red-500 hover:text-red-700 hidden">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                </svg>
+        <% if (typeof canCreate !== 'undefined' && !canCreate) { %>
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-6 mb-8">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-amber-500 text-2xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-lg font-semibold text-amber-800 mb-2">Booth Creation Limit Reached</h3>
+                        <p class="text-amber-700 mb-4">
+                            You've reached your maximum limit of <%= typeof maxBooths !== 'undefined' ? maxBooths : 5 %> booths. 
+                            Upgrade your account to create more booths.
+                        </p>
+                        <div class="flex space-x-3">
+                            <a href="/pricing" class="bg-amber-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-amber-700 transition-colors">
+                                <i class="fas fa-crown mr-2"></i>Upgrade Account
+                            </a>
+                            <a href="/booth/dashboard" class="bg-white text-amber-700 border border-amber-300 px-4 py-2 rounded-lg font-medium hover:bg-amber-50 transition-colors">
+                                Back to Dashboard
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <% } else { %>
+            <!-- Create Booth Form -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <form method="POST" action="/booth/create" id="createBoothForm">
+                    <!-- CSRF token will be added when middleware is working -->
+                    <!-- Form Header -->
+                    <div class="px-8 py-6 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+                        <div class="flex items-center space-x-3">
+                            <div class="p-3 bg-blue-100 rounded-lg">
+                                <i class="fas fa-vote-yea text-blue-600 text-xl"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-bold text-slate-800">Booth Details</h2>
+                                <p class="text-slate-600">Configure your voting booth settings</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-8 space-y-8">
+                        <!-- Basic Information -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div>
+                                <label for="name" class="block text-sm font-semibold text-slate-700 mb-2">
+                                    <i class="fas fa-tag text-slate-500 mr-2"></i>Booth Name *
+                                </label>
+                                <input type="text" id="name" name="name" required 
+                                       class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                       placeholder="Enter booth name (e.g., Class President Election)">
+                                <p class="text-xs text-slate-500 mt-1">3-100 characters</p>
+                            </div>
+
+                            <div>
+                                <label for="maxMembers" class="block text-sm font-semibold text-slate-700 mb-2">
+                                    <i class="fas fa-users text-slate-500 mr-2"></i>Maximum Members
+                                </label>
+                                <input type="number" id="maxMembers" name="maxMembers" min="2" max="10000" value="100"
+                                       class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                       placeholder="100">
+                                <p class="text-xs text-slate-500 mt-1">2-10,000 members</p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="description" class="block text-sm font-semibold text-slate-700 mb-2">
+                                <i class="fas fa-align-left text-slate-500 mr-2"></i>Description *
+                            </label>
+                            <textarea id="description" name="description" rows="3" required
+                                      class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                      placeholder="Describe what this booth is for, voting rules, etc. (10-500 characters)"></textarea>
+                            <p class="text-xs text-slate-500 mt-1">10-500 characters</p>
+                        </div>
+
+                        <!-- Candidates Section -->
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-slate-800">
+                                        <i class="fas fa-user-friends text-slate-500 mr-2"></i>Candidates
+                                    </h3>
+                                    <p class="text-sm text-slate-600">Add candidates or options for voting (minimum 2)</p>
+                                </div>
+                                <button type="button" onclick="addCandidate()" 
+                                        class="bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700 transition-colors">
+                                    <i class="fas fa-plus mr-2"></i>Add Candidate
+                                </button>
+                            </div>
+
+                            <div id="candidates-container" class="space-y-3">
+                                <!-- Initial candidates will be added by JavaScript -->
+                            </div>
+                        </div>
+
+                        <!-- Settings -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-slate-800 mb-4">
+                                <i class="fas fa-cog text-slate-500 mr-2"></i>Booth Settings
+                            </h3>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="space-y-4">
+                                    <div class="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
+                                        <div>
+                                            <label for="anonymousVoting" class="font-medium text-slate-700">Anonymous Voting</label>
+                                            <p class="text-sm text-slate-500">Hide voter identities in results</p>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" id="anonymousVoting" name="settings[anonymousVoting]" class="sr-only peer" checked>
+                                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                        </label>
+                                    </div>
+
+                                    <div class="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
+                                        <div>
+                                            <label for="allowViewResults" class="font-medium text-slate-700">Results Visible to Voters</label>
+                                            <p class="text-sm text-slate-500">Allow voters to see results</p>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" id="allowViewResults" name="settings[allowViewResults]" class="sr-only peer">
+                                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-4">
+                                    <div class="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
+                                        <div>
+                                            <label for="allowMultipleVotes" class="font-medium text-slate-700">Allow Vote Changes</label>
+                                            <p class="text-sm text-slate-500">Let users change their vote</p>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" id="allowMultipleVotes" name="settings[allowMultipleVotes]" class="sr-only peer">
+                                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                        </label>
+                                    </div>
+
+                                    <div class="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
+                                        <div>
+                                            <label for="requireApproval" class="font-medium text-slate-700">Require Join Approval</label>
+                                            <p class="text-sm text-slate-500">Manually approve new members</p>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" id="requireApproval" name="settings[requireApproval]" class="sr-only peer">
+                                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="flex flex-col sm:flex-row gap-4 pt-6 border-t border-slate-200">
+                            <button type="submit" 
+                                    class="flex-1 bg-primary text-white px-6 py-4 rounded-xl font-semibold text-lg hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                                <i class="fas fa-rocket mr-3"></i>Create Booth
                             </button>
-                        </div>
-                        <div class="grid md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-                                <input type="text" name="candidates[0][name]" required
-                                       class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                       placeholder="Candidate name">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                                <input type="text" name="candidates[0][description]"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                       placeholder="Brief description or slogan">
-                            </div>
+                            <button type="button" onclick="saveDraft()"
+                                    class="flex-1 bg-slate-600 text-white px-6 py-4 rounded-xl font-semibold text-lg hover:bg-slate-700 transition-colors">
+                                <i class="fas fa-save mr-3"></i>Save as Draft
+                            </button>
+                            <a href="/booth/dashboard" 
+                               class="flex-1 bg-white text-slate-700 border border-slate-300 px-6 py-4 rounded-xl font-semibold text-lg hover:bg-slate-50 transition-colors text-center">
+                                <i class="fas fa-times mr-3"></i>Cancel
+                            </a>
                         </div>
                     </div>
-                </div>
-                <button type="button" id="addCandidate" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors">
-                    <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                    </svg>
-                    Add Candidate
-                </button>
+                </form>
             </div>
-
-            <!-- Settings Section -->
-            <div class="mb-8">
-                <h2 class="text-xl font-semibold text-gray-900 mb-4">Booth Settings</h2>
-                <div class="grid md:grid-cols-2 gap-6">
-                    <!-- Left Column - Voting Settings -->
-                    <div class="space-y-4">
-                        <h3 class="text-md font-medium text-gray-800 border-b pb-2">Voting Rules</h3>
-                        <div class="flex items-center">
-                            <input type="checkbox" id="resultsVisibleToVoters" name="settings[resultsVisibleToVoters]" checked
-                                   class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                            <label for="resultsVisibleToVoters" class="ml-2 block text-sm text-gray-900">
-                                Results visible to voters after voting
-                            </label>
-                        </div>
-                        <div class="flex items-center">
-                            <input type="checkbox" id="anonymousVoting" name="settings[anonymousVoting]" checked
-                                   class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                            <label for="anonymousVoting" class="ml-2 block text-sm text-gray-900">
-                                Anonymous voting (votes are not linked to users)
-                            </label>
-                        </div>
-                        <div class="flex items-center">
-                            <input type="checkbox" id="allowVoteChange" name="settings[allowVoteChange]"
-                                   class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                            <label for="allowVoteChange" class="ml-2 block text-sm text-gray-900">
-                                Allow voters to change their vote
-                            </label>
-                        </div>
-                        <div class="flex items-center">
-                            <input type="checkbox" id="showLiveResults" name="settings[showLiveResults]"
-                                   class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                            <label for="showLiveResults" class="ml-2 block text-sm text-gray-900">
-                                Show live results during voting
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <!-- Right Column - Access Control -->
-                    <div class="space-y-4">
-                        <h3 class="text-md font-medium text-gray-800 border-b pb-2">Access Control</h3>
-                        <div class="flex items-center">
-                            <input type="checkbox" id="requireEmailVerification" name="settings[requireEmailVerification]"
-                                   class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                            <label for="requireEmailVerification" class="ml-2 block text-sm text-gray-900">
-                                Require email verification to join
-                            </label>
-                        </div>
-                        <div class="flex items-center">
-                            <input type="checkbox" id="requireApproval" name="settings[requireApproval]"
-                                   class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                            <label for="requireApproval" class="ml-2 block text-sm text-gray-900">
-                                Require admin approval to join
-                            </label>
-                        </div>
-                        <div class="flex items-center">
-                            <input type="checkbox" id="publicBooth" name="settings[publicBooth]"
-                                   class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                            <label for="publicBooth" class="ml-2 block text-sm text-gray-900">
-                                Make booth discoverable (public listing)
-                            </label>
-                        </div>
-                        <div class="flex items-center">
-                            <input type="checkbox" id="sendNotifications" name="settings[sendNotifications]"
-                                   class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                            <label for="sendNotifications" class="ml-2 block text-sm text-gray-900">
-                                Send email notifications to members
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Time Settings Row -->
-                <div class="grid md:grid-cols-2 gap-6 mt-6">
-                    <div>
-                        <label for="votingStartTime" class="block text-sm font-medium text-gray-700 mb-2">Voting Start Time (optional)</label>
-                        <input type="datetime-local" id="votingStartTime" name="settings[votingStartTime]"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                        <p class="text-xs text-gray-500 mt-1">Leave empty to start immediately</p>
-                    </div>
-                    <div>
-                        <label for="votingEndTime" class="block text-sm font-medium text-gray-700 mb-2">Voting End Time (optional)</label>
-                        <input type="datetime-local" id="votingEndTime" name="settings[votingEndTime]"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                        <p class="text-xs text-gray-500 mt-1">Leave empty for no deadline</p>
-                    </div>
-                </div>
-                
-                <!-- Email Domain Restriction -->
-                <div class="mt-6">
-                    <div class="flex items-center mb-3">
-                        <input type="checkbox" id="enableEmailRestriction" 
-                               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                               onchange="toggleEmailRestriction()">
-                        <label for="enableEmailRestriction" class="ml-2 block text-sm font-medium text-gray-700">
-                            <span class="font-medium">Restrict by Email Domain</span>
-                            <span class="text-gray-500 text-xs block">Only allow users from specific email domains</span>
-                        </label>
-                    </div>
-                    <div id="emailRestrictionField" style="display: none;" class="mt-3">
-                        <label for="allowedEmailDomains" class="block text-sm font-medium text-gray-700 mb-2">Allowed Email Domains</label>
-                        <input type="text" id="allowedEmailDomains" name="settings[allowedEmailDomains]"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                               placeholder="e.g., gmail.com, @college.edu, company.com"
-                               disabled>
-                        <p class="text-xs text-gray-500 mt-1">Comma-separated list of domains (with or without @)</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Submit Button -->
-            <div class="flex justify-end space-x-4">
-                <a href="/booth/dashboard" class="bg-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-400 transition-colors">Cancel</a>
-                <button type="submit" class="bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors">
-                    Create Booth
-                </button>
-            </div>
-        </form>
+        <% } %>
     </div>
 
     <script>
-        let candidateCount = 1;
+        let candidateCount = 0;
 
-        document.getElementById('addCandidate').addEventListener('click', function() {
-            const container = document.getElementById('candidatesContainer');
-            const newCandidate = document.createElement('div');
-            newCandidate.className = 'candidate-item mb-4 p-4 border border-gray-200 rounded-lg';
-            newCandidate.innerHTML = `
-                <div class="flex justify-between items-center mb-2">
-                    <h3 class="font-medium text-gray-900">Candidate ${candidateCount + 1}</h3>
-                    <button type="button" class="remove-candidate text-red-500 hover:text-red-700">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                        </svg>
-                    </button>
-                </div>
-                <div class="grid md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-                        <input type="text" name="candidates[${candidateCount}][name]" required
-                               class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                               placeholder="Candidate name">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                        <input type="text" name="candidates[${candidateCount}][description]"
-                               class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                               placeholder="Brief description or slogan">
-                    </div>
-                </div>
-            `;
-            
-            container.appendChild(newCandidate);
+        // Initialize with 2 candidates
+        document.addEventListener('DOMContentLoaded', function() {
+            addCandidate();
+            addCandidate();
+        });
+
+        function addCandidate() {
             candidateCount++;
-            
-            // Show remove buttons if there's more than one candidate
+            const container = document.getElementById('candidates-container');
+            const candidateDiv = document.createElement('div');
+            candidateDiv.className = 'candidate-item flex items-center space-x-3 p-4 border border-slate-200 rounded-lg bg-slate-50';
+            candidateDiv.innerHTML = `
+                <div class="flex-shrink-0 w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                    ${candidateCount}
+                </div>
+                <div class="flex-1">
+                    <input type="text" name="candidates[${candidateCount - 1}][name]" required 
+                           placeholder="Candidate ${candidateCount} name" 
+                           class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                </div>
+                <button type="button" onclick="removeCandidate(this)" 
+                        class="flex-shrink-0 text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-colors ${candidateCount <= 2 ? 'opacity-50 cursor-not-allowed' : ''}">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            `;
+            container.appendChild(candidateDiv);
             updateRemoveButtons();
-        });
+        }
 
-        // Handle remove candidate
-        document.addEventListener('click', function(e) {
-            if (e.target.closest('.remove-candidate')) {
-                e.target.closest('.candidate-item').remove();
-                updateRemoveButtons();
-                renumberCandidates();
+        function removeCandidate(button) {
+            const container = document.getElementById('candidates-container');
+            if (container.children.length <= 2) {
+                alert('You must have at least 2 candidates');
+                return;
             }
-        });
+            button.closest('.candidate-item').remove();
+            updateCandidateNumbers();
+            updateRemoveButtons();
+        }
+
+        function updateCandidateNumbers() {
+            const candidates = document.querySelectorAll('.candidate-item');
+            candidates.forEach((candidate, index) => {
+                const numberDiv = candidate.querySelector('.flex-shrink-0');
+                numberDiv.textContent = index + 1;
+                const input = candidate.querySelector('input');
+                input.name = `candidates[${index}][name]`;
+                input.placeholder = `Candidate ${index + 1} name`;
+            });
+        }
 
         function updateRemoveButtons() {
             const candidates = document.querySelectorAll('.candidate-item');
-            const removeButtons = document.querySelectorAll('.remove-candidate');
-            
-            removeButtons.forEach(button => {
-                button.classList.toggle('hidden', candidates.length <= 1);
-            });
-        }
-
-        function renumberCandidates() {
-            const candidates = document.querySelectorAll('.candidate-item');
-            candidates.forEach((candidate, index) => {
-                const title = candidate.querySelector('h3');
-                title.textContent = `Candidate ${index + 1}`;
-                
-                const nameInput = candidate.querySelector('input[name*="[name]"]');
-                const descInput = candidate.querySelector('input[name*="[description]"]');
-                
-                nameInput.name = `candidates[${index}][name]`;
-                descInput.name = `candidates[${index}][description]`;
-            });
-            
-            candidateCount = candidates.length;
-        }
-
-        // Form submission handling
-        document.getElementById('createBoothForm').addEventListener('submit', function(e) {
-            const candidates = document.querySelectorAll('input[name*="[name]"]');
-            if (candidates.length < 2) {
-                e.preventDefault();
-                alert('You need at least 2 candidates to create a booth.');
-                return;
-            }
-
-            // Validate that all candidate names are filled
-            let hasEmptyName = false;
-            candidates.forEach(input => {
-                if (!input.value.trim()) {
-                    hasEmptyName = true;
+            candidates.forEach(candidate => {
+                const removeBtn = candidate.querySelector('button[onclick*="removeCandidate"]');
+                if (candidates.length <= 2) {
+                    removeBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                } else {
+                    removeBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                 }
             });
-
-            if (hasEmptyName) {
-                e.preventDefault();
-                alert('Please fill in all candidate names.');
-                return;
-            }
-
-            // Show loading state
-            const submitBtn = this.querySelector('button[type="submit"]');
-            submitBtn.textContent = 'Creating...';
-            submitBtn.disabled = true;
-        });
-
-        // Toggle email restriction field
-        function toggleEmailRestriction() {            const checkbox = document.getElementById('enableEmailRestriction');
-            const field = document.getElementById('emailRestrictionField');
-            const input = document.getElementById('allowedEmailDomains');
-            
-            if (checkbox.checked) {
-                field.style.display = 'block';
-                input.disabled = false;
-            } else {
-                field.style.display = 'none';
-                input.disabled = true;
-                input.value = ''; // Clear the value when disabled
-            }
         }
+
+        function saveDraft() {
+            const form = document.getElementById('createBoothForm');
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'draft';
+            hiddenInput.value = 'true';
+            form.appendChild(hiddenInput);
+            form.submit();
+        }
+
+        // Form validation
+        document.getElementById('createBoothForm').addEventListener('submit', function(e) {
+            const name = document.getElementById('name').value.trim();
+            const description = document.getElementById('description').value.trim();
+            const candidates = document.querySelectorAll('input[name*="candidates"]');
+            
+            let valid = true;
+            let errors = [];
+
+            if (name.length < 3 || name.length > 100) {
+                errors.push('Booth name must be 3-100 characters');
+                valid = false;
+            }
+
+            if (description.length < 10 || description.length > 500) {
+                errors.push('Description must be 10-500 characters');
+                valid = false;
+            }
+
+            let validCandidates = 0;
+            candidates.forEach(input => {
+                if (input.value.trim().length > 0) validCandidates++;
+            });
+
+            if (validCandidates < 2) {
+                errors.push('You must have at least 2 candidates with names');
+                valid = false;
+            }
+
+            if (!valid) {
+                e.preventDefault();
+                alert('Please fix the following errors:\n\n' + errors.join('\n'));
+            }
+        });
     </script>
 </body>
 </html>

@@ -3,150 +3,256 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Join Booth - Voting App</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="/css/animations.css">
+    <title>Join Booth | VoteBooth</title>
+    <link href="/public/css/tailwind.css" rel="stylesheet">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/public/css/animations.css" rel="stylesheet">
 </head>
-<body class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-    <!-- Navigation -->
-    <nav class="bg-white shadow-sm border-b">
-        <div class="max-w-6xl mx-auto px-6 py-4">
-            <div class="flex justify-between items-center">
-                <div class="flex items-center space-x-4">
-                    <a href="/" class="text-2xl font-bold text-indigo-600">Voting App</a>
-                    <span class="text-gray-300">|</span>
-                    <a href="/booth/dashboard" class="text-gray-600 hover:text-gray-800">Dashboard</a>
-                    <span class="text-gray-300">|</span>
-                    <span class="text-gray-600">Join Booth</span>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <a href="/booth/dashboard" class="text-indigo-600 hover:text-indigo-800">Back to Dashboard</a>
-                    <a href="/logout" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors">Logout</a>
-                </div>
-            </div>
-        </div>
-    </nav>
-
-    <div class="max-w-2xl mx-auto px-6 py-8">
+<body class="bg-gradient-to-br from-emerald-50 via-blue-50 to-teal-50 min-h-screen font-sans flex items-center justify-center py-12">
+    <div class="max-w-md w-full mx-4">
         <!-- Header -->
         <div class="text-center mb-8">
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">Join a Voting Booth</h1>
-            <p class="text-gray-600">Enter an invite code or use an invite link to join a booth</p>
+            <a href="/" class="inline-flex items-center mb-6 group">
+                <i class="fas fa-vote-yea text-4xl text-primary mr-3 group-hover:scale-110 transition-transform"></i>
+                <span class="font-bold text-3xl text-slate-800">VoteBooth</span>
+            </a>
+            <div class="mb-6">
+                <div class="mx-auto w-16 h-16 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-center mb-4">
+                    <i class="fas fa-sign-in-alt text-2xl text-white"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-900 mb-2">Join a Voting Booth</h2>
+                <p class="text-slate-600">Enter the invite code to join an existing booth</p>
+            </div>
         </div>
 
-        <!-- Error/Success Messages -->
+        <!-- Alert Messages -->
         <% if (error) { %>
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-                <%= error %>
+            <div class="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 animate-slide-down">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-circle text-red-500 text-xl"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-red-800 font-medium"><%= error %></p>
+                    </div>
+                </div>
             </div>
         <% } %>
+
         <% if (success) { %>
-            <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
-                <%= success %>
+            <div class="mb-6 bg-emerald-50 border border-emerald-200 rounded-xl p-4 animate-slide-down">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-check-circle text-emerald-500 text-xl"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-emerald-800 font-medium"><%= success %></p>
+                    </div>
+                </div>
             </div>
         <% } %>
 
-        <!-- Join by Code Form -->
-        <div class="bg-white rounded-xl shadow-lg p-8 mb-8">
-            <div class="text-center mb-6">
-                <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
-                    </svg>
-                </div>
-                <h2 class="text-xl font-semibold text-gray-900 mb-2">Enter Booth Code</h2>
-                <p class="text-gray-600">Got an invite code? Enter it below to join the booth</p>
+        <!-- Join Form -->
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+            <div class="px-8 py-6 border-b border-slate-200 bg-gradient-to-r from-emerald-50 to-teal-50">
+                <h3 class="text-lg font-semibold text-slate-900">Enter Invite Code</h3>
+                <p class="text-sm text-slate-600">Ask the booth creator for the invite code</p>
             </div>
 
-            <form action="/booth/join-by-code" method="POST">
+            <form method="POST" action="/booth/join" class="p-8">
                 <div class="mb-6">
-                    <label for="inviteCode" class="block text-sm font-medium text-gray-700 mb-2">Invite Code</label>
-                    <input type="text" id="inviteCode" name="inviteCode" required
-                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-center text-lg font-mono uppercase"
-                           placeholder="ABC123"
-                           maxlength="8"
-                           style="letter-spacing: 0.1em;">
+                    <label for="inviteCode" class="block text-sm font-semibold text-slate-700 mb-3">
+                        <i class="fas fa-key text-slate-500 mr-2"></i>Invite Code
+                    </label>
+                    <div class="relative">
+                        <input type="text" 
+                               id="inviteCode" 
+                               name="inviteCode" 
+                               required 
+                               maxlength="8"
+                               placeholder="Enter 6-8 character code"
+                               class="w-full px-4 py-4 text-center text-lg font-mono font-bold uppercase border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 tracking-widest"
+                               style="letter-spacing: 0.2em;"
+                               autocomplete="off">
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-4">
+                            <button type="button" id="pasteButton" class="text-slate-400 hover:text-slate-600 transition-colors">
+                                <i class="fas fa-clipboard text-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-2 text-center">
+                        Code format: ABC123 or ABCD1234
+                    </p>
                 </div>
-                <button type="submit" class="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-indigo-700 transition-colors">
-                    Join Booth
-                </button>
+
+                <div class="space-y-4">
+                    <button type="submit" 
+                            class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-6 py-4 rounded-xl font-semibold text-lg hover:from-emerald-700 hover:to-teal-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                        <i class="fas fa-sign-in-alt mr-3"></i>Join Booth
+                    </button>
+
+                    <div class="text-center">
+                        <span class="text-slate-500 text-sm">or</span>
+                    </div>
+
+                    <a href="/booth/dashboard" 
+                       class="w-full bg-white text-slate-700 border-2 border-slate-300 px-6 py-4 rounded-xl font-semibold text-lg hover:bg-slate-50 transition-colors text-center block">
+                        <i class="fas fa-arrow-left mr-3"></i>Back to Dashboard
+                    </a>
+                </div>
             </form>
         </div>
 
-        <!-- Divider -->
-        <div class="flex items-center mb-8">
-            <div class="flex-1 border-t border-gray-300"></div>
-            <div class="px-4 text-gray-500 text-sm">OR</div>
-            <div class="flex-1 border-t border-gray-300"></div>
-        </div>
-
-        <!-- Join by Link Instructions -->
-        <div class="bg-white rounded-xl shadow-lg p-8">
-            <div class="text-center mb-6">
-                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
-                    </svg>
+        <!-- How it Works -->
+        <div class="mt-8 bg-white/70 backdrop-blur-sm rounded-xl p-6 border border-slate-200">
+            <h4 class="font-semibold text-slate-900 mb-4 flex items-center">
+                <i class="fas fa-question-circle text-emerald-600 mr-2"></i>How to Join
+            </h4>
+            <div class="space-y-3 text-sm text-slate-600">
+                <div class="flex items-start space-x-3">
+                    <div class="flex-shrink-0 w-6 h-6 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center text-xs font-bold">1</div>
+                    <p>Get the invite code from the booth creator</p>
                 </div>
-                <h2 class="text-xl font-semibold text-gray-900 mb-2">Join with Invite Link</h2>
-                <p class="text-gray-600">If you have an invite link, simply click on it to join automatically</p>
-            </div>
-
-            <div class="bg-gray-50 rounded-lg p-4">
-                <p class="text-sm text-gray-600 mb-2"><strong>Example invite link:</strong></p>
-                <code class="text-sm text-gray-800 bg-white px-2 py-1 rounded border">
-                    https://votingapp.com/booth/join/ABC123
-                </code>
-            </div>
-
-            <div class="mt-6 space-y-3 text-sm text-gray-600">
-                <div class="flex items-start">
-                    <svg class="w-5 h-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    <span>Invite links are automatically generated when a booth is created</span>
+                <div class="flex items-start space-x-3">
+                    <div class="flex-shrink-0 w-6 h-6 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center text-xs font-bold">2</div>
+                    <p>Enter the code in the field above (not case sensitive)</p>
                 </div>
-                <div class="flex items-start">
-                    <svg class="w-5 h-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    <span>You can get invite links from booth creators</span>
-                </div>
-                <div class="flex items-start">
-                    <svg class="w-5 h-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    <span>Links work the same as entering the code manually</span>
+                <div class="flex items-start space-x-3">
+                    <div class="flex-shrink-0 w-6 h-6 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center text-xs font-bold">3</div>
+                    <p>Click "Join Booth" to confirm and start voting</p>
                 </div>
             </div>
         </div>
 
-        <!-- Back to Dashboard -->
-        <div class="text-center mt-8">
-            <a href="/booth/dashboard" class="text-indigo-600 hover:text-indigo-800 font-medium">
-                ← Back to Dashboard
-            </a>
+        <!-- Alternative Methods -->
+        <div class="mt-6 text-center">
+            <p class="text-sm text-slate-600 mb-3">Have a share link instead?</p>
+            <button onclick="showLinkInput()" class="text-emerald-600 hover:text-emerald-700 font-medium text-sm">
+                <i class="fas fa-link mr-2"></i>Join via Link
+            </button>
+        </div>
+
+        <!-- Link Input (Hidden by default) -->
+        <div id="linkInputSection" class="mt-4 bg-white rounded-xl p-6 border border-slate-200 hidden">
+            <label for="shareLink" class="block text-sm font-semibold text-slate-700 mb-2">
+                <i class="fas fa-link text-slate-500 mr-2"></i>Paste Share Link
+            </label>
+            <div class="flex space-x-2">
+                <input type="url" 
+                       id="shareLink" 
+                       placeholder="https://votebooth.com/booth/join/ABC123"
+                       class="flex-1 px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors">
+                <button onclick="extractCodeFromLink()" 
+                        class="bg-emerald-600 text-white px-4 py-3 rounded-lg hover:bg-emerald-700 transition-colors">
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="mt-8 text-center text-xs text-slate-500">
+            <p>
+                Need help? <a href="/help" class="text-emerald-600 hover:text-emerald-700">Visit our Help Center</a>
+            </p>
         </div>
     </div>
 
     <script>
-        // Auto-uppercase invite code input
-        document.getElementById('inviteCode').addEventListener('input', function(e) {
-            e.target.value = e.target.value.toUpperCase();
-        });
+        const inviteCodeInput = document.getElementById('inviteCode');
+        const pasteButton = document.getElementById('pasteButton');
+        const linkInputSection = document.getElementById('linkInputSection');
+        const shareLinkInput = document.getElementById('shareLink');
 
-        // Format the invite code with spacing (optional visual enhancement)
-        document.getElementById('inviteCode').addEventListener('input', function(e) {
-            let value = e.target.value.replace(/\s/g, '');
-            if (value.length > 3) {
-                e.target.value = value.substring(0, 3) + ' ' + value.substring(3);
+        // Auto-uppercase and format input
+        inviteCodeInput.addEventListener('input', function(e) {
+            let value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            if (value.length > 8) {
+                value = value.slice(0, 8);
+            }
+            e.target.value = value;
+            
+            // Auto-submit if code looks complete (6-8 characters)
+            if (value.length >= 6 && /^[A-Z0-9]{6,8}$/.test(value)) {
+                e.target.classList.add('border-emerald-500', 'bg-emerald-50');
+            } else {
+                e.target.classList.remove('border-emerald-500', 'bg-emerald-50');
             }
         });
 
-        // Remove spaces before form submission
+        // Paste button functionality
+        pasteButton.addEventListener('click', async function() {
+            try {
+                const text = await navigator.clipboard.readText();
+                // Extract code from text (look for 6-8 alphanumeric characters)
+                const codeMatch = text.match(/[A-Z0-9]{6,8}/i);
+                if (codeMatch) {
+                    inviteCodeInput.value = codeMatch[0].toUpperCase();
+                    inviteCodeInput.dispatchEvent(new Event('input'));
+                } else {
+                    // If no code pattern found, just use the text as is
+                    inviteCodeInput.value = text.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+                    inviteCodeInput.dispatchEvent(new Event('input'));
+                }
+            } catch (err) {
+                // Clipboard access failed, show manual instruction
+                alert('Please manually paste the invite code');
+            }
+        });
+
+        // Show/hide link input section
+        function showLinkInput() {
+            linkInputSection.classList.toggle('hidden');
+            if (!linkInputSection.classList.contains('hidden')) {
+                shareLinkInput.focus();
+            }
+        }
+
+        // Extract code from share link
+        function extractCodeFromLink() {
+            const link = shareLinkInput.value;
+            const codeMatch = link.match(/\/join\/([A-Z0-9]{6,8})/i);
+            if (codeMatch) {
+                inviteCodeInput.value = codeMatch[1].toUpperCase();
+                inviteCodeInput.dispatchEvent(new Event('input'));
+                linkInputSection.classList.add('hidden');
+            } else {
+                alert('Invalid share link format. Please check the link and try again.');
+            }
+        }
+
+        // Auto-focus on load
+        inviteCodeInput.focus();
+
+        // Handle URL parameters (if coming from a share link)
+        const urlParams = new URLSearchParams(window.location.search);
+        const codeFromUrl = urlParams.get('code');
+        if (codeFromUrl) {
+            inviteCodeInput.value = codeFromUrl.toUpperCase();
+            inviteCodeInput.dispatchEvent(new Event('input'));
+        }
+
+        // Form validation
         document.querySelector('form').addEventListener('submit', function(e) {
-            const codeInput = document.getElementById('inviteCode');
-            codeInput.value = codeInput.value.replace(/\s/g, '');
+            const code = inviteCodeInput.value.trim();
+            if (!code) {
+                e.preventDefault();
+                alert('Please enter an invite code');
+                return;
+            }
+            if (code.length < 6) {
+                e.preventDefault();
+                alert('Invite code must be at least 6 characters');
+                return;
+            }
+        });
+
+        // Add loading state on submit
+        document.querySelector('form').addEventListener('submit', function() {
+            const submitButton = this.querySelector('button[type="submit"]');
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-3"></i>Joining...';
+            submitButton.disabled = true;
         });
     </script>
 </body>

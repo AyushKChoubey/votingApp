@@ -3,39 +3,159 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Error - Voting App</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="/css/animations.css">
+    <title><%= typeof title !== 'undefined' ? title : 'Error - VoteBooth' %></title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="/public/css/tailwind.css" rel="stylesheet">
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 </head>
-<body class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-    <div class="max-w-lg mx-auto px-6">
-        <div class="bg-white rounded-xl shadow-lg p-8 text-center animate-fade-in">
-            <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg class="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
+<body class="bg-gradient-to-br from-red-50 to-pink-100 min-h-screen flex items-center justify-center">
+    <div class="max-w-md w-full text-center px-4">
+        <!-- Error Icon -->
+        <div class="mb-8">
+            <div class="mx-auto w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mb-6 animate-bounce">
+                <i class="fas fa-exclamation-triangle text-4xl text-red-600"></i>
             </div>
             
-            <h1 class="text-3xl font-bold text-gray-900 mb-4">Oops! Something went wrong</h1>
+            <!-- Error Title -->
+            <h1 class="text-6xl font-bold text-gray-800 mb-4">
+                <%= error && error.includes('not found') ? '404' : error && error.includes('Forbidden') ? '403' : error && error.includes('server') ? '500' : 'Error' %>
+            </h1>
             
-            <% if (typeof error !== 'undefined' && error) { %>
-                <p class="text-gray-600 mb-6"><%= error %></p>
-            <% } else { %>
-                <p class="text-gray-600 mb-6">We encountered an unexpected error. Please try again later.</p>
-            <% } %>
+            <h2 class="text-2xl font-semibold text-gray-700 mb-2">
+                <% if (error && error.includes('not found')) { %>
+                    Page Not Found
+                <% } else if (error && error.includes('Forbidden')) { %>
+                    Access Forbidden
+                <% } else if (error && error.includes('server')) { %>
+                    Server Error
+                <% } else { %>
+                    Something went wrong
+                <% } %>
+            </h2>
+        </div>
+
+        <!-- Error Message -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <div class="text-gray-600 mb-4">
+                <% if (error) { %>
+                    <p class="text-lg"><%= error %></p>
+                <% } else { %>
+                    <p class="text-lg">We're sorry, but something unexpected happened.</p>
+                <% } %>
+            </div>
             
+            <!-- Helpful suggestions -->
+            <div class="text-sm text-gray-500">
+                <% if (error && error.includes('not found')) { %>
+                    <p>The page you're looking for might have been moved, deleted, or you entered the wrong URL.</p>
+                <% } else if (error && error.includes('Forbidden')) { %>
+                    <p>You don't have permission to access this resource. Please contact support if you believe this is an error.</p>
+                <% } else if (error && error.includes('server')) { %>
+                    <p>Our servers are experiencing some difficulties. Please try again in a few minutes.</p>
+                <% } else { %>
+                    <p>Please try refreshing the page or contact support if the problem continues.</p>
+                <% } %>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="space-y-4">
             <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                <button onclick="history.back()" class="bg-gray-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-600 transition-colors">
+                <button onclick="window.history.back()" 
+                        class="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transform hover:scale-105 transition-all duration-200 shadow-md">
+                    <i class="fas fa-arrow-left mr-2"></i>
                     Go Back
                 </button>
-                <a href="/" class="bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors">
-                    Home Page
+                
+                <a href="/" 
+                   class="inline-flex items-center justify-center px-6 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-blue-700 transform hover:scale-105 transition-all duration-200 shadow-md">
+                    <i class="fas fa-home mr-2"></i>
+                    Go Home
                 </a>
-                <a href="/booth/dashboard" class="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors">
-                    Dashboard
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <button onclick="location.reload()" 
+                        class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors">
+                    <i class="fas fa-redo mr-2"></i>
+                    Refresh Page
+                </button>
+                
+                <a href="/contact" 
+                   class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors">
+                    <i class="fas fa-envelope mr-2"></i>
+                    Contact Support
                 </a>
             </div>
         </div>
+
+        <!-- Brand Link -->
+        <div class="mt-12">
+            <a href="/" class="inline-flex items-center text-gray-500 hover:text-primary transition-colors">
+                <i class="fas fa-vote-yea text-2xl mr-2"></i>
+                <span class="font-semibold text-lg">VoteBooth</span>
+            </a>
+        </div>
+
+        <!-- Fun Facts (to make error page less frustrating) -->
+        <div class="mt-8 text-xs text-gray-400">
+            <div class="bg-gray-50 rounded-lg p-4">
+                <p class="font-medium mb-1">💡 Did you know?</p>
+                <p id="funFact">The first computer bug was an actual bug - a moth found trapped in a Harvard computer in 1947.</p>
+            </div>
+        </div>
     </div>
+
+    <script>
+        // Array of fun facts to display
+        const funFacts = [
+            "The first computer bug was an actual bug - a moth found trapped in a Harvard computer in 1947.",
+            "The word 'spam' for unwanted email comes from a Monty Python sketch about the canned meat.",
+            "The @ symbol was used in email addresses because it was the only preposition available on the keyboard.",
+            "The first website ever created is still online: info.cern.ch",
+            "There are more possible games of chess than atoms in the observable universe.",
+            "The term 'debugging' was coined by Admiral Grace Hopper when she found the actual bug in the computer.",
+            "Python programming language was named after Monty Python's Flying Circus.",
+            "The first computer programmer was Ada Lovelace in the 1840s."
+        ];
+
+        // Display random fun fact
+        document.getElementById('funFact').textContent = funFacts[Math.floor(Math.random() * funFacts.length)];
+
+        // Auto-redirect after some time for certain errors
+        <% if (error && error.includes('server')) { %>
+            setTimeout(() => {
+                const countdown = document.createElement('div');
+                countdown.className = 'mt-4 text-sm text-gray-500';
+                countdown.innerHTML = 'Redirecting to home page in <span id="timer">10</span> seconds...';
+                document.querySelector('.space-y-4').appendChild(countdown);
+                
+                let timeLeft = 10;
+                const timer = setInterval(() => {
+                    timeLeft--;
+                    document.getElementById('timer').textContent = timeLeft;
+                    if (timeLeft <= 0) {
+                        clearInterval(timer);
+                        window.location.href = '/';
+                    }
+                }, 1000);
+            }, 5000);
+        <% } %>
+
+        // Add some interactive elements
+        document.addEventListener('DOMContentLoaded', function() {
+            const errorIcon = document.querySelector('.fa-exclamation-triangle');
+            
+            // Add click event to error icon for a fun interaction
+            errorIcon.addEventListener('click', function() {
+                this.style.transform = 'rotate(360deg)';
+                this.style.transition = 'transform 0.5s ease-in-out';
+                setTimeout(() => {
+                    this.style.transform = 'rotate(0deg)';
+                }, 500);
+            });
+        });
+    </script>
 </body>
 </html>
