@@ -1,0 +1,89 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Logs
+logs/
+*.log
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+.env.example
+.env.template
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+database.db
+
+# Uploads and user content
+uploads/
+public/uploads/
+temp/
+tmp/
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*.swo
+*~
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+
+# Session files
+sessions/
+
+# Cache
+.cache/
+
+# PM2
+.pm2/
+
+# IDE
+*.code-workspace
+.history/
+
+# Testing
+__tests__/coverage/
+jest-coverage/
+
+# Build outputs (if any)
+dist/
+build/
