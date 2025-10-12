@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useEffect } from 'react';
 import api from '../../services/api';
 import { Alert } from '../layout/Alert';
-import { Loading } from '../layout/Loading';
+import { LoadingButton } from '../layout/Loading';
 
 export function JoinBooth() {
     const [inviteCode, setInviteCode] = useState('');
@@ -72,21 +72,21 @@ export function JoinBooth() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-teal-900 to-purple-900 flex items-center justify-center px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 flex items-center justify-center px-4 sm:px-6 lg:px-8">
             <div className="max-w-md w-full space-y-8">
                 <div className="text-center">
-                    <h1 className="text-3xl sm:text-4xl font-bold text-white mb-4">Join Booth</h1>
-                    <p className="text-gray-300 text-lg">Enter an invite code to join a voting booth</p>
+                    <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">Join Booth</h1>
+                    <p className="text-gray-600 text-lg">Enter an invite code to join a voting booth</p>
                 </div>
 
-                <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-8 border border-white/20">
+                <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
                     {error && <Alert type="error" message={error} />}
                     {success && <Alert type="success" message={success} />}
 
                     {!booth ? (
                         <form onSubmit={handleCodeSubmit} className="space-y-6">
                             <div>
-                                <label htmlFor="inviteCode" className="block text-sm font-medium text-gray-200 mb-2">
+                                <label htmlFor="inviteCode" className="block text-sm font-medium text-gray-700 mb-2">
                                     Invite Code
                                 </label>
                                 <input
@@ -95,55 +95,58 @@ export function JoinBooth() {
                                     required
                                     value={inviteCode}
                                     onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                                    className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent transition-all text-center text-2xl font-mono tracking-wider"
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-transparent transition-all text-center text-2xl font-mono tracking-wider"
                                     placeholder="ABCD123"
                                     maxLength="10"
                                 />
-                                <p className="text-gray-400 text-sm mt-2 text-center">
+                                <p className="text-gray-500 text-sm mt-2 text-center">
                                     Enter the invite code provided by the booth creator
                                 </p>
                             </div>
 
-                            <button
+                            <LoadingButton
                                 type="submit"
-                                disabled={loading || !inviteCode.trim()}
-                                className="w-full bg-gradient-to-r from-teal-500 to-purple-500 text-white py-3 px-4 rounded-xl font-semibold hover:from-teal-600 hover:to-purple-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-all transform hover:scale-105 disabled:opacity-50 disabled:transform-none"
+                                loading={loading}
+                                disabled={!inviteCode.trim()}
+                                variant="teal"
+                                size="lg"
+                                className="w-full"
                             >
-                                {loading ? <Loading size="sm" color="white" /> : 'Find Booth'}
-                            </button>
+                                Find Booth
+                            </LoadingButton>
                         </form>
                     ) : (
                         <div className="space-y-6">
                             {/* Booth Information */}
-                            <div className="bg-white/5 rounded-xl p-6 border border-white/10">
+                            <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
                                 <div className="flex items-center justify-between mb-4">
-                                    <h2 className="text-2xl font-bold text-white">{booth.name}</h2>
+                                    <h2 className="text-2xl font-bold text-gray-900">{booth.name}</h2>
                                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                                         booth.status === 'active' 
-                                            ? 'bg-green-500/20 text-green-300' 
-                                            : 'bg-gray-500/20 text-gray-300'
+                                            ? 'bg-green-100 text-green-600' 
+                                            : 'bg-gray-100 text-gray-600'
                                     }`}>
                                         {booth.status}
                                     </span>
                                 </div>
                                 
-                                <p className="text-gray-300 mb-4">{booth.description}</p>
+                                <p className="text-gray-600 mb-4">{booth.description}</p>
                                 
                                 <div className="grid grid-cols-2 gap-4 text-sm">
-                                    <div className="bg-white/5 p-3 rounded-lg">
-                                        <div className="text-gray-400">Created by</div>
-                                        <div className="text-white font-medium">{booth.creator?.name}</div>
+                                    <div className="bg-white p-3 rounded-lg border border-gray-200">
+                                        <div className="text-gray-500">Created by</div>
+                                        <div className="text-gray-900 font-medium">{booth.creator?.name}</div>
                                     </div>
-                                    <div className="bg-white/5 p-3 rounded-lg">
-                                        <div className="text-gray-400">Members</div>
-                                        <div className="text-white font-medium">{booth.memberCount} joined</div>
+                                    <div className="bg-white p-3 rounded-lg border border-gray-200">
+                                        <div className="text-gray-500">Members</div>
+                                        <div className="text-gray-900 font-medium">{booth.memberCount} joined</div>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Join Confirmation */}
                             <div className="text-center">
-                                <p className="text-gray-300 mb-6">
+                                <p className="text-gray-600 mb-6">
                                     Are you sure you want to join this voting booth?
                                 </p>
                                 
@@ -153,22 +156,25 @@ export function JoinBooth() {
                                             setBooth(null);
                                             setInviteCode('');
                                         }}
-                                        className="flex-1 bg-white/10 text-white py-3 px-4 rounded-xl font-semibold hover:bg-white/20 transition-all border border-white/20"
+                                        className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-xl font-semibold hover:bg-gray-200 transition-all duration-300 border border-gray-300"
                                     >
                                         Back
                                     </button>
                                     
-                                    <button
+                                    <LoadingButton
                                         onClick={handleJoinBooth}
-                                        disabled={joining || booth.status !== 'active'}
-                                        className="flex-1 bg-gradient-to-r from-green-500 to-teal-500 text-white py-3 px-4 rounded-xl font-semibold hover:from-green-600 hover:to-teal-600 transition-all transform hover:scale-105 disabled:opacity-50 disabled:transform-none"
+                                        loading={joining}
+                                        disabled={booth.status !== 'active'}
+                                        variant="green"
+                                        size="lg"
+                                        className="flex-1"
                                     >
-                                        {joining ? <Loading size="sm" color="white" /> : 'Join Booth'}
-                                    </button>
+                                        Join Booth
+                                    </LoadingButton>
                                 </div>
                                 
                                 {booth.status !== 'active' && (
-                                    <p className="text-orange-300 text-sm mt-4">
+                                    <p className="text-orange-600 text-sm mt-4">
                                         This booth is currently inactive and cannot accept new members.
                                     </p>
                                 )}
@@ -179,7 +185,7 @@ export function JoinBooth() {
                     <div className="mt-6 text-center">
                         <button
                             onClick={() => navigate('/dashboard')}
-                            className="text-gray-300 hover:text-white transition-colors text-sm"
+                            className="text-gray-500 hover:text-gray-700 transition-colors text-sm"
                         >
                             ← Back to Dashboard
                         </button>

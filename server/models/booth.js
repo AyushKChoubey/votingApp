@@ -100,10 +100,6 @@ const boothSchema = new mongoose.Schema({
             type: Boolean,
             default: false
         },
-        publicBooth: {
-            type: Boolean,
-            default: false
-        },
         sendNotifications: {
             type: Boolean,
             default: false
@@ -184,16 +180,20 @@ boothSchema.pre('save', async function(next) {
 
 // Check if user is a member
 boothSchema.methods.isMember = function(userId) {
-    return this.members.some(member => 
-        member.user.toString() === userId.toString()
-    );
+    return this.members.some(member => {
+        // Handle both populated and unpopulated user references
+        const memberId = member.user._id || member.user;
+        return memberId.toString() === userId.toString();
+    });
 };
 
 // Check if user has voted
 boothSchema.methods.hasUserVoted = function(userId) {
-    const member = this.members.find(member => 
-        member.user.toString() === userId.toString()
-    );
+    const member = this.members.find(member => {
+        // Handle both populated and unpopulated user references
+        const memberId = member.user._id || member.user;
+        return memberId.toString() === userId.toString();
+    });
     return member ? member.hasVoted : false;
 };
 
@@ -212,6 +212,8 @@ boothSchema.methods.addMember = async function(userId) {
         hasVoted: false
     });
     
+
+    
     return this.save();
 };
 
@@ -226,15 +228,17 @@ boothSchema.methods.removeMember = async function(userId) {
 
 // Mark user as voted
 boothSchema.methods.markAsVoted = async function(userId) {
-    const member = this.members.find(member => 
-        member.user.toString() === userId.toString()
-    );
+    const member = this.members.find(member => {
+        // Handle both populated and unpopulated user references
+        const memberId = member.user._id || member.user;
+        return memberId.toString() === userId.toString();
+    });
     
     if (!member) {
         throw new Error('User is not a member of this booth');
     }
     
-    if (member.hasVoted && !this.settings.allowMultipleVotes) {
+    if (member.hasVoted && !this.settings.allowVoteChange) {
         throw new Error('User has already voted');
     }
     

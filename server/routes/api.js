@@ -54,8 +54,6 @@ router.post('/contact', async (req, res) => {
         }
         
         // TODO: Send email or save to database
-        console.log('Contact form submission:', { name, email, subject, message });
-        
         res.json({
             success: true,
             message: 'Thank you for your message! We will get back to you soon.'

@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from './components/layout/Toast';
 import Layout from './components/layout/Layout';
 import { PageLoading } from './components/layout/Loading';
 
@@ -21,6 +22,7 @@ import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
+import OAuthCallback from './pages/OAuthCallback';
 
 // Booth Pages
 import CreateBoothPage from './pages/booth/CreateBoothPage';
@@ -28,6 +30,7 @@ import JoinBoothPage from './pages/booth/JoinBoothPage';
 import BoothDetailPage from './pages/booth/BoothDetailPage';
 import BoothAdminPage from './pages/booth/BoothAdminPage';
 import BoothResultsPage from './pages/booth/BoothResultsPage';
+
 
 // Create a query client
 const queryClient = new QueryClient({
@@ -86,6 +89,7 @@ const AppRoutes = () => {
         <Route path="/terms" element={<TermsPage />} />
 
         {/* Auth Routes */}
+        <Route path="/auth/callback" element={<OAuthCallback />} />
         <Route 
           path="/login" 
           element={
@@ -154,6 +158,7 @@ const AppRoutes = () => {
             </ProtectedRoute>
           } 
         />
+
         <Route 
           path="/booth/:boothId" 
           element={
@@ -192,9 +197,11 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <Router>
         <AuthProvider>
-          <div className="App">
-            <AppRoutes />
-          </div>
+          <ToastProvider>
+            <div className="App">
+              <AppRoutes />
+            </div>
+          </ToastProvider>
         </AuthProvider>
       </Router>
       <ReactQueryDevtools initialIsOpen={false} />

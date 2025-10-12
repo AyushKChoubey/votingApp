@@ -1,0 +1,54 @@
+# Root level gitignore for VotingApp
+
+# Environment files (CRITICAL - keeps secrets safe)
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# Dependencies
+node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Build outputs
+dist/
+build/
+
+# Database files
+*.db
+*.sqlite
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.code-workspace
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# PM2 (process manager)
+.pm2/
+ecosystem.config.js
+
+# Coverage reports
+coverage/
+
+# Cache directories
+.cache/
+.next/
+
+# Runtime files
+*.pid
+*.pid.lock

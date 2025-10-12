@@ -53,9 +53,8 @@ exports.signup = async (req, res) => {
         }
         
         if (errors.length > 0) {
-            return res.render('register', { 
+            return res.status(400).json({
                 error: errors.join('. '),
-                success: null,
                 formData: { name, email }
             });
         }
@@ -63,9 +62,8 @@ exports.signup = async (req, res) => {
         // Check if email already exists
         const existingUser = await User.findOne({ email });
         if (existingUser) {
-            return res.render('register', { 
+            return res.status(409).json({
                 error: 'Email already registered. Please use a different email or try logging in.',
-                success: null,
                 formData: { name, email }
             });
         }
@@ -84,24 +82,22 @@ exports.signup = async (req, res) => {
         const token = generateToken(savedUser);
         const refreshToken = generateRefreshToken(savedUser);
         
-        // Set secure cookies
-        const cookieOptions = {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        // Return user data and tokens
+        const userData = {
+            id: savedUser._id,
+            name: savedUser.name,
+            email: savedUser.email,
+            role: savedUser.role,
+            isEmailVerified: savedUser.isEmailVerified
         };
         
-        res.cookie('token', token, cookieOptions);
-        res.cookie('refreshToken', refreshToken, {
-            ...cookieOptions,
-            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        res.status(201).json({
+            success: true,
+            message: 'Registration successful',
+            token,
+            refreshToken,
+            user: userData
         });
-        
-        // Log successful registration
-        console.log(`New user registered: ${email} at ${new Date().toISOString()}`);
-        
-        res.redirect('/booth/dashboard');
     } catch (err) {
         console.error('Registration error:', err);
         
@@ -114,16 +110,15 @@ exports.signup = async (req, res) => {
             }
         }
         
-        res.render('register', { 
+        res.status(500).json({
             error: errorMessage,
-            success: null,
             formData: req.body
         });
     }
 };
 
-// API-only login (for React frontend)
-exports.loginAPI = async (req, res) => {
+// Login user (API endpoint for React frontend)
+exports.login = async (req, res) => {
     try {
         let { email, password, remember } = req.body;
         
@@ -195,9 +190,6 @@ exports.loginAPI = async (req, res) => {
             preferences: user.preferences
         };
         
-        // Log successful login
-        console.log(`User logged in via API: ${email} at ${new Date().toISOString()}`);
-        
         res.json({
             success: true,
             message: 'Login successful',
@@ -207,118 +199,9 @@ exports.loginAPI = async (req, res) => {
         });
         
     } catch (err) {
-        console.error('API Login error:', err);
+        console.error('Login error:', err);
         res.status(500).json({
             error: 'Login failed. Please try again.'
-        });
-    }
-};
-
-// Login user
-exports.login = async (req, res) => {
-    try {
-        let { email, password, remember } = req.body;
-        const redirectUrl = req.query.redirect || '/booth/dashboard';
-        
-        // Sanitize inputs
-        email = email ? email.trim().toLowerCase() : '';
-        
-        // Validation
-        if (!email || !password) {
-            return res.render('login', { 
-                error: 'Email and password are required',
-                success: null,
-                redirectUrl
-            });
-        }
-        
-        if (!validateEmail(email)) {
-            return res.render('login', { 
-                error: 'Please provide a valid email address',
-                success: null,
-                redirectUrl
-            });
-        }
-        
-        // Find user and include password for comparison
-        const user = await User.findOne({ email }).select('+password');
-        if (!user) {
-            // Use same error message to prevent email enumeration
-            return res.render('login', { 
-                error: 'Invalid email or password',
-                success: null,
-                redirectUrl
-            });
-        }
-        
-        // Check if account is locked
-        if (user.isLocked) {
-            return res.render('login', { 
-                error: 'Account is temporarily locked due to too many failed login attempts. Please try again later.',
-                success: null,
-                redirectUrl
-            });
-        }
-        
-        // Check password
-        const isPasswordValid = await user.comparePassword(password);
-        if (!isPasswordValid) {
-            // Increment login attempts
-            await user.incLoginAttempts();
-            
-            return res.render('login', { 
-                error: 'Invalid email or password',
-                success: null,
-                redirectUrl
-            });
-        }
-        
-        // Reset login attempts on successful login
-        if (user.loginAttempts && user.loginAttempts > 0) {
-            await user.resetLoginAttempts();
-        }
-        
-        // Update last login and login count
-        user.lastLogin = new Date();
-        user.loginCount = (user.loginCount || 0) + 1;
-        await user.save();
-        
-        // Generate tokens
-        const tokenExpiry = remember ? '7d' : '24h';
-        const token = generateToken(user, { expiresIn: tokenExpiry });
-        const refreshToken = generateRefreshToken(user);
-        
-        // Set secure cookies
-        const cookieOptions = {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            maxAge: remember ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000
-        };
-        
-        res.cookie('token', token, cookieOptions);
-        res.cookie('refreshToken', refreshToken, {
-            ...cookieOptions,
-            maxAge: 7 * 24 * 60 * 60 * 1000
-        });
-        
-        // Log successful login
-        console.log(`User login: ${email} at ${new Date().toISOString()} from IP: ${req.ip}`);
-        
-        // Redirect to intended page or dashboard
-        const safeRedirectUrl = validator.isURL(redirectUrl, { 
-            require_host: false, 
-            require_protocol: false,
-            allow_query_components: true 
-        }) ? redirectUrl : '/booth/dashboard';
-        
-        res.redirect(safeRedirectUrl);
-    } catch (err) {
-        console.error('Login error:', err);
-        res.render('login', { 
-            error: 'Login failed. Please try again.',
-            success: null,
-            redirectUrl: req.query.redirect
         });
     }
 };
@@ -339,21 +222,12 @@ exports.logout = (req, res) => {
         res.clearCookie('refreshToken');
         
         // Log logout
-        if (req.user) {
-            console.log(`User logout: ${req.user.email || req.user.id} at ${new Date().toISOString()}`);
-        }
-        
-        // Handle both API and HTML requests
-        if (req.accepts('html')) {
-            return res.redirect('/?message=logged_out');
-        }
-        
-        res.json({ message: 'Logged out successfully' });
+        res.json({ 
+            success: true,
+            message: 'Logged out successfully' 
+        });
     } catch (err) {
         console.error('Logout error:', err);
-        if (req.accepts('html')) {
-            return res.redirect('/');
-        }
         res.status(500).json({ error: 'Logout failed' });
     }
 };
@@ -368,31 +242,18 @@ exports.getProfile = async (req, res) => {
             .populate('joinedBooths', 'name status createdAt');
         
         if (!user) {
-            if (req.accepts('html')) {
-                return res.status(404).render('error', { error: 'User not found' });
-            }
             return res.status(404).json({ error: 'User not found' });
         }
         
         const stats = await user.getStats();
         
-        if (req.accepts('html')) {
-            res.render('profile', { 
-                user,
-                stats,
-                error: null,
-                success: null
-            });
-        } else {
-            res.json({ user, stats });
-        }
+        res.json({ 
+            success: true,
+            user, 
+            stats 
+        });
     } catch (err) {
         console.error('Get profile error:', err);
-        if (req.accepts('html')) {
-            return res.status(500).render('error', { 
-                error: 'Failed to load profile' 
-            });
-        }
         res.status(500).json({ error: 'Failed to load profile' });
     }
 };
@@ -446,9 +307,6 @@ exports.updatePassword = async (req, res) => {
         user.password = newPassword;
         user.passwordChangedAt = new Date();
         await user.save();
-        
-        // Log password change
-        console.log(`Password changed for user: ${user.email} at ${new Date().toISOString()}`);
         
         res.json({ message: 'Password updated successfully' });
     } catch (err) {
@@ -516,9 +374,6 @@ exports.updateProfile = async (req, res) => {
         if (address !== undefined) user.address = address;
         
         await user.save();
-        
-        // Log profile update
-        console.log(`Profile updated for user: ${user.email} at ${new Date().toISOString()}`);
         
         res.json({ 
             message: 'Profile updated successfully',
@@ -615,8 +470,6 @@ exports.deleteAccount = async (req, res) => {
         // Clear cookies
         res.clearCookie('token');
         res.clearCookie('refreshToken');
-        
-        console.log(`User account deleted: ${user.email} at ${new Date().toISOString()}`);
         
         res.json({ message: 'Account deleted successfully' });
     } catch (err) {

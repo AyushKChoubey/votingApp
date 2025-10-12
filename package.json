@@ -1,0 +1,24 @@
+{
+  "name": "voting-app",
+  "version": "1.0.0",
+  "description": "Full-stack voting application with React frontend and Express API",
+  "main": "server/server.js",
+  "scripts": {
+    "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
+    "server:dev": "cd server && npm run dev",
+    "client:dev": "cd client && npm run dev", 
+    "server:start": "cd server && npm start",
+    "client:build": "cd client && npm run build",
+    "build": "npm run client:build",
+    "start": "npm run server:start",
+    "start:fresh": "npm run client:build && npm run server:start",
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "clean": "cd client && rm -rf dist && cd ../server && rm -rf node_modules && cd ../client && rm -rf node_modules"
+  },
+  "keywords": ["voting", "react", "express", "nodejs"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

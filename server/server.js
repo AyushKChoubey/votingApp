@@ -1,13 +1,15 @@
 // server-api.js (API-only server for React frontend)
 const express = require('express');
 const app = express();
-const db = require('./db');
+const db = require('./config/database');
 require('dotenv').config();
 
 const bodyParser = require('body-parser');
 const path = require('path');
 const compression = require('compression');
 const cors = require('cors');
+const session = require('express-session');
+const passport = require('./config/passport');
 
 // Import security middleware
 const {
@@ -25,15 +27,47 @@ app.use(securityHeaders);
 app.use(compression());
 
 // CORS configuration for React frontend
-app.use(cors({
-    origin: process.env.NODE_ENV === 'production' 
-        ? ['https://yourdomain.com'] // Replace with your production domain
-        : ['http://localhost:3000'], // React dev server
+const corsOptions = {
+    origin: function (origin, callback) {
+        // Get allowed origins from environment variables or use defaults
+        const productionOrigins = process.env.ALLOWED_ORIGINS 
+            ? process.env.ALLOWED_ORIGINS.split(',').map(url => url.trim())
+            : ['https://yourdomain.com']; // fallback
+        
+        const developmentOrigins = ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'];
+        
+        const allowedOrigins = process.env.NODE_ENV === 'production' 
+            ? productionOrigins
+            : developmentOrigins;
+        
+        // Allow requests with no origin (like mobile apps, curl, or same-origin requests)
+        if (!origin) {
+            return callback(null, true);
+        }
+        
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-    exposedHeaders: ['X-Total-Count']
-}));
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+    exposedHeaders: ['X-Total-Count'],
+    optionsSuccessStatus: 200 // For legacy browser support
+};
+
+app.use(cors(corsOptions));
+
+// Manual preflight handling for complex requests
+app.options('*', (req, res) => {
+    res.header('Access-Control-Allow-Origin', req.get('Origin'));
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS,PATCH');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+    res.sendStatus(200);
+});
 
 // Body parsing middleware
 app.use(bodyParser.json({ 
@@ -52,6 +86,22 @@ app.use(validateInput);
 app.use(xssProtection);
 app.use(securityLogger);
 
+// Session configuration for OAuth
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+}));
+
+// Initialize Passport
+app.use(passport.initialize());
+app.use(passport.session());
+
 // Trust proxy in production (for correct IP addresses)
 if (process.env.NODE_ENV === 'production') {
     app.set('trust proxy', 1);
@@ -59,6 +109,7 @@ if (process.env.NODE_ENV === 'production') {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
+
     res.status(200).json({
         status: 'healthy',
         timestamp: new Date().toISOString(),
@@ -78,27 +129,51 @@ app.get('/api/status', (req, res) => {
     });
 });
 
-// API Routes - JSON only responses
-app.use('/api', require('./routes/api'));                 // General API routes
-// Routes
 const userRoutes = require('./routes/userRoutes');
 const boothRoutes = require('./routes/boothRoutes');
+const apiRoutes = require('./routes/api');
+const authRoutes = require('./routes/authRoutes');
 
-app.use('/api/users', userRoutes);
-app.use('/', userRoutes); // For compatibility with some routes
-app.use('/api', boothRoutes); // Booth routes with /api prefix built in
-app.use('/user', require('./routes/userRoutes'));    // User auth and profile routes
-app.use('/api', require('./routes/boothRoutes'));   // Booth functionality routes
+// ✅ Clean mount structure
+app.use('/api/auth', authRoutes);  // OAuth routes
+app.use('/api/user', userRoutes);  // all user routes
+app.use('/api/booth', boothRoutes); // all booth routes
+app.use('/api', apiRoutes); // general api routes
 
-// Handle 404 for API routes
-app.use('*', (req, res) => {
-    res.status(404).json({ 
-        error: 'API endpoint not found',
-        path: req.originalUrl,
-        method: req.method,
-        timestamp: new Date().toISOString()
+// Serve React app static files in production
+if (process.env.NODE_ENV === 'production') {
+    // Serve static files from client/dist
+    app.use(express.static(path.join(__dirname, '../client/dist')));
+    
+    // Handle React routing - serve index.html for non-API routes
+    app.get('*', (req, res) => {
+        // Don't serve index.html for API routes
+        if (req.path.startsWith('/api/')) {
+            return res.status(404).json({ error: 'API endpoint not found' });
+        }
+        res.sendFile(path.join(__dirname, '../client/dist/index.html'));
     });
-});
+} else {
+    // In development, handle API 404s only
+    app.use('/api/*', (req, res) => {
+        res.status(404).json({ 
+            error: 'API endpoint not found',
+            path: req.originalUrl,
+            method: req.method,
+            timestamp: new Date().toISOString()
+        });
+    });
+    
+    // For non-API routes in development, return helpful message
+    app.use('*', (req, res) => {
+        res.status(200).json({
+            message: 'React development server should handle this route',
+            note: 'Make sure your React dev server is running on http://localhost:5173',
+            path: req.originalUrl,
+            timestamp: new Date().toISOString()
+        });
+    });
+}
 
 // Global error handler
 app.use((err, req, res, next) => {
@@ -127,7 +202,7 @@ app.use((err, req, res, next) => {
 });
 
 // Start the API server
-const PORT = process.env.API_PORT || 3001;
+const PORT = process.env.PORT || 5000;
 const HOST = process.env.HOST || 'localhost';
 
 const startServer = async () => {
@@ -136,7 +211,7 @@ const startServer = async () => {
             console.log(`🚀 VoteBooth API Server running at http://${HOST}:${PORT}`);
             console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
             console.log(`🔗 Health check: http://${HOST}:${PORT}/health`);
-            console.log(`📡 CORS enabled for: ${process.env.NODE_ENV === 'production' ? 'production domains' : 'http://localhost:3000'}`);
+            console.log(`📡 CORS enabled for: ${process.env.NODE_ENV === 'production' ? 'production domains' : 'http://localhost:5173'}`);
         });
     } catch (error) {
         console.error('❌ Failed to start server:', error);

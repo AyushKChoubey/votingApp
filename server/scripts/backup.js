@@ -18,7 +18,7 @@ async function backup() {
         }
         
         // Parse MongoDB URL to get database name
-        const mongoUrl = process.env.MONGODB_URL;
+        const mongoUrl = process.env.MONGODB_URI || process.env.MONGODB_URL || process.env.MONGODB_URL_LOCAL || 'mongodb://localhost:27017/votingApp';
         const dbName = mongoUrl.split('/').pop().split('?')[0];
         
         console.log(`📦 Backing up database: ${dbName}`);

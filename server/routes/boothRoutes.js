@@ -78,7 +78,7 @@ router.get('/dashboard', jwtAuthMiddleware, async (req, res) => {
 });
 
 // Check if user can create booth
-router.get('/api/create/check', jwtAuthMiddleware, async (req, res) => {
+router.get('/create', jwtAuthMiddleware, async (req, res) => {
     try {
         const User = require('../models/user');
         const user = await User.findById(req.user.id);
@@ -104,7 +104,7 @@ router.get('/api/create/check', jwtAuthMiddleware, async (req, res) => {
 });
 
 // Find booth by invite code (for join confirmation)
-router.get('/api/join/:code', jwtAuthMiddleware, async (req, res) => {
+router.get('/join/:code', jwtAuthMiddleware, async (req, res) => {
     try {
         const { code } = req.params;
         const booth = await Booth.findOne({ inviteCode: code.toUpperCase() })
@@ -141,10 +141,16 @@ router.get('/api/join/:code', jwtAuthMiddleware, async (req, res) => {
 });
 
 // Get booth details for voting/viewing
-router.get('/api/:boothId', jwtAuthMiddleware, async (req, res) => {
+router.get('/:boothId', jwtAuthMiddleware, async (req, res) => {
     try {
         const { boothId } = req.params;
         const userId = req.user.id;
+        
+        // Validate ObjectId format
+        const mongoose = require('mongoose');
+        if (!mongoose.Types.ObjectId.isValid(boothId)) {
+            return res.status(400).json({ error: 'Invalid booth ID format' });
+        }
         
         const booth = await Booth.findById(boothId)
             .populate('creator', 'name email')
@@ -187,7 +193,7 @@ router.get('/api/:boothId', jwtAuthMiddleware, async (req, res) => {
                     isCreator,
                     isMember,
                     hasVoted,
-                    canVote: votingStatus.allowed && !hasVoted
+                    canVote: votingStatus.allowed && (!hasVoted || booth.settings.allowVoteChange)
                 },
                 votingStatus,
                 stats
@@ -200,7 +206,7 @@ router.get('/api/:boothId', jwtAuthMiddleware, async (req, res) => {
 });
 
 // Get booth results
-router.get('/api/:boothId/results', jwtAuthMiddleware, async (req, res) => {
+router.get('/:boothId/results', jwtAuthMiddleware, async (req, res) => {
     try {
         const { boothId } = req.params;
         const userId = req.user.id;
@@ -263,7 +269,7 @@ router.get('/api/:boothId/results', jwtAuthMiddleware, async (req, res) => {
 });
 
 // Get admin panel data
-router.get('/api/:boothId/admin', jwtAuthMiddleware, async (req, res) => {
+router.get('/:boothId/admin', jwtAuthMiddleware, async (req, res) => {
     try {
         const { boothId } = req.params;
         const userId = req.user.id;
@@ -327,7 +333,7 @@ router.get('/api/:boothId/admin', jwtAuthMiddleware, async (req, res) => {
 });
 
 // Export booth data (JSON format for API)
-router.get('/api/:boothId/export', jwtAuthMiddleware, async (req, res) => {
+router.get('/:boothId/export', jwtAuthMiddleware, async (req, res) => {
     try {
         const { boothId } = req.params;
         const userId = req.user.id;
@@ -392,7 +398,7 @@ router.get('/api/:boothId/export', jwtAuthMiddleware, async (req, res) => {
 });
 
 // Remove member (admin only)
-router.delete('/api/:boothId/members/:memberId', jwtAuthMiddleware, async (req, res) => {
+router.delete('/:boothId/members/:memberId', jwtAuthMiddleware, async (req, res) => {
     try {
         const { boothId, memberId } = req.params;
         const userId = req.user.id;
@@ -434,30 +440,35 @@ router.delete('/api/:boothId/members/:memberId', jwtAuthMiddleware, async (req, 
 // ===== Standard API Routes (from controller) =====
 
 // Create booth
-router.post('/api/create', jwtAuthMiddleware, boothController.createBooth);
+router.post('/create', jwtAuthMiddleware, boothController.createBooth);
 
 // Join booth (via code)
-router.post('/api/join/:code', jwtAuthMiddleware, boothController.joinBooth);
+router.post('/join/:code', jwtAuthMiddleware, boothController.joinBooth);
+
+// Direct invite link join (handles login redirect)
+router.get('/invite/:code', boothController.directInviteJoin);
 
 // Vote
-router.post('/api/:boothId/vote', jwtAuthMiddleware, boothController.vote);
+router.post('/:boothId/vote', jwtAuthMiddleware, boothController.vote);
 
 // Reset invite code
-router.post('/api/:boothId/reset-code', jwtAuthMiddleware, boothController.resetInviteCode);
+router.post('/:boothId/reset-code', jwtAuthMiddleware, boothController.resetInviteCode);
 
 // Update booth settings
-router.put('/api/:boothId/settings', jwtAuthMiddleware, boothController.updateBoothSettings);
+router.put('/:boothId/settings', jwtAuthMiddleware, boothController.updateBoothSettings);
 
 // Toggle booth status
-router.post('/api/:boothId/toggle-status', jwtAuthMiddleware, boothController.toggleBoothStatus);
+router.post('/:boothId/toggle-status', jwtAuthMiddleware, boothController.toggleBoothStatus);
 
 // Delete booth
-router.delete('/api/:boothId', jwtAuthMiddleware, boothController.deleteBooth);
+router.delete('/:boothId', jwtAuthMiddleware, boothController.deleteBooth);
 
 // Edit booth
-router.put('/api/:boothId', jwtAuthMiddleware, boothController.editBooth);
+router.put('/:boothId', jwtAuthMiddleware, boothController.editBooth);
 
 // Get user's booths (API)
-router.get('/api/user/booths', jwtAuthMiddleware, boothController.getUserBooths);
+router.get('/user/booths', jwtAuthMiddleware, boothController.getUserBooths);
+
+
 
 module.exports = router;

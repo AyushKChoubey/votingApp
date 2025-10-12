@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 // Create axios instance with default config
 const api = axios.create({
@@ -28,7 +28,24 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response.data,
   (error) => {
+    console.error('API Error:', {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      config: {
+        method: error.config?.method,
+        url: error.config?.url,
+        baseURL: error.config?.baseURL
+      }
+    });
+    
     const message = error.response?.data?.error || error.response?.data?.message || error.message;
+    
+    // Handle CORS errors
+    if (error.message.includes('Network Error') || error.code === 'ERR_NETWORK') {
+      console.error('🚨 CORS or Network Error - Check if server is running on localhost:5000');
+    }
     
     // Handle 401 unauthorized
     if (error.response?.status === 401) {
@@ -36,101 +53,109 @@ api.interceptors.response.use(
       window.location.href = '/login?message=session_expired';
     }
     
-    return Promise.reject(new Error(message));
+    // Preserve the original error structure but with our message
+    const enhancedError = new Error(message);
+    enhancedError.response = error.response;
+    enhancedError.status = error.response?.status;
+    enhancedError.data = error.response?.data;
+    
+    return Promise.reject(enhancedError);
   }
 );
 
 // Authentication Services
 export const authService = {
   async login(email, password) {
-    return api.post('/user/login', { email, password });
+    return api.post('/api/user/login', { email, password });
   },
 
   async register(userData) {
-    return api.post('/user/register', userData);
+    return api.post('/api/user/register', userData);
   },
 
   async logout() {
-    return api.post('/user/logout');
+    return api.post('/api/user/logout');
   },
 
   async getProfile() {
-    return api.get('/user/api/profile');
+    return api.get('/api/user/profile');
   },
 
   async updateProfile(userData) {
-    return api.put('/user/api/profile', userData);
+    return api.put('/api/user/profile', userData);
   },
 
   async updatePassword(passwordData) {
-    return api.put('/user/api/password', passwordData);
+    return api.put('/api/user/password', passwordData);
   },
 
   async getUserStats() {
-    return api.get('/user/api/stats');
+    return api.get('/api/user/stats');
   },
 
   async refreshToken() {
-    return api.post('/user/api/refresh-token');
+    return api.post('/api/user/refresh-token');
   }
 };
 
 // Booth Services
 export const boothService = {
   async getBooths() {
-    return api.get('/booth/api/user/booths');
+    return api.get('/api/booth/user/booths');
   },
 
   async getBooth(boothId) {
-    return api.get(`/booth/api/${boothId}`);
+    return api.get(`/api/booth/${boothId}`);
   },
 
   async createBooth(boothData) {
-    return api.post('/booth/create', boothData);
+    return api.post('/api/booth/create', boothData);
   },
 
   async updateBooth(boothId, boothData) {
-    return api.post(`/booth/${boothId}/edit`, boothData);
+    return api.post(`/api/booth/${boothId}/edit`, boothData);
   },
 
   async deleteBooth(boothId) {
-    return api.delete(`/booth/${boothId}/delete`);
+    return api.delete(`/api/booth/${boothId}/delete`);
   },
 
   async joinBooth(inviteCode) {
-    return api.post(`/booth/join/${inviteCode}`);
+    return api.post(`/api/booth/join/${inviteCode}`);
   },
 
-  async vote(boothId, candidateId) {
-    return api.post(`/booth/${boothId}/vote`, { candidateId });
+  async vote(boothId, candidateIndex) {
+    return api.post(`/api/booth/${boothId}/vote`, { candidateIndex });
   },
 
   async getResults(boothId) {
-    return api.get(`/booth/api/${boothId}/results`);
+    return api.get(`/api/booth/${boothId}/results`);
   },
 
   async resetInviteCode(boothId) {
-    return api.post(`/booth/${boothId}/reset-code`);
+    return api.post(`/api/booth/${boothId}/reset-code`);
   },
 
   async updateSettings(boothId, settings) {
-    return api.put(`/booth/${boothId}/settings`, settings);
+    return api.put(`/api/booth/${boothId}/settings`, settings);
   },
 
   async removeMember(boothId, memberId) {
-    return api.post(`/booth/${boothId}/remove-member/${memberId}`);
+    return api.post(`/api/booth/${boothId}/remove-member/${memberId}`);
   },
 
   async toggleStatus(boothId) {
-    return api.post(`/booth/${boothId}/toggle-status`);
+    return api.post(`/api/booth/${boothId}/toggle-status`);
   },
 
   async exportData(boothId, format) {
-    const response = await api.get(`/booth/${boothId}/export/${format}`, {
+    const response = await api.get(`/api/booth/${boothId}/export/${format}`, {
       responseType: 'blob'
     });
     return response;
-  }
+  },
+
+
 };
 
 // General API Services

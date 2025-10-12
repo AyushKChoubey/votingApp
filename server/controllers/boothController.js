@@ -51,31 +51,14 @@ exports.createBooth = async (req, res) => {
         // Check if user can create more booths
         const user = await User.findById(userId);
         if (!user) {
-            const error = 'User not found';
-            if (req.accepts('html')) {
-                return res.render('booth/create', { 
-                    error,
-                    success: null,
-                    canCreate: false,
-                    maxBooths: 5,
-                    user: null
-                });
-            }
-            return res.status(404).json({ error });
+            return res.status(404).json({ error: 'User not found' });
         }
         
         if (!await user.canCreateBooth()) {
-            const error = 'Booth creation limit reached. Upgrade your account to create more booths.';
-            if (req.accepts('html')) {
-                return res.render('booth/create', { 
-                    error,
-                    success: null,
-                    canCreate: false,
-                    maxBooths: user.subscription.maxBooths,
-                    user: user
-                });
-            }
-            return res.status(403).json({ error });
+            return res.status(403).json({ 
+                error: 'Booth creation limit reached. Upgrade your account to create more booths.',
+                maxBooths: user.subscription.maxBooths
+            });
         }
         
         // Validate inputs
@@ -149,18 +132,10 @@ exports.createBooth = async (req, res) => {
         }
         
         if (errors.length > 0) {
-            const error = errors.join('. ');
-            if (req.accepts('html')) {
-                return res.render('booth/create', { 
-                    error, 
-                    formData: req.body,
-                    success: null,
-                    canCreate: true,
-                    maxBooths: user.subscription.maxBooths,
-                    user: user
-                });
-            }
-            return res.status(400).json({ error });
+            return res.status(400).json({ 
+                error: errors.join('. '),
+                formData: req.body
+            });
         }
         
         // Process settings
@@ -188,7 +163,6 @@ exports.createBooth = async (req, res) => {
             // Access Control
             requireEmailVerification: req.body['settings[requireEmailVerification]'] === 'on' || req.body['settings[requireEmailVerification]'] === 'true',
             requireApproval: req.body['settings[requireApproval]'] === 'on' || req.body['settings[requireApproval]'] === 'true',
-            publicBooth: req.body['settings[publicBooth]'] === 'on' || req.body['settings[publicBooth]'] === 'true',
             sendNotifications: req.body['settings[sendNotifications]'] === 'on' || req.body['settings[sendNotifications]'] === 'true',
             
             // Time Settings
@@ -209,18 +183,10 @@ exports.createBooth = async (req, res) => {
         // Validate time settings
         if (processedSettings.votingStartTime && processedSettings.votingEndTime) {
             if (processedSettings.votingStartTime >= processedSettings.votingEndTime) {
-                const error = 'Voting end time must be after start time';
-                if (req.accepts('html')) {
-                    return res.render('booth/create', { 
-                        error, 
-                        formData: req.body,
-                        success: null,
-                        canCreate: true,
-                        maxBooths: user.subscription.maxBooths,
-                        user: user
-                    });
-                }
-                return res.status(400).json({ error });
+                return res.status(400).json({ 
+                    error: 'Voting end time must be after start time',
+                    formData: req.body
+                });
             }
         }
         
@@ -232,18 +198,10 @@ exports.createBooth = async (req, res) => {
             });
             
             if (invalidDomains.length > 0) {
-                const error = `Invalid email domains: ${invalidDomains.join(', ')}`;
-                if (req.accepts('html')) {
-                    return res.render('booth/create', { 
-                        error, 
-                        formData: req.body,
-                        success: null,
-                        canCreate: true,
-                        maxBooths: user.subscription.maxBooths,
-                        user: user
-                    });
-                }
-                return res.status(400).json({ error });
+                return res.status(400).json({ 
+                    error: `Invalid email domains: ${invalidDomains.join(', ')}`,
+                    formData: req.body
+                });
             }
         }
         
@@ -267,14 +225,8 @@ exports.createBooth = async (req, res) => {
         }
         await user.save();
         
-        // Log booth creation
-        console.log(`Booth created: ${booth.name} by ${user.email} at ${new Date().toISOString()}`);
-        
-        if (req.accepts('html')) {
-            return res.redirect(`/booth/${booth._id}/admin`);
-        }
-        
         res.status(201).json({
+            success: true,
             message: 'Booth created successfully',
             booth: {
                 id: booth._id,
@@ -285,18 +237,10 @@ exports.createBooth = async (req, res) => {
         });
     } catch (err) {
         console.error('Create booth error:', err);
-        const error = 'Failed to create booth. Please try again.';
-        if (req.accepts('html')) {
-            return res.render('booth/create', { 
-                error, 
-                formData: req.body,
-                success: null,
-                canCreate: true,
-                maxBooths: 5,
-                user: null
-            });
-        }
-        res.status(500).json({ error });
+        res.status(500).json({ 
+            error: 'Failed to create booth. Please try again.',
+            formData: req.body
+        });
     }
 };
 
@@ -330,11 +274,7 @@ exports.getBoothDetails = async (req, res) => {
         const isCreator = booth.creator._id.toString() === userId;
         
         if (!isMember && !isCreator) {
-            const error = 'Access denied. You are not a member of this booth.';
-            if (req.accepts('html')) {
-                return res.status(403).render('error', { error });
-            }
-            return res.status(403).json({ error });
+            return res.status(403).json({ error: 'Access denied. You are not a member of this booth.' });
         }
         
         // Prepare response based on user role
@@ -365,10 +305,6 @@ exports.getBoothDetails = async (req, res) => {
             response.booth.members = booth.members;
         }
         
-        if (req.accepts('html')) {
-            return res.render('booth/detail', response.booth);
-        }
-        
         res.json(response);
     } catch (err) {
         console.error('Get booth details error:', err);
@@ -388,37 +324,23 @@ exports.joinBooth = async (req, res) => {
         
         // Validate invite code format
         if (!code || !/^[A-Z0-9]{6,8}$/.test(code.toUpperCase())) {
-            const error = 'Invalid invite code format';
-            if (req.accepts('html')) {
-                return res.render('booth/join', { error, success: null });
-            }
-            return res.status(400).json({ error });
+            return res.status(400).json({ error: 'Invalid invite code format' });
         }
         
         const booth = await Booth.findOne({ inviteCode: code.toUpperCase() });
         
         if (!booth) {
-            const error = 'Invalid invite code';
-            if (req.accepts('html')) {
-                return res.render('booth/join', { error, success: null });
-            }
-            return res.status(404).json({ error });
+            return res.status(404).json({ error: 'Invalid invite code' });
         }
         
         if (booth.status !== 'active') {
-            const error = 'This booth is not accepting new members';
-            if (req.accepts('html')) {
-                return res.render('booth/join', { error, success: null });
-            }
-            return res.status(400).json({ error });
+            return res.status(400).json({ error: 'This booth is not accepting new members' });
         }
         
         // Check if user is already a member
         if (booth.isMember(userId)) {
-            if (req.accepts('html')) {
-                return res.redirect(`/booth/${booth._id}`);
-            }
             return res.json({ 
+                success: true,
                 message: 'You are already a member of this booth',
                 boothId: booth._id,
                 boothName: booth.name
@@ -427,23 +349,16 @@ exports.joinBooth = async (req, res) => {
         
         // Check booth capacity
         if (booth.members.length >= booth.maxMembers) {
-            const error = 'This booth is full';
-            if (req.accepts('html')) {
-                return res.render('booth/join', { error, success: null });
-            }
-            return res.status(400).json({ error });
+            return res.status(400).json({ error: 'This booth is full' });
         }
         
         // Check email domain restriction
         if (booth.settings?.allowedEmailDomains?.length > 0) {
+            const User = require('../models/user');
             const user = await User.findById(userId);
             
             if (!user?.email) {
-                const error = 'User account must have a valid email address to join this booth';
-                if (req.accepts('html')) {
-                    return res.render('booth/join', { error, success: null });
-                }
-                return res.status(400).json({ error });
+                return res.status(400).json({ error: 'User account must have a valid email address to join this booth' });
             }
             
             const userEmailDomain = user.email.split('@')[1];
@@ -457,50 +372,34 @@ exports.joinBooth = async (req, res) => {
                 const domainList = booth.settings.allowedEmailDomains
                     .map(d => d.startsWith('@') ? d : '@' + d)
                     .join(', ');
-                const error = `Only users with ${domainList} email addresses can join this booth`;
-                if (req.accepts('html')) {
-                    return res.render('booth/join', { error, success: null });
-                }
-                return res.status(403).json({ error });
+                return res.status(403).json({ error: `Only users with ${domainList} email addresses can join this booth` });
             }
         }
         
         try {
+            // Add member (this already saves the booth)
             await booth.addMember(userId);
             
             // Update user's joined booths
+            const User = require('../models/user');
             const user = await User.findById(userId);
             if (!user.joinedBooths.includes(booth._id)) {
                 user.joinedBooths.push(booth._id);
                 await user.save();
             }
             
-            // Log successful join
-            console.log(`User joined booth: ${user.email} joined ${booth.name} at ${new Date().toISOString()}`);
-            
-            if (req.accepts('html')) {
-                return res.redirect(`/booth/${booth._id}`);
-            }
-            
             res.json({ 
+                success: true,
                 message: 'Successfully joined booth',
                 boothId: booth._id,
                 boothName: booth.name
             });
         } catch (err) {
-            const error = err.message;
-            if (req.accepts('html')) {
-                return res.render('booth/join', { error, success: null });
-            }
-            res.status(400).json({ error });
+            res.status(400).json({ error: err.message });
         }
     } catch (err) {
         console.error('Join booth error:', err);
-        const error = 'Failed to join booth. Please try again.';
-        if (req.accepts('html')) {
-            return res.render('booth/join', { error, success: null });
-        }
-        res.status(500).json({ error });
+        res.status(500).json({ error: 'Failed to join booth. Please try again.' });
     }
 };
 
@@ -596,24 +495,14 @@ exports.vote = async (req, res) => {
         });
         await vote.save();
         
-        // Log vote
-        console.log(`Vote cast: User ${userId} voted for ${booth.candidates[candidateIdx].name} in booth ${booth.name} at ${new Date().toISOString()}`);
-        
-        if (req.accepts('html')) {
-            return res.redirect(`/booth/${boothId}/results`);
-        }
-        
         res.json({ 
+            success: true,
             message: 'Vote recorded successfully',
             candidate: booth.candidates[candidateIdx].name
         });
     } catch (err) {
         console.error('Vote error:', err);
-        const error = 'Failed to record vote. Please try again.';
-        if (req.accepts('html')) {
-            return res.status(500).render('error', { error });
-        }
-        res.status(500).json({ error });
+        res.status(500).json({ error: 'Failed to record vote. Please try again.' });
     }
 };
 
@@ -774,10 +663,13 @@ exports.getBoothEditForm = async (req, res) => {
             return res.status(403).render('error', { error: 'Only booth creator can edit booth' });
         }
         
-        res.render('booth/edit', { booth, error: null, success: null });
+        res.json({ 
+            success: true, 
+            booth 
+        });
     } catch (err) {
         console.error('Get booth edit form error:', err);
-        res.status(500).render('error', { error: 'Failed to load edit form' });
+        res.status(500).json({ error: 'Failed to load edit form' });
     }
 };
 
@@ -828,10 +720,9 @@ exports.editBooth = async (req, res) => {
         }
         
         if (errors.length > 0) {
-            return res.render('booth/edit', { 
-                booth, 
+            return res.status(400).json({ 
                 error: errors.join('. '), 
-                success: null 
+                booth
             });
         }
         
@@ -842,14 +733,14 @@ exports.editBooth = async (req, res) => {
         
         await booth.save();
         
-        res.render('booth/edit', { 
-            booth, 
-            error: null, 
-            success: 'Booth updated successfully' 
+        res.json({ 
+            success: true,
+            message: 'Booth updated successfully',
+            booth
         });
     } catch (err) {
         console.error('Edit booth error:', err);
-        res.status(500).render('error', { error: 'Failed to update booth' });
+        res.status(500).json({ error: 'Failed to update booth' });
     }
 };
 
@@ -902,13 +793,10 @@ exports.deleteBooth = async (req, res) => {
         // Delete the booth
         await Booth.findByIdAndDelete(boothId);
         
-        console.log(`Booth deleted: ${booth.name} by user ${userId} at ${new Date().toISOString()}`);
-        
-        if (req.accepts('html')) {
-            return res.redirect('/booth/dashboard?message=booth_deleted');
-        }
-        
-        res.json({ message: 'Booth deleted successfully' });
+        res.json({ 
+            success: true,
+            message: 'Booth deleted successfully' 
+        });
     } catch (err) {
         console.error('Delete booth error:', err);
         const error = 'Failed to delete booth';
@@ -1022,3 +910,94 @@ exports.getUserBooths = async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch user booths' });
     }
 };
+
+// Direct invite link join - handles login redirect
+exports.directInviteJoin = async (req, res) => {
+    try {
+        const { code } = req.params;
+        const token = req.headers.authorization?.replace('Bearer ', '') || req.query.token;
+        
+        // First, verify the invite code is valid
+        const booth = await Booth.findOne({ inviteCode: code.toUpperCase() })
+            .populate('creator', 'name');
+        
+        if (!booth) {
+            // Redirect to client with error
+            return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/booth/join?error=invalid_code`);
+        }
+        
+        // If no token, redirect to login with the invite code
+        if (!token) {
+            const loginUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/login?invite=${code}&redirect=/booth/join/${code}`;
+            return res.redirect(loginUrl);
+        }
+        
+        // Verify the token
+        const jwt = require('jsonwebtoken');
+        let userId;
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            userId = decoded.userId;
+        } catch (jwtErr) {
+            const loginUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/login?invite=${code}&redirect=/booth/join/${code}`;
+            return res.redirect(loginUrl);
+        }
+        
+        // Check if user is already a member or creator
+        const isMember = booth.isMember(userId);
+        const isCreator = booth.creator._id.toString() === userId;
+        
+        if (isMember || isCreator) {
+            return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/booth/${booth._id}`);
+        }
+        
+        // Check booth capacity
+        if (booth.members.length >= booth.maxMembers) {
+            return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/booth/join?error=booth_full`);
+        }
+        
+        // Check if booth is active
+        if (booth.status !== 'active') {
+            return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/booth/join?error=booth_inactive`);
+        }
+        
+        // Check email domain restriction
+        if (booth.settings?.allowedEmailDomains?.length > 0) {
+            const user = await User.findById(userId);
+            const userEmailDomain = user.email.split('@')[1];
+            const isAllowed = booth.settings.allowedEmailDomains.some(domain => {
+                const cleanDomain = domain.startsWith('@') ? 
+                    domain.slice(1) : domain;
+                return cleanDomain.toLowerCase() === userEmailDomain.toLowerCase();
+            });
+            
+            if (!isAllowed) {
+                return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/booth/join?error=domain_restricted`);
+            }
+        }
+        
+        // Add user to booth
+        try {
+            await booth.addMember(userId);
+            
+            // Update user's joined booths
+            const user = await User.findById(userId);
+            if (!user.joinedBooths.includes(booth._id)) {
+                user.joinedBooths.push(booth._id);
+                await user.save();
+            }
+            
+            // Redirect to booth with success message
+            return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/booth/${booth._id}?joined=true`);
+            
+        } catch (memberErr) {
+            console.error('Error adding member via direct invite:', memberErr);
+            return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/booth/join?error=join_failed`);
+        }
+        
+    } catch (err) {
+        console.error('Direct invite join error:', err);
+        res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/booth/join?error=server_error`);
+    }
+};
+

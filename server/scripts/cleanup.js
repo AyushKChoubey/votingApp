@@ -9,7 +9,8 @@ async function cleanup() {
     try {
         console.log('🧹 Starting database cleanup...');
         
-        await mongoose.connect(process.env.MONGODB_URL, {
+        const mongoURL = process.env.MONGODB_URI || process.env.MONGODB_URL || process.env.MONGODB_URL_LOCAL || 'mongodb://localhost:27017/votingApp';
+        await mongoose.connect(mongoURL, {
             useNewUrlParser: true,
             useUnifiedTopology: true
         });

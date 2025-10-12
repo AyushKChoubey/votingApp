@@ -3,6 +3,9 @@ const express = require('express');
 const router = express.Router();
 const { jwtAuthMiddleware } = require('../middleware/jwt');
 const userController = require('../controllers/userController');
+const User = require('../models/user');
+const Booth = require('../models/booth');
+const Vote = require('../models/vote');
 
 // ===== Authentication API Routes =====
 
@@ -21,7 +24,7 @@ router.post('/register', async (req, res) => {
 // POST: Login
 router.post('/login', async (req, res) => {
     try {
-        await userController.loginAPI(req, res);
+        await userController.login(req, res);
     } catch (error) {
         res.status(500).json({
             error: 'Login failed',
@@ -33,8 +36,7 @@ router.post('/login', async (req, res) => {
 // POST: Logout
 router.post('/logout', jwtAuthMiddleware, async (req, res) => {
     try {
-        // For JWT tokens, we just need to clear client-side storage
-        // In a production app, you might want to blacklist the token
+        // JWT logout: handled client-side; optionally implement server blacklist
         res.json({
             success: true,
             message: 'Logged out successfully'
@@ -50,9 +52,9 @@ router.post('/logout', jwtAuthMiddleware, async (req, res) => {
 // ===== Profile Management API Routes =====
 
 // GET: Get user profile
-router.get('/api/profile', jwtAuthMiddleware, async (req, res) => {
+router.get('/profile', jwtAuthMiddleware, async (req, res) => {
     try {
-        const user = await require('../models/user').findById(req.user.id)
+        const user = await User.findById(req.user.id)
             .select('-password -emailVerificationToken -passwordResetToken')
             .populate('createdBooths', 'name status createdAt')
             .populate('joinedBooths', 'name status creator');
@@ -61,10 +63,7 @@ router.get('/api/profile', jwtAuthMiddleware, async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
         
-        res.json({
-            success: true,
-            user: user
-        });
+        res.json({ success: true, user });
     } catch (error) {
         res.status(500).json({
             error: 'Failed to get profile',
@@ -74,7 +73,7 @@ router.get('/api/profile', jwtAuthMiddleware, async (req, res) => {
 });
 
 // PUT: Update user profile
-router.put('/api/profile', jwtAuthMiddleware, async (req, res) => {
+router.put('/profile', jwtAuthMiddleware, async (req, res) => {
     try {
         await userController.updateProfile(req, res);
     } catch (error) {
@@ -86,19 +85,15 @@ router.put('/api/profile', jwtAuthMiddleware, async (req, res) => {
 });
 
 // GET: Get user statistics
-router.get('/api/stats', jwtAuthMiddleware, async (req, res) => {
+router.get('/stats', jwtAuthMiddleware, async (req, res) => {
     try {
-        const user = await require('../models/user').findById(req.user.id);
+        const user = await User.findById(req.user.id);
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
         
         const stats = await user.getStats();
-        
-        res.json({
-            success: true,
-            stats: stats
-        });
+        res.json({ success: true, stats });
     } catch (error) {
         res.status(500).json({
             error: 'Failed to get statistics',
@@ -108,7 +103,7 @@ router.get('/api/stats', jwtAuthMiddleware, async (req, res) => {
 });
 
 // PUT: Change password
-router.put('/api/password', jwtAuthMiddleware, async (req, res) => {
+router.put('/password', jwtAuthMiddleware, async (req, res) => {
     try {
         await userController.updatePassword(req, res);
     } catch (error) {
@@ -120,24 +115,21 @@ router.put('/api/password', jwtAuthMiddleware, async (req, res) => {
 });
 
 // PUT: Update preferences
-router.put('/api/preferences', jwtAuthMiddleware, async (req, res) => {
+router.put('/preferences', jwtAuthMiddleware, async (req, res) => {
     try {
-        const user = await require('../models/user').findById(req.user.id);
+        const user = await User.findById(req.user.id);
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
         
         const { emailNotifications, theme, language } = req.body;
         
-        // Update preferences
         if (typeof emailNotifications !== 'undefined') {
             user.preferences.emailNotifications = emailNotifications;
         }
-        
         if (theme && ['light', 'dark', 'auto'].includes(theme)) {
             user.preferences.theme = theme;
         }
-        
         if (language && typeof language === 'string') {
             user.preferences.language = language;
         }
@@ -157,8 +149,32 @@ router.put('/api/preferences', jwtAuthMiddleware, async (req, res) => {
     }
 });
 
+// PUT: Update password
+router.put('/password', jwtAuthMiddleware, async (req, res) => {
+    try {
+        await userController.updatePassword(req, res);
+    } catch (error) {
+        res.status(500).json({
+            error: 'Password update failed',
+            message: error.message
+        });
+    }
+});
+
+// PUT: Update preferences
+router.put('/preferences', jwtAuthMiddleware, async (req, res) => {
+    try {
+        await userController.updatePreferences(req, res);
+    } catch (error) {
+        res.status(500).json({
+            error: 'Preferences update failed',
+            message: error.message
+        });
+    }
+});
+
 // POST: Refresh token
-router.post('/api/refresh-token', async (req, res) => {
+router.post('/refresh-token', async (req, res) => {
     try {
         await userController.refreshToken(req, res);
     } catch (error) {
@@ -170,31 +186,25 @@ router.post('/api/refresh-token', async (req, res) => {
 });
 
 // DELETE: Delete account
-router.delete('/api/account', jwtAuthMiddleware, async (req, res) => {
+router.delete('/account', jwtAuthMiddleware, async (req, res) => {
     try {
         const { password } = req.body;
-        
         if (!password) {
-            return res.status(400).json({
-                error: 'Password is required to delete account'
-            });
+            return res.status(400).json({ error: 'Password is required to delete account' });
         }
         
-        const user = await require('../models/user').findById(req.user.id).select('+password');
+        const user = await User.findById(req.user.id).select('+password');
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
         
-        // Verify password
         const isMatch = await user.comparePassword(password);
         if (!isMatch) {
-            return res.status(400).json({
-                error: 'Incorrect password'
-            });
+            return res.status(400).json({ error: 'Incorrect password' });
         }
         
-        // Delete user's booths and votes
-        await require('../models/booth').deleteMany({ creator: user._id });
-        await require('../models/vote').deleteMany({ voter: user._id });
-        
-        // Delete user account
+        await Booth.deleteMany({ creator: user._id });
+        await Vote.deleteMany({ voter: user._id });
         await user.deleteOne();
         
         res.json({

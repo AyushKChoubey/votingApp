@@ -7,7 +7,8 @@ async function migrate() {
         console.log('🔄 Starting database migration...');
         
         // Connect to MongoDB
-        await mongoose.connect(process.env.MONGODB_URL, {
+        const mongoURL = process.env.MONGODB_URI || process.env.MONGODB_URL || process.env.MONGODB_URL_LOCAL || 'mongodb://localhost:27017/votingApp';
+        await mongoose.connect(mongoURL, {
             useNewUrlParser: true,
             useUnifiedTopology: true
         });
@@ -37,7 +38,7 @@ async function migrate() {
         await boothCollection.createIndex({ creator: 1, createdAt: -1 });
         await boothCollection.createIndex({ 'members.user': 1 });
         await boothCollection.createIndex({ status: 1, createdAt: -1 });
-        await boothCollection.createIndex({ 'settings.publicBooth': 1, status: 1 });
+
         
         // Vote collection indexes
         const voteCollection = db.collection('votes');

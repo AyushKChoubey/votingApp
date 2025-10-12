@@ -21,12 +21,12 @@ const HelpPage = () => {
                 answer: "To create your first voting booth, log in to your account and click 'Create New Booth' from your dashboard. Fill in the booth details including title, description, voting options, and set your preferences for anonymous voting, result visibility, and voting deadline."
             },
             {
-                question: "What's the difference between public and private booths?",
-                answer: "Public booths can be discovered and joined by anyone, while private booths require an invitation code. Private booths are perfect for internal company polls or closed group decisions."
+                question: "How are booths secured?",
+                answer: "All booths are private and require an invitation code to join. This ensures only authorized participants can access your voting booth, making it perfect for internal company polls, team decisions, or any secure voting scenario."
             },
             {
                 question: "How do I invite people to vote?",
-                answer: "You can invite people by sharing the booth link, sending the unique booth code, or using our built-in email invitation system. For private booths, participants will need the invitation code to join."
+                answer: "You can invite people by sharing the booth link or sending the unique booth code. Participants will need the invitation code to join your secure voting booth."
             },
             {
                 question: "Can I customize the look of my voting booth?",

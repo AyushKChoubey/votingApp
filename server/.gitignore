@@ -16,8 +16,7 @@ logs/
 .env.test.local
 .env.production.local
 .env.*.local
-.env.example
-.env.template
+# NOTE: .env.example should be committed to show structure
 
 # Database
 *.db

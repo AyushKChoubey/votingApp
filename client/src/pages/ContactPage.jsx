@@ -98,12 +98,12 @@ const ContactPage = () => {
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Hero Section */}
-            <div className="py-16">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                    <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+            <div className="py-12 sm:py-16">
+                <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 text-center">
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4 sm:mb-6 px-2 sm:px-0">
                         Get in Touch
                     </h1>
-                    <p className="text-xl text-gray-600 mb-12 max-w-3xl mx-auto">
+                    <p className="text-base sm:text-xl text-gray-600 mb-8 sm:mb-12 max-w-3xl mx-auto px-2 sm:px-0 leading-relaxed">
                         We're here to help you succeed with VoteSecure. Reach out with any questions,
                         feedback, or partnership opportunities.
                     </p>
@@ -111,17 +111,19 @@ const ContactPage = () => {
             </div>
 
             {/* Contact Information */}
-            <div className="pb-16">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="pb-12 sm:pb-16">
+                <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8">
                         {contactInfo.map((info, index) => (
-                            <div key={index} className="bg-white rounded-lg p-6 shadow-lg text-center transition-all duration-300 hover:shadow-xl transform hover:scale-105">
-                                <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mx-auto mb-4 text-teal-600 transition-all duration-300 hover:scale-110">
-                                    {info.icon}
+                            <div key={index} className="bg-white rounded-lg p-4 sm:p-6 shadow-lg text-center transition-all duration-300 hover:shadow-xl transform hover:scale-105 mx-2 sm:mx-0">
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-teal-100 rounded-lg flex items-center justify-center mx-auto mb-3 sm:mb-4 text-teal-600 transition-all duration-300 hover:scale-110">
+                                    <div className="w-5 h-5 sm:w-6 sm:h-6">
+                                        {info.icon}
+                                    </div>
                                 </div>
-                                <h3 className="text-lg font-semibold text-gray-900 mb-2">{info.title}</h3>
-                                <p className="text-gray-600 mb-3">{info.description}</p>
-                                <p className="text-teal-600 font-medium">{info.contact}</p>
+                                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">{info.title}</h3>
+                                <p className="text-sm sm:text-base text-gray-600 mb-2 sm:mb-3 leading-relaxed">{info.description}</p>
+                                <p className="text-sm sm:text-base text-teal-600 font-medium break-words">{info.contact}</p>
                             </div>
                         ))}
                     </div>
@@ -129,14 +131,14 @@ const ContactPage = () => {
             </div>
 
             {/* Contact Form & Map */}
-            <div className="pb-16">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            <div className="pb-12 sm:pb-16">
+                <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12">
                         {/* Contact Form */}
-                        <div className="bg-white rounded-2xl shadow-2xl p-8 transition-all duration-300 hover:shadow-3xl">
-                            <h2 className="text-2xl font-bold text-gray-900 mb-6">Send us a message</h2>
-                            <form onSubmit={handleSubmit} className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 transition-all duration-300 hover:shadow-3xl mx-2 sm:mx-0">
+                            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Send us a message</h2>
+                            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                                     <div>
                                         <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
                                             Name
@@ -148,7 +150,7 @@ const ContactPage = () => {
                                             required
                                             value={formData.name}
                                             onChange={handleChange}
-                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-300"
+                                            className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-300 text-sm sm:text-base"
                                             placeholder="Your name"
                                         />
                                     </div>
@@ -163,7 +165,7 @@ const ContactPage = () => {
                                             required
                                             value={formData.email}
                                             onChange={handleChange}
-                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-300"
+                                            className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-300 text-sm sm:text-base"
                                             placeholder="your@email.com"
                                         />
                                     </div>
@@ -179,7 +181,7 @@ const ContactPage = () => {
                                         required
                                         value={formData.subject}
                                         onChange={handleChange}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-300"
+                                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-300 text-sm sm:text-base"
                                         placeholder="How can we help?"
                                     />
                                 </div>
@@ -190,18 +192,18 @@ const ContactPage = () => {
                                     <textarea
                                         id="message"
                                         name="message"
-                                        rows={6}
+                                        rows={5}
                                         required
                                         value={formData.message}
                                         onChange={handleChange}
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-300 resize-none"
+                                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-300 resize-none text-sm sm:text-base"
                                         placeholder="Tell us more about your inquiry..."
                                     />
                                 </div>
                                 <button
                                     type="submit"
                                     disabled={loading}
-                                    className="w-full bg-teal-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-all duration-300 disabled:opacity-50 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                                    className="w-full bg-teal-600 text-white py-2 sm:py-3 px-4 sm:px-6 rounded-lg font-medium hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-all duration-300 disabled:opacity-50 transform hover:scale-105 shadow-lg hover:shadow-xl text-sm sm:text-base"
                                 >
                                     {loading ? 'Sending...' : 'Send Message'}
                                 </button>
@@ -209,39 +211,39 @@ const ContactPage = () => {
                         </div>
 
                         {/* Map/Office Info */}
-                        <div className="space-y-8">
-                            <div className="bg-white rounded-2xl shadow-xl p-8">
-                                <h2 className="text-2xl font-bold text-gray-900 mb-6">Our Office</h2>
-                                <div className="aspect-w-16 aspect-h-12 mb-6">
-                                    <div className="bg-gray-200 rounded-lg flex items-center justify-center">
+                        <div className="space-y-6 sm:space-y-8">
+                            <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 mx-2 sm:mx-0">
+                                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Our Office</h2>
+                                <div className="aspect-w-16 aspect-h-12 mb-4 sm:mb-6">
+                                    <div className="bg-gray-200 rounded-lg flex items-center justify-center min-h-[150px] sm:min-h-[200px]">
                                         <div className="text-center text-gray-500">
-                                            <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                             </svg>
-                                            <p className="text-lg font-medium">Interactive Map</p>
-                                            <p className="text-sm">Map integration coming soon</p>
+                                            <p className="text-base sm:text-lg font-medium">Interactive Map</p>
+                                            <p className="text-xs sm:text-sm">Map integration coming soon</p>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="space-y-4">
+                                <div className="space-y-3 sm:space-y-4">
                                     <div className="flex items-start">
-                                        <svg className="w-5 h-5 text-teal-600 mt-1 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="w-4 h-4 sm:w-5 sm:h-5 text-teal-600 mt-1 mr-2 sm:mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                         </svg>
                                         <div>
-                                            <p className="font-medium text-gray-900">Address</p>
-                                            <p className="text-gray-600">123 Tech Street<br />San Francisco, CA 94105</p>
+                                            <p className="font-medium text-gray-900 text-sm sm:text-base">Address</p>
+                                            <p className="text-gray-600 text-sm sm:text-base leading-relaxed">123 Tech Street<br />San Francisco, CA 94105</p>
                                         </div>
                                     </div>
                                     <div className="flex items-start">
-                                        <svg className="w-5 h-5 text-teal-600 mt-1 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="w-4 h-4 sm:w-5 sm:h-5 text-teal-600 mt-1 mr-2 sm:mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
                                         <div>
-                                            <p className="font-medium text-gray-900">Office Hours</p>
-                                            <p className="text-gray-600">Monday - Friday: 9AM - 6PM PST<br />Saturday: 10AM - 4PM PST<br />Sunday: Closed</p>
+                                            <p className="font-medium text-gray-900 text-sm sm:text-base">Office Hours</p>
+                                            <p className="text-gray-600 text-sm sm:text-base leading-relaxed">Monday - Friday: 9AM - 6PM PST<br />Saturday: 10AM - 4PM PST<br />Sunday: Closed</p>
                                         </div>
                                     </div>
                                 </div>
@@ -252,28 +254,28 @@ const ContactPage = () => {
             </div>
 
             {/* Team Section */}
-            <div className="py-16 bg-white">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center mb-16">
-                        <h2 className="text-3xl font-bold text-gray-900 mb-4">Meet Our Team</h2>
-                        <p className="text-xl text-gray-600">
+            <div className="py-12 sm:py-16 bg-white">
+                <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+                    <div className="text-center mb-10 sm:mb-16 px-2 sm:px-0">
+                        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4">Meet Our Team</h2>
+                        <p className="text-base sm:text-xl text-gray-600 leading-relaxed">
                             The people behind VoteSecure are here to help you succeed
                         </p>
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8 px-2 sm:px-0">
                         {team.map((member, index) => (
-                            <div key={index} className="text-center">
+                            <div key={index} className="text-center px-2 sm:px-4">
                                 <img
                                     src={member.image}
                                     alt={member.name}
-                                    className="w-32 h-32 rounded-full mx-auto mb-4 object-cover"
+                                    className="w-24 h-24 sm:w-32 sm:h-32 rounded-full mx-auto mb-3 sm:mb-4 object-cover"
                                 />
-                                <h3 className="text-xl font-semibold text-gray-900 mb-2">{member.name}</h3>
-                                <p className="text-teal-600 font-medium mb-2">{member.role}</p>
+                                <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-1 sm:mb-2">{member.name}</h3>
+                                <p className="text-sm sm:text-base text-teal-600 font-medium mb-1 sm:mb-2">{member.role}</p>
                                 <a
                                     href={`mailto:${member.email}`}
-                                    className="text-gray-600 hover:text-teal-600 transition-colors"
+                                    className="text-xs sm:text-sm text-gray-600 hover:text-teal-600 transition-colors break-words"
                                 >
                                     {member.email}
                                 </a>
@@ -284,50 +286,50 @@ const ContactPage = () => {
             </div>
 
             {/* FAQ Section */}
-            <div className="py-16 bg-gray-50">
-                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center mb-16">
-                        <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            <div className="py-12 sm:py-16 bg-gray-50">
+                <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8">
+                    <div className="text-center mb-10 sm:mb-16 px-2 sm:px-0">
+                        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4">
                             Common Questions
                         </h2>
-                        <p className="text-xl text-gray-600">
+                        <p className="text-base sm:text-xl text-gray-600 leading-relaxed">
                             Quick answers to questions you might have
                         </p>
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="bg-white rounded-lg p-6 shadow-sm">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">
+                        <div className="bg-white rounded-lg p-5 sm:p-6 shadow-sm mx-2 sm:mx-0">
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">
                                 How quickly do you respond to support requests?
                             </h3>
-                            <p className="text-gray-600">
+                            <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
                                 We typically respond to all inquiries within 24 hours. For urgent technical issues, 
                                 our premium customers receive priority support with faster response times.
                             </p>
                         </div>
-                        <div className="bg-white rounded-lg p-6 shadow-sm">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                        <div className="bg-white rounded-lg p-5 sm:p-6 shadow-sm mx-2 sm:mx-0">
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">
                                 Do you offer phone support?
                             </h3>
-                            <p className="text-gray-600">
+                            <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
                                 Yes! Phone support is available during business hours (9AM-6PM PST) for Pro and 
                                 Enterprise customers. Free tier users can reach us via email or chat.
                             </p>
                         </div>
-                        <div className="bg-white rounded-lg p-6 shadow-sm">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                        <div className="bg-white rounded-lg p-5 sm:p-6 shadow-sm mx-2 sm:mx-0">
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">
                                 Can I schedule a demo?
                             </h3>
-                            <p className="text-gray-600">
+                            <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
                                 Absolutely! We'd love to show you how VoteSecure can help your organization. 
                                 Contact our sales team to schedule a personalized demo.
                             </p>
                         </div>
-                        <div className="bg-white rounded-lg p-6 shadow-sm">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                        <div className="bg-white rounded-lg p-5 sm:p-6 shadow-sm mx-2 sm:mx-0">
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">
                                 Do you offer training and onboarding?
                             </h3>
-                            <p className="text-gray-600">
+                            <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
                                 Yes, we provide comprehensive onboarding for all new customers, plus ongoing 
                                 training resources and documentation to help you get the most out of VoteSecure.
                             </p>

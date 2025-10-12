@@ -9,8 +9,8 @@ async function seed() {
     try {
         console.log('🌱 Starting database seeding...');
         
-        // Connect to MongoDB using the same logic as db.js
-        const mongoURL = process.env.MONGODB_URL || process.env.MONGODB_URL_LOCAL || 'mongodb://localhost:27017/votingApp';
+        // Connect to MongoDB using the same logic as config/database.js
+        const mongoURL = process.env.MONGODB_URI || process.env.MONGODB_URL || process.env.MONGODB_URL_LOCAL || 'mongodb://localhost:27017/votingApp';
         await mongoose.connect(mongoURL, {
             useNewUrlParser: true,
             useUnifiedTopology: true
@@ -84,8 +84,7 @@ async function seed() {
                 resultsVisibleToVoters: true,
                 anonymousVoting: true,
                 allowVoteChange: false,
-                showLiveResults: true,
-                publicBooth: true
+                showLiveResults: true
             },
             members: [{ user: adminUser._id, hasVoted: false }]
         });
@@ -109,7 +108,6 @@ async function seed() {
                 anonymousVoting: true,
                 allowVoteChange: true,
                 showLiveResults: false,
-                publicBooth: false,
                 votingEndTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 1 week from now
             },
             members: [
@@ -138,7 +136,6 @@ async function seed() {
                 anonymousVoting: true,
                 allowVoteChange: false,
                 showLiveResults: false,
-                publicBooth: false,
                 allowedEmailDomains: ['university.edu', 'student.edu'],
                 votingStartTime: new Date(),
                 votingEndTime: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now

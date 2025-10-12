@@ -6,10 +6,10 @@ A modern voting application built with React frontend and Node.js API backend.
 
 This application uses a modern separated architecture:
 
-- **Frontend**: React SPA with Vite build tool (port 3000)
-- **Backend**: Node.js/Express API server (port 3001)
+- **Frontend**: React SPA with Vite build tool (port 5173)
+- **Backend**: Node.js/Express API server (port 5000)
 - **Database**: MongoDB
-- **Authentication**: JWT tokens
+- **Authentication**: JWT tokens + Google OAuth2
 
 ## Project Structure
 
@@ -58,8 +58,9 @@ votingApp/
    ```
 
 4. Set up environment variables:
-   - Copy `.env.example` to `.env` in the backend directory
+   - Copy `.env.example` to `.env` in the server directory
    - Configure MongoDB connection and JWT secret
+   - **For Google OAuth2 setup**: See [OAUTH_SETUP.md](./OAUTH_SETUP.md) or [OAUTH_QUICKSTART.md](./OAUTH_QUICKSTART.md)
 
 ### Running the Application
 
@@ -80,12 +81,14 @@ votingApp/
 ## Features
 
 - User authentication (register/login)
+- **Google OAuth2 authentication** (Sign in with Google)
 - Create voting booths
 - Join voting booths with access codes
 - Real-time voting
 - Results visualization
 - Admin dashboard
-- Responsive design with modern UI
+- Responsive design with modern teal theme
+- Mobile-friendly interface
 
 ## API Endpoints
 
@@ -106,12 +109,15 @@ votingApp/
 - React Query
 - Tailwind CSS
 - Axios
+- **react-icons** (Google icon)
 
 ### Backend
 - Node.js
 - Express.js
 - MongoDB with Mongoose
 - JWT authentication
+- **Passport.js with Google OAuth2**
+- **express-session**
 - bcrypt
 - CORS
 
