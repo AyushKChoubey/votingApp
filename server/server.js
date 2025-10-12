@@ -9,6 +9,7 @@ const path = require('path');
 const compression = require('compression');
 const cors = require('cors');
 const session = require('express-session');
+const MongoStore = require('connect-mongo');
 const passport = require('./config/passport');
 
 // Import security middleware
@@ -91,6 +92,15 @@ app.use(session({
     secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
     resave: false,
     saveUninitialized: false,
+    store: MongoStore.create({
+        mongoUrl: process.env.MONGODB_URI || process.env.MONGODB_LOCAL_URL || 'mongodb://localhost:27017/votingApp',
+        touchAfter: 24 * 3600, // lazy session update
+        ttl: 24 * 60 * 60, // = 24 hours. Default session expiration time
+        autoRemove: 'native', // Default - let MongoDB handle expired sessions
+        crypto: {
+            secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production'
+        }
+    }),
     cookie: {
         secure: process.env.NODE_ENV === 'production', // HTTPS only in production
         httpOnly: true,
@@ -203,7 +213,8 @@ app.use((err, req, res, next) => {
 
 // Start the API server
 const PORT = process.env.PORT || 5000;
-const HOST = process.env.HOST || 'localhost';
+// Use 0.0.0.0 for production (cloud platforms) and localhost for development
+const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : (process.env.HOST || 'localhost');
 
 const startServer = async () => {
     try {
