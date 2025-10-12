@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"No tests specified\"",
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "build": "echo 'No build needed for API server'"
   },
   "keywords": [],
   "author": "",

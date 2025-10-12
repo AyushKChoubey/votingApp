@@ -10,6 +10,7 @@
     "server:start": "cd server && npm start",
     "client:build": "cd client && npm run build",
     "build": "npm run client:build",
+    "build:production": "npm install && cd client && npm install && npm run build && cd ../server && npm install",
     "start": "npm run server:start",
     "start:fresh": "npm run client:build && npm run server:start",
     "install:all": "npm install && cd server && npm install && cd ../client && npm install",

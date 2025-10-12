@@ -150,40 +150,35 @@ app.use('/api/user', userRoutes);  // all user routes
 app.use('/api/booth', boothRoutes); // all booth routes
 app.use('/api', apiRoutes); // general api routes
 
-// Serve React app static files in production
-if (process.env.NODE_ENV === 'production') {
-    // Serve static files from client/dist
-    app.use(express.static(path.join(__dirname, '../client/dist')));
-    
-    // Handle React routing - serve index.html for non-API routes
-    app.get('*', (req, res) => {
-        // Don't serve index.html for API routes
-        if (req.path.startsWith('/api/')) {
-            return res.status(404).json({ error: 'API endpoint not found' });
-        }
-        res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+// API-only server (frontend deployed separately)
+// Handle 404s for unknown API routes
+app.use('/api/*', (req, res) => {
+    res.status(404).json({ 
+        error: 'API endpoint not found',
+        path: req.originalUrl,
+        method: req.method,
+        timestamp: new Date().toISOString()
     });
-} else {
-    // In development, handle API 404s only
-    app.use('/api/*', (req, res) => {
-        res.status(404).json({ 
-            error: 'API endpoint not found',
+});
+
+// For non-API routes, return helpful message about separate frontend
+app.use('*', (req, res) => {
+    if (process.env.NODE_ENV === 'production') {
+        res.status(200).json({
+            message: 'VoteBooth API Server',
+            note: 'Frontend is deployed separately. API available at /api/*',
             path: req.originalUrl,
-            method: req.method,
             timestamp: new Date().toISOString()
         });
-    });
-    
-    // For non-API routes in development, return helpful message
-    app.use('*', (req, res) => {
+    } else {
         res.status(200).json({
             message: 'React development server should handle this route',
             note: 'Make sure your React dev server is running on http://localhost:5173',
             path: req.originalUrl,
             timestamp: new Date().toISOString()
         });
-    });
-}
+    }
+});
 
 // Global error handler
 app.use((err, req, res, next) => {
