@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { Loading, PageLoading, Skeleton, LoadingButton } from '../layout/Loading';
@@ -13,9 +13,25 @@ export function Dashboard() {
     const [lastUpdated, setLastUpdated] = useState(null);
     
     const { user } = useAuth();
-    const location = useLocation();
     const navigate = useNavigate();
     const { addToast } = useToast();
+
+    // Helper: check JWT presence and expiry (simple client-side check)
+    const isTokenValid = () => {
+        try {
+            const raw = localStorage.getItem('token');
+            if (!raw) return false;
+            const parts = raw.split('.');
+            if (parts.length < 2) return false;
+            const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+            if (!payload) return false;
+            if (!payload.exp) return true; // no exp claim -> assume valid
+            const expMs = payload.exp * 1000;
+            return Date.now() < expMs;
+        } catch (e) {
+            return false;
+        }
+    };
 
     const fetchDashboardData = useCallback(async () => {
         try {
@@ -30,11 +46,17 @@ export function Dashboard() {
                 setError('');
                 setLastUpdated(new Date());
             } else {
-                console.error('Invalid response structure:', response);
+                // Invalid response structure
                 throw new Error('Invalid response structure from server');
             }
         } catch (err) {
-            console.error('Dashboard fetch error:', err);
+            // Dashboard fetch error
+            // If API returned unauthorized, clear token and redirect to login
+            if (err && (err.status === 401 || err.status === 403)) {
+                try { localStorage.removeItem('token'); } catch (e) {}
+                navigate('/login?message=session_expired');
+                return;
+            }
             setError(err.message || 'Failed to load dashboard data');
         } finally {
             setLoading(false);
@@ -43,30 +65,23 @@ export function Dashboard() {
 
 
 
-    // Initial load
+    // Initial load — validate token first to avoid showing dashboard for expired sessions
     useEffect(() => {
+        if (!isTokenValid()) {
+            try { localStorage.removeItem('token'); } catch (e) {}
+            navigate('/login?message=session_expired');
+            return;
+        }
         fetchDashboardData();
     }, [fetchDashboardData]);
 
-    // Auto-refresh when navigating with refresh state
-    useEffect(() => {
-        if (location.state?.refresh) {
-            fetchDashboardData();
-            // Show success message for booth creation
-            setTimeout(() => {
-                addToast('✓ Booth created! Dashboard updated.', 'success', 3000);
-            }, 500);
-            // Clear the state to prevent repeated refreshes
-            window.history.replaceState({}, document.title);
-        }
-    }, [location.state, fetchDashboardData, addToast]);
+    // note: refresh via location.state was removed — dashboard now relies on explicit refresh actions
 
     const copyInviteCode = useCallback(async (inviteCode) => {
         try {
             await navigator.clipboard.writeText(inviteCode);
-            addToast(`✓ Invite code ${inviteCode} copied to clipboard!`, 'success', 2000);
+            addToast(`Invite code ${inviteCode} copied to clipboard.`, 'success', 2000);
         } catch (err) {
-            console.error('Copy failed:', err);
             // Fallback for browsers that don't support clipboard API
             try {
                 const textArea = document.createElement('textarea');
@@ -75,7 +90,7 @@ export function Dashboard() {
                 textArea.select();
                 document.execCommand('copy');
                 document.body.removeChild(textArea);
-                addToast(`✓ Invite code ${inviteCode} copied!`, 'success', 2000);
+                addToast(`Invite code ${inviteCode} copied.`, 'success', 2000);
             } catch (fallbackErr) {
                 addToast('❌ Failed to copy invite code', 'error');
             }
@@ -86,9 +101,8 @@ export function Dashboard() {
         try {
             const inviteLink = `${window.location.origin}/booth/join/${inviteCode}`;
             await navigator.clipboard.writeText(inviteLink);
-            addToast(`✓ Invite link copied to clipboard!`, 'success', 2000);
+            addToast(`Invite link copied to clipboard.`, 'success', 2000);
         } catch (err) {
-            console.error('Copy link failed:', err);
             // Fallback for browsers that don't support clipboard API
             try {
                 const inviteLink = `${window.location.origin}/booth/join/${inviteCode}`;
@@ -98,7 +112,7 @@ export function Dashboard() {
                 textArea.select();
                 document.execCommand('copy');
                 document.body.removeChild(textArea);
-                addToast(`✓ Invite link copied!`, 'success', 2000);
+                addToast(`Invite link copied.`, 'success', 2000);
             } catch (fallbackErr) {
                 addToast('❌ Failed to copy invite link', 'error');
             }
@@ -231,7 +245,7 @@ export function Dashboard() {
                     <div className="flex flex-col sm:flex-row gap-4">
                         <Link
                             to="/booth/create"
-                            onClick={() => addToast('🚀 Redirecting to booth creation...', 'info', 1500)}
+                        
                             className="bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 text-white py-3 px-6 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-xl text-center shadow-lg flex items-center justify-center gap-2"
                         >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -265,14 +279,17 @@ export function Dashboard() {
                         </h2>
                         
                         {createdBooths && createdBooths.length > 0 ? (
-                            <div className="flex-1 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border-2 border-blue-200 shadow-lg hover:shadow-xl transition-all duration-300 hover:border-blue-300">
-                                <div className="px-5 py-3 border-b border-blue-200 bg-gradient-to-r from-blue-100/70 to-indigo-100/70 rounded-t-xl">
-                                    <h3 className="text-sm font-medium text-blue-700 flex items-center gap-2">
-                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                            <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z"/>
-                                        </svg>
-                                        Created Booths
-                                    </h3>
+                            <div className="flex-1 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200">
+                                <div className="px-5 py-3 border-b border-gray-100 rounded-t-xl">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2 text-sm font-medium text-gray-800">
+                                            <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                                <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z"/>
+                                            </svg>
+                                            <span className="sr-only">Created Booths</span>
+                                        </div>
+                                        <span className="bg-blue-50 text-blue-700 text-xs font-semibold px-2 py-1 rounded-full">{createdBooths.length}</span>
+                                    </div>
                                 </div>
                                 <div className="h-96 overflow-y-auto p-5 space-y-5 scrollbar-thin scrollbar-thumb-blue-400 scrollbar-track-blue-100 hover:scrollbar-thumb-blue-500">
                                     {createdBooths.map((booth) => (
@@ -307,14 +324,17 @@ export function Dashboard() {
                         </h2>
                         
                         {joinedBooths && joinedBooths.length > 0 ? (
-                            <div className="flex-1 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border-2 border-green-200 shadow-lg hover:shadow-xl transition-all duration-300 hover:border-green-300">
-                                <div className="px-5 py-3 border-b border-green-200 bg-gradient-to-r from-green-100/70 to-emerald-100/70 rounded-t-xl">
-                                    <h3 className="text-sm font-medium text-green-700 flex items-center gap-2">
-                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                            <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z"/>
-                                        </svg>
-                                        Joined Booths
-                                    </h3>
+                            <div className="flex-1 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200">
+                                <div className="px-5 py-3 border-b border-gray-100 rounded-t-xl">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2 text-sm font-medium text-gray-800">
+                                            <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                                <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z"/>
+                                            </svg>
+                                            <span className="sr-only">Joined Booths</span>
+                                        </div>
+                                        <span className="bg-green-50 text-green-700 text-xs font-semibold px-2 py-1 rounded-full">{joinedBooths.length}</span>
+                                    </div>
                                 </div>
                                 <div className="h-96 overflow-y-auto p-5 space-y-5 scrollbar-thin scrollbar-thumb-green-400 scrollbar-track-green-100 hover:scrollbar-thumb-green-500">
                                     {joinedBooths.map((booth) => (
@@ -465,6 +485,7 @@ function CreatedBoothCard({ booth, onCopyInviteCode, onCopyInviteLink, formatDat
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                     </svg>
                     <span className="hidden sm:inline">Vote</span>
+                    <span className="sm:hidden">Vote</span>
                 </Link>
                 <Link
                     to={`/booth/${booth.id}/admin`}
@@ -475,6 +496,7 @@ function CreatedBoothCard({ booth, onCopyInviteCode, onCopyInviteLink, formatDat
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                     <span className="hidden sm:inline">Manage</span>
+                    <span className="sm:hidden">Admin</span>
                 </Link>
                 <div className="relative">
                     <button
@@ -488,6 +510,7 @@ function CreatedBoothCard({ booth, onCopyInviteCode, onCopyInviteLink, formatDat
                         <svg className="w-2 h-2 sm:w-3 sm:h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m19 9-7 7-7-7" />
                         </svg>
+                        <span className="sm:hidden">Invite</span>
                     </button>
                     
                     {showInviteOptions && (
@@ -542,47 +565,41 @@ function JoinedBoothCard({ booth }) {
                         </span>
                     </div>
                 </div>
-                <div className="flex sm:flex-col items-start sm:items-end gap-2">
-                    {booth.hasVoted ? (
-                        <span className="px-2 sm:px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-600 flex items-center gap-1">
-                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                            Voted
-                        </span>
-                    ) : (
-                        <span className="px-2 sm:px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-600 flex items-center gap-1">
-                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                            </svg>
-                            Pending
-                        </span>
-                    )}
-                </div>
+                {/* compact header-right removed — status shown in info row to avoid duplication */}
             </div>
             
             <p className="text-gray-600 mb-3 text-xs sm:text-sm line-clamp-2">{booth.description}</p>
             
             <div className="flex items-center justify-between text-xs sm:text-sm text-gray-500 mb-3 bg-gray-50 rounded-lg p-2">
-                <div className="flex items-center gap-1">
-                    <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
-                    </svg>
-                    <span>{booth.memberCount || 0} <span className="hidden sm:inline">members</span></span>
-                </div>
-                {booth.hasVoted && (
-                    <div className="flex items-center gap-1 text-green-600">
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1">
                         <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
                         </svg>
-                        <span className="hidden sm:inline">Vote submitted</span>
+                        <span className="font-medium">{booth.memberCount || 0} members</span>
                     </div>
-                )}
+                    <div className="flex items-center gap-1">
+                        <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="font-medium">{booth.totalVotes || 0} votes</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z"/>
+                        </svg>
+                        <span className="font-medium">{booth.candidateCount || 0} candidates</span>
+                    </div>
+                </div>
+
+                {booth.hasVoted ? (
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-600">Voted</span>
+                ) : null}
             </div>
             
             <Link
                 to={`/booth/${booth.id}`}
-                className={`block w-full py-1.5 sm:py-2 px-3 sm:px-4 rounded-lg sm:rounded-xl text-center transition-all duration-300 text-xs sm:text-sm font-semibold flex items-center justify-center gap-1 sm:gap-2 ${
+                className={`w-full py-1.5 sm:py-2 px-3 sm:px-4 rounded-lg sm:rounded-xl text-center transition-all duration-300 text-xs sm:text-sm font-semibold flex items-center justify-center gap-1 sm:gap-2 ${
                     booth.hasVoted 
                         ? 'bg-blue-600 hover:bg-blue-700 text-white'
                         : 'bg-green-600 hover:bg-green-700 text-white'

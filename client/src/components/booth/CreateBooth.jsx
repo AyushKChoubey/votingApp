@@ -12,14 +12,11 @@ export function CreateBooth() {
         maxMembers: 50,
         settings: {
             resultsVisibleToVoters: true,
-            anonymousVoting: false,
-            allowVoteChange: false,
             showLiveResults: false,
-            requireEmailVerification: false,
             requireApproval: false,
-            sendNotifications: true,
             votingStartTime: '',
             votingEndTime: '',
+            restrictByEmailDomain: false,
             allowedEmailDomains: []
         }
     });
@@ -27,6 +24,8 @@ export function CreateBooth() {
     const [canCreate, setCanCreate] = useState(false);
     const [maxBooths, setMaxBooths] = useState(5);
     const [currentBooths, setCurrentBooths] = useState(0);
+    const [isFreeUser, setIsFreeUser] = useState(false);
+    const [allowedMax, setAllowedMax] = useState(null);
     const [loading, setLoading] = useState(false);
     const [checkingPermissions, setCheckingPermissions] = useState(true);
     const [error, setError] = useState('');
@@ -59,6 +58,20 @@ export function CreateBooth() {
                 setCanCreate(userCurrentBooths < userMaxBooths);
                 setMaxBooths(userMaxBooths);
                 setCurrentBooths(userCurrentBooths);
+                // Determine if this is a free user (best-effort detection)
+                const s = user.subscription || null;
+                const name = (s && (s.name || s.plan || s.tier) ? String(s.name || s.plan || s.tier).toLowerCase() : '');
+                const paidFlag = !!(s && (s.isPaid === true || (s.maxMembers && s.maxMembers > 100)));
+                const free = !paidFlag && (name.includes('free') || name === '' || !s);
+                setIsFreeUser(free);
+                // Set allowed max members for UI guidance
+                if (s && Number.isInteger(s.maxMembers) && s.maxMembers > 0) {
+                    setAllowedMax(s.maxMembers);
+                } else if (s && s.isPaid === true) {
+                    setAllowedMax(10000);
+                } else {
+                    setAllowedMax(99);
+                }
             } else if (response.user) {
                 // Handle case where response doesn't have success field but has user
                 const user = response.user || response;
@@ -68,12 +81,23 @@ export function CreateBooth() {
                 setCanCreate(userCurrentBooths < userMaxBooths);
                 setMaxBooths(userMaxBooths);
                 setCurrentBooths(userCurrentBooths);
+                const s = (response.user && response.user.subscription) || null;
+                const name = (s && (s.name || s.plan || s.tier) ? String(s.name || s.plan || s.tier).toLowerCase() : '');
+                const paidFlag = !!(s && (s.isPaid === true || (s.maxMembers && s.maxMembers > 100)));
+                const free = !paidFlag && (name.includes('free') || name === '' || !s);
+                setIsFreeUser(free);
+                if (s && Number.isInteger(s.maxMembers) && s.maxMembers > 0) {
+                    setAllowedMax(s.maxMembers);
+                } else if (s && s.isPaid === true) {
+                    setAllowedMax(10000);
+                } else {
+                    setAllowedMax(99);
+                }
             } else {
                 setCanCreate(false);
                 setError('Unable to verify permissions');
             }
         } catch (err) {
-            console.error('Permission check error:', err);
             if (err.status === 401) {
                 setError('Please log in to create booths');
                 // Optionally redirect to login
@@ -89,17 +113,48 @@ export function CreateBooth() {
         }
     };
 
+    
+
     const handleInputChange = (e) => {
         const { name, value, type, checked } = e.target;
         
         if (name.startsWith('settings.')) {
             const settingName = name.split('.')[1];
+            // special-case allowedEmailDomains: accept comma-separated string and store as array
+            if (settingName === 'allowedEmailDomains') {
+                const arr = String(value || '').split(',').map(s => s.trim()).filter(Boolean);
+                setFormData(prev => ({
+                    ...prev,
+                    settings: {
+                        ...prev.settings,
+                        [settingName]: arr
+                    }
+                }));
+            } else {
+                setFormData(prev => ({
+                    ...prev,
+                    settings: {
+                        ...prev.settings,
+                        [settingName]: type === 'checkbox' ? checked : (type === 'number' ? parseInt(value) || 0 : value)
+                    }
+                }));
+            }
+        } else if (name === 'maxMembers') {
+            // Handle maxMembers specially: allow blank, enforce min 2 when typing
+            let numValue = value;
+            if (value === '' || value === null || value === undefined) {
+                numValue = ''; // Allow blank state
+            } else {
+                const parsed = parseInt(value);
+                if (!isNaN(parsed)) {
+                    numValue = Math.max(2, parsed); // Minimum 2
+                } else {
+                    numValue = '';
+                }
+            }
             setFormData(prev => ({
                 ...prev,
-                settings: {
-                    ...prev.settings,
-                    [settingName]: type === 'checkbox' ? checked : (type === 'number' ? parseInt(value) || 0 : value)
-                }
+                [name]: numValue
             }));
         } else {
             setFormData(prev => ({
@@ -152,13 +207,18 @@ export function CreateBooth() {
         }
 
         // Validate description
-        if (!formData.description.trim() || formData.description.trim().length < 5 || formData.description.trim().length > 500) {
-            errors.push('Description must be 5-500 characters');
+        if (!formData.description.trim() || formData.description.trim().length < 10 || formData.description.trim().length > 500) {
+            errors.push('Description must be 10-500 characters');
         }
 
         // Validate max members
-        if (!formData.maxMembers || formData.maxMembers < 2 || formData.maxMembers > 10000) {
+        if (!formData.maxMembers || formData.maxMembers === '' || formData.maxMembers < 2 || formData.maxMembers > 10000) {
             errors.push('Maximum members must be between 2 and 10,000');
+        }
+
+        // Free plan: warn if they exceed 100 members (no acknowledgement required)
+        if (isFreeUser && formData.maxMembers > 100) {
+            // Just a UX warning — server must still enforce the limit if desired
         }
 
         // Validate candidates
@@ -226,24 +286,28 @@ export function CreateBooth() {
                     }
                 }, 2000);
             } else {
-                console.error('Unexpected response format:', response);
                 setError(response.error || 'Failed to create booth. Please try again.');
             }
         } catch (err) {
-            console.error('Create booth error:', err);
-            console.error('Error details:', {
-                message: err.message,
-                response: err.response?.data,
-                status: err.status
-            });
-            setError(err.message || 'Failed to create booth. Please try again.');
+            // Handle create error
+            // If server enforces a plan cap it may return 403 with allowedMax
+            if (err.response && err.response.status === 403) {
+                const data = err.response.data || {};
+                if (data.allowedMax) {
+                    setAllowedMax(data.allowedMax);
+                }
+                setError(data.error || 'Your plan does not allow the requested maximum members');
+            } else {
+                setError(err.message || 'Failed to create booth. Please try again.');
+            }
         } finally {
             setLoading(false);
         }
     };
 
-    if (checkingPermissions) {
-        return <PageLoading text="Checking permissions..." />;
+    // Use a single central loading view for permission checks and submission
+    if (checkingPermissions || loading) {
+        return <PageLoading text={checkingPermissions ? "Checking permissions..." : "Creating booth..."} />;
     }
 
     if (!canCreate) {
@@ -392,8 +456,8 @@ export function CreateBooth() {
                                     }`}
                                     placeholder="Describe the purpose and details of this voting booth..."
                                 />
-                                {formData.description.trim().length > 0 && formData.description.trim().length < 5 && (
-                                    <p className="text-red-500 text-sm mt-1">Description must be at least 5 characters long</p>
+                                {formData.description.trim().length > 0 && formData.description.trim().length < 10 && (
+                                    <p className="text-red-500 text-sm mt-1">Description must be at least 10 characters long</p>
                                 )}
                                 {formData.description.trim().length > 500 && (
                                     <p className="text-red-500 text-sm mt-1">Description must be less than 500 characters</p>
@@ -403,30 +467,41 @@ export function CreateBooth() {
 
                             <div>
                                 <label htmlFor="maxMembers" className="block text-sm font-medium text-gray-700 mb-2">
-                                    Maximum Members
+                                    Maximum Members *
                                 </label>
                                 <input
                                     id="maxMembers"
                                     name="maxMembers"
                                     type="number"
-                                    min="2"
                                     max="10000"
+                                    required
                                     value={formData.maxMembers}
                                     onChange={handleInputChange}
                                     className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg sm:rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-300 text-sm sm:text-base ${
-                                        formData.maxMembers && (formData.maxMembers < 2 || formData.maxMembers > 10000)
+                                        (!formData.maxMembers || formData.maxMembers === '' || formData.maxMembers < 2 || formData.maxMembers > 10000 || (allowedMax !== null && formData.maxMembers > allowedMax))
                                             ? 'border-red-300 focus:ring-red-500 bg-red-50'
                                             : 'border-gray-300 focus:ring-teal-500'
                                     }`}
-                                    placeholder="50"
+                                    placeholder="Enter minimum 2"
                                 />
+                                {(!formData.maxMembers || formData.maxMembers === '') && (
+                                    <p className="text-red-500 text-sm mt-1">Maximum members is required</p>
+                                )}
                                 {formData.maxMembers && formData.maxMembers < 2 && (
                                     <p className="text-red-500 text-sm mt-1">Must be at least 2 members</p>
                                 )}
                                 {formData.maxMembers && formData.maxMembers > 10000 && (
                                     <p className="text-red-500 text-sm mt-1">Cannot exceed 10,000 members</p>
                                 )}
-                                <p className="text-sm text-gray-500 mt-1">Number of people who can join this booth (2-10,000)</p>
+                                {allowedMax !== null ? (
+                                    formData.maxMembers > allowedMax ? (
+                                        <p className="text-sm text-red-600 mt-1">Number of people who can join this booth (2-{allowedMax}) — you've entered {formData.maxMembers}, which exceeds your plan limit.</p>
+                                    ) : (
+                                        <p className="text-sm text-gray-600 mt-1">Capacity: {formData.maxMembers || '—'} participants (allowed range: 2–{allowedMax}).</p>
+                                    )
+                                ) : (
+                                    <p className="text-sm text-gray-500 mt-1">Capacity: {formData.maxMembers || '—'} participants (allowed range: 2–10,000).</p>
+                                )}
                             </div>
                         </div>
 
@@ -528,18 +603,18 @@ export function CreateBooth() {
 
                                     <div className="flex items-start space-x-3">
                                         <input
-                                            id="allowVoteChange"
-                                            name="settings.allowVoteChange"
+                                            id="showLiveResults"
+                                            name="settings.showLiveResults"
                                             type="checkbox"
-                                            checked={formData.settings.allowVoteChange}
+                                            checked={formData.settings.showLiveResults}
                                             onChange={handleInputChange}
                                             className="mt-1 h-4 w-4 text-teal-600 bg-white border-gray-300 rounded focus:ring-teal-500"
                                         />
                                         <div>
-                                            <label htmlFor="anonymousVoting" className="text-sm font-medium text-gray-900">
-                                                Anonymous voting
+                                            <label htmlFor="showLiveResults" className="text-sm font-medium text-gray-900">
+                                                Show live results
                                             </label>
-                                            <p className="text-sm text-gray-600">Hide voter identities from results</p>
+                                            <p className="text-sm text-gray-600">Broadcast live aggregate results to viewers (opt-in)</p>
                                         </div>
                                     </div>
                                 </div>
@@ -549,22 +624,6 @@ export function CreateBooth() {
                             <div className="space-y-4">
                                 <h3 className="text-lg font-medium text-gray-900">Access Control</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="flex items-start space-x-3">
-                                        <input
-                                            id="requireEmailVerification"
-                                            name="settings.requireEmailVerification"
-                                            type="checkbox"
-                                            checked={formData.settings.requireEmailVerification}
-                                            onChange={handleInputChange}
-                                            className="mt-1 h-4 w-4 text-teal-600 bg-white border-gray-300 rounded focus:ring-teal-500"
-                                        />
-                                        <div>
-                                            <label htmlFor="requireEmailVerification" className="text-sm font-medium text-gray-900">
-                                                Require email verification
-                                            </label>
-                                            <p className="text-sm text-gray-600">Users must verify their email to vote</p>
-                                        </div>
-                                    </div>
 
                                     <div className="flex items-start space-x-3">
                                         <input
@@ -580,6 +639,58 @@ export function CreateBooth() {
                                                 Require approval
                                             </label>
                                             <p className="text-sm text-gray-600">Manually approve new members</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-start space-x-3">
+                                        <input
+                                            id="restrictByEmailDomain"
+                                            name="settings.restrictByEmailDomain"
+                                            type="checkbox"
+                                            checked={formData.settings.restrictByEmailDomain}
+                                            onChange={(e) => {
+                                                // toggle and clear domains when disabling
+                                                const checked = e.target.checked;
+                                                handleInputChange({
+                                                    target: {
+                                                        name: 'settings.restrictByEmailDomain',
+                                                        type: 'checkbox',
+                                                        checked
+                                                    }
+                                                });
+                                                if (!checked) {
+                                                    // clear domains when restriction disabled
+                                                    handleInputChange({
+                                                        target: {
+                                                            name: 'settings.allowedEmailDomains',
+                                                            type: 'text',
+                                                            value: ''
+                                                        }
+                                                    });
+                                                }
+                                            }}
+                                            className="mt-1 h-4 w-4 text-teal-600 bg-white border-gray-300 rounded focus:ring-teal-500"
+                                        />
+                                        <div className="flex-1">
+                                            <label htmlFor="restrictByEmailDomain" className="text-sm font-medium text-gray-900">
+                                                Restrict by email domain
+                                            </label>
+                                            <p className="text-sm text-gray-600">Only allow members with emails from listed domains to join.</p>
+
+                                            {formData.settings.restrictByEmailDomain && (
+                                                <div className="mt-2">
+                                                    <input
+                                                        id="allowedEmailDomains"
+                                                        name="settings.allowedEmailDomains"
+                                                        type="text"
+                                                        value={(formData.settings.allowedEmailDomains || []).join(', ')}
+                                                        onChange={handleInputChange}
+                                                        placeholder="example.com, organization.org"
+                                                        className="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all duration-300"
+                                                    />
+                                                    <p className="text-xs text-gray-500 mt-1">Enter comma-separated domains (no @). Leave blank to allow any domain.</p>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -636,7 +747,9 @@ export function CreateBooth() {
                                 disabled={
                                     formData.name.trim().length < 3 || 
                                     formData.description.trim().length < 10 || 
-                                    candidates.filter(c => c.name.trim()).length < 2
+                                    candidates.filter(c => c.name.trim()).length < 2 ||
+                                    !formData.maxMembers || formData.maxMembers === '' || formData.maxMembers < 2 ||
+                                    (allowedMax !== null && formData.maxMembers > allowedMax)
                                 }
                                 variant="teal"
                                 size="lg"

@@ -3,6 +3,7 @@ const Booth = require('../models/booth');
 const User = require('../models/user');
 const Vote = require('../models/vote');
 const validator = require('validator');
+const socket = require('../socket');
 
 // Input validation helpers
 const validateBoothName = (name) => {
@@ -35,6 +36,23 @@ const validateCandidates = (candidates) => {
 const validateMaxMembers = (maxMembers) => {
     const num = parseInt(maxMembers);
     return !isNaN(num) && num >= 2 && num <= 10000;
+};
+
+// Determine allowed maximum members for a user based on subscription
+const allowedMaxForUser = (user) => {
+    // If subscription explicitly provides maxMembers, respect it
+    const s = user.subscription || {};
+    if (s.maxMembers && Number.isInteger(s.maxMembers) && s.maxMembers > 0) {
+        return s.maxMembers;
+    }
+
+    // If subscription explicitly marks paid, allow a high cap
+    if (s.isPaid === true) {
+        return 10000; // platform absolute cap
+    }
+
+    // Otherwise treat as free plan
+    return 99;
 };
 
 // Create a new booth
@@ -137,6 +155,14 @@ exports.createBooth = async (req, res) => {
                 formData: req.body
             });
         }
+        // Enforce subscription-based maxMembers cap
+        const userAllowedMax = allowedMaxForUser(user);
+        if (maxMembers > userAllowedMax) {
+            return res.status(403).json({
+                error: `Your plan allows a maximum of ${userAllowedMax} members per booth. Please reduce the maxMembers or upgrade your plan.`,
+                allowedMax: userAllowedMax
+            });
+        }
         
         // Process settings
         let processedSettings = {};
@@ -156,14 +182,12 @@ exports.createBooth = async (req, res) => {
         const formSettings = {
             // Voting Rules
             resultsVisibleToVoters: req.body['settings[resultsVisibleToVoters]'] === 'on' || req.body['settings[resultsVisibleToVoters]'] === 'true',
-            anonymousVoting: req.body['settings[anonymousVoting]'] === 'on' || req.body['settings[anonymousVoting]'] === 'true',
-            allowVoteChange: req.body['settings[allowVoteChange]'] === 'on' || req.body['settings[allowVoteChange]'] === 'true',
             showLiveResults: req.body['settings[showLiveResults]'] === 'on' || req.body['settings[showLiveResults]'] === 'true',
             
             // Access Control
-            requireEmailVerification: req.body['settings[requireEmailVerification]'] === 'on' || req.body['settings[requireEmailVerification]'] === 'true',
+            // note: requireEmailVerification removed
             requireApproval: req.body['settings[requireApproval]'] === 'on' || req.body['settings[requireApproval]'] === 'true',
-            sendNotifications: req.body['settings[sendNotifications]'] === 'on' || req.body['settings[sendNotifications]'] === 'true',
+            // sendNotifications removed
             
             // Time Settings
             votingStartTime: req.body['settings[votingStartTime]'] ? new Date(req.body['settings[votingStartTime]']) : null,
@@ -351,6 +375,18 @@ exports.joinBooth = async (req, res) => {
         if (booth.members.length >= booth.maxMembers) {
             return res.status(400).json({ error: 'This booth is full' });
         }
+
+        // If booth requires approval, add a pending request instead of directly joining
+        if (booth.settings?.requireApproval) {
+            // If already requested, respond accordingly
+            try {
+                await booth.addPendingRequest(userId);
+                return res.json({ success: true, message: 'Join request submitted and pending approval' });
+            } catch (reqErr) {
+                // If duplicate request or other known reason, return friendly message
+                return res.status(400).json({ error: reqErr.message || 'Failed to submit join request' });
+            }
+        }
         
         // Check email domain restriction
         if (booth.settings?.allowedEmailDomains?.length > 0) {
@@ -447,7 +483,7 @@ exports.vote = async (req, res) => {
         }
         
         // Check if user has already voted
-        if (booth.hasUserVoted(userId) && !booth.settings.allowVoteChange) {
+        if (booth.hasUserVoted(userId)) {
             const error = 'You have already voted in this booth';
             if (req.accepts('html')) {
                 return res.status(400).render('error', { error });
@@ -465,20 +501,8 @@ exports.vote = async (req, res) => {
             return res.status(400).json({ error });
         }
         
-        // Handle vote change
-        if (booth.hasUserVoted(userId) && booth.settings.allowVoteChange) {
-            // Find and remove previous vote
-            const previousVote = await Vote.findOne({ booth: boothId, voter: userId });
-            if (previousVote) {
-                // Decrement previous candidate's vote count
-                if (previousVote.candidateIndex < booth.candidates.length) {
-                    booth.candidates[previousVote.candidateIndex].voteCount = 
-                        Math.max(0, booth.candidates[previousVote.candidateIndex].voteCount - 1);
-                    booth.totalVotes = Math.max(0, booth.totalVotes - 1);
-                }
-                await Vote.deleteOne({ _id: previousVote._id });
-            }
-        }
+        // Note: vote changes are not supported (legacy setting removed);
+        // users who have voted cannot change their vote.
         
         // Mark user as voted and increment vote count
         await booth.markAsVoted(userId);
@@ -494,6 +518,22 @@ exports.vote = async (req, res) => {
             userAgent: req.get('user-agent')
         });
         await vote.save();
+
+        // Emit live update to any connected clients for this booth (if socket initialized)
+        try {
+            const io = socket.getIo && socket.getIo();
+            if (io) {
+                // Send aggregate counts only (no voter-identifying data)
+                io.to(`booth:${boothId}`).emit('vote:update', {
+                    candidateIndex: candidateIdx,
+                    candidates: booth.candidates.map(c => ({ _id: c._id, name: c.name, voteCount: c.voteCount })),
+                    totalVotes: booth.totalVotes
+                });
+            }
+        } catch (emitErr) {
+            // Don't fail the request if emit fails — log and continue
+            console.error('Failed to emit vote:update', emitErr);
+        }
         
         res.json({ 
             success: true,
@@ -586,8 +626,10 @@ exports.resetInviteCode = async (req, res) => {
         await booth.generateNewInviteCode();
         
         const inviteLink = `${req.protocol}://${req.get('host')}/booth/join/${booth.inviteCode}`;
-        
+
+        // Return a consistent response shape with success flag
         res.json({
+            success: true,
             message: 'Invite code reset successfully',
             inviteCode: booth.inviteCode,
             inviteLink
@@ -633,7 +675,9 @@ exports.updateBoothSettings = async (req, res) => {
         booth.settings = { ...booth.settings, ...settings };
         await booth.save();
         
+        // Return consistent success shape so clients can check `response.success`
         res.json({
+            success: true,
             message: 'Settings updated successfully',
             settings: booth.settings
         });
@@ -678,7 +722,8 @@ exports.editBooth = async (req, res) => {
     try {
         const { boothId } = req.params;
         const userId = req.user.id;
-        let { name, description, maxMembers } = req.body;
+        // accept optional candidates array in body
+        let { name, description, maxMembers, candidates } = req.body;
         
         // Sanitize inputs
         name = name ? name.trim() : '';
@@ -701,24 +746,74 @@ exports.editBooth = async (req, res) => {
         
         // Validate inputs
         const errors = [];
-        
+
         if (name && !validateBoothName(name)) {
             errors.push('Booth name must be 3-100 characters');
         }
-        
+
         if (description && !validateDescription(description)) {
             errors.push('Description must be 10-500 characters');
         }
-        
+
         if (maxMembers && !validateMaxMembers(maxMembers)) {
             errors.push('Maximum members must be between 2 and 10,000');
         }
-        
+
         // Check if reducing maxMembers below current member count
         if (maxMembers && maxMembers < booth.members.length) {
             errors.push(`Cannot reduce maximum members below current member count (${booth.members.length})`);
         }
-        
+
+        // Enforce user's subscription cap when increasing maxMembers
+        if (maxMembers) {
+            const userAllowedMax = allowedMaxForUser(req.user || {});
+            if (maxMembers > userAllowedMax) {
+                errors.push(`Your plan allows a maximum of ${userAllowedMax} members per booth. Please upgrade to increase this limit.`);
+            }
+        }
+
+        // Handle optional candidates update
+        let candidatesToSet = undefined;
+        if (typeof candidates !== 'undefined') {
+            // Accept JSON string or array
+            let formattedCandidates = [];
+            if (typeof candidates === 'string') {
+                try {
+                    formattedCandidates = JSON.parse(candidates);
+                } catch (e) {
+                    formattedCandidates = [];
+                }
+            } else if (Array.isArray(candidates)) {
+                formattedCandidates = candidates;
+            } else if (candidates && typeof candidates === 'object') {
+                // If object (form-like), try to coerce to array
+                formattedCandidates = Array.isArray(candidates.items) ? candidates.items : [];
+            }
+
+            // Normalize
+            formattedCandidates = formattedCandidates.map(c => ({
+                name: (c.name || '').trim(),
+                description: (c.description || '').trim(),
+                voteCount: c.voteCount ? parseInt(c.voteCount) : 0
+            })).filter(c => c.name);
+
+            if (!validateCandidates(formattedCandidates)) {
+                errors.push('At least 2 valid candidates are required');
+            }
+
+            const candidateNames = formattedCandidates.map(c => c.name.toLowerCase());
+            if (new Set(candidateNames).size !== candidateNames.length) {
+                errors.push('Candidate names must be unique');
+            }
+
+            // Prevent candidate edits after votes exist
+            if (booth.totalVotes && booth.totalVotes > 0) {
+                errors.push('Cannot modify candidates after votes have been cast');
+            } else {
+                candidatesToSet = formattedCandidates;
+            }
+        }
+
         if (errors.length > 0) {
             return res.status(400).json({ 
                 error: errors.join('. '), 
@@ -730,6 +825,11 @@ exports.editBooth = async (req, res) => {
         if (name) booth.name = name;
         if (description) booth.description = description;
         if (maxMembers) booth.maxMembers = maxMembers;
+        if (typeof candidatesToSet !== 'undefined') {
+            // Reset vote counts to 0 for new candidates (safe because we blocked edits when votes exist)
+            booth.candidates = candidatesToSet.map(c => ({ name: c.name, description: c.description, voteCount: 0 }));
+            booth.totalVotes = 0;
+        }
         
         await booth.save();
         
@@ -832,13 +932,117 @@ exports.toggleBoothStatus = async (req, res) => {
         booth.status = newStatus;
         await booth.save();
         
+        // Return consistent success shape so client handlers can check response.success
         res.json({
+            success: true,
             message: `Booth status changed to ${newStatus}`,
             status: newStatus
         });
     } catch (err) {
         console.error('Toggle booth status error:', err);
         res.status(500).json({ error: 'Failed to toggle booth status' });
+    }
+};
+
+// Approve pending join request (creator only)
+exports.approveJoinRequest = async (req, res) => {
+    try {
+        const { boothId, userId } = req.params;
+        const actorId = req.user.id;
+
+        if (!validator.isMongoId(boothId) || !validator.isMongoId(userId)) {
+            return res.status(404).json({ error: 'Invalid id(s) provided' });
+        }
+
+        const booth = await Booth.findById(boothId);
+        if (!booth) return res.status(404).json({ error: 'Booth not found' });
+
+        if (booth.creator.toString() !== actorId) {
+            return res.status(403).json({ error: 'Only booth creator can approve requests' });
+        }
+
+        // Ensure the request exists
+        const pending = (booth.pendingRequests || []).some(r => (r.user._id || r.user).toString() === userId);
+        if (!pending) {
+            return res.status(400).json({ error: 'No pending request from this user' });
+        }
+
+        // Attempt to add member (this will check capacity and duplicates)
+        try {
+            await booth.addMember(userId);
+        } catch (addErr) {
+            return res.status(400).json({ error: addErr.message || 'Failed to add member' });
+        }
+
+        // Remove pending request
+        await booth.removePendingRequest(userId);
+
+        // Notify the requester via socket (if connected)
+        try {
+            const io = socket.getIo && socket.getIo();
+            if (io) {
+                io.to(`user:${userId}`).emit('joinRequest:status', {
+                    boothId: booth._id,
+                    boothName: booth.name,
+                    status: 'approved',
+                    message: 'Your join request has been approved.'
+                });
+            }
+        } catch (emitErr) {
+            console.error('Failed to emit joinRequest approved event', emitErr);
+        }
+
+        res.json({ success: true, message: 'Member approved and added' });
+    } catch (err) {
+        console.error('Approve join request error:', err);
+        res.status(500).json({ error: 'Failed to approve join request' });
+    }
+};
+
+// Reject pending join request (creator only)
+exports.rejectJoinRequest = async (req, res) => {
+    try {
+        const { boothId, userId } = req.params;
+        const actorId = req.user.id;
+
+        if (!validator.isMongoId(boothId) || !validator.isMongoId(userId)) {
+            return res.status(404).json({ error: 'Invalid id(s) provided' });
+        }
+
+        const booth = await Booth.findById(boothId);
+        if (!booth) return res.status(404).json({ error: 'Booth not found' });
+
+        if (booth.creator.toString() !== actorId) {
+            return res.status(403).json({ error: 'Only booth creator can reject requests' });
+        }
+
+        // Ensure the request exists
+        const pending = (booth.pendingRequests || []).some(r => (r.user._id || r.user).toString() === userId);
+        if (!pending) {
+            return res.status(400).json({ error: 'No pending request from this user' });
+        }
+
+        await booth.removePendingRequest(userId);
+
+        // Notify the requester via socket (if connected)
+        try {
+            const io = socket.getIo && socket.getIo();
+            if (io) {
+                io.to(`user:${userId}`).emit('joinRequest:status', {
+                    boothId: booth._id,
+                    boothName: booth.name,
+                    status: 'rejected',
+                    message: 'Your join request has been rejected.'
+                });
+            }
+        } catch (emitErr) {
+            console.error('Failed to emit joinRequest rejected event', emitErr);
+        }
+
+        res.json({ success: true, message: 'Join request rejected' });
+    } catch (err) {
+        console.error('Reject join request error:', err);
+        res.status(500).json({ error: 'Failed to reject join request' });
     }
 };
 
@@ -911,93 +1115,5 @@ exports.getUserBooths = async (req, res) => {
     }
 };
 
-// Direct invite link join - handles login redirect
-exports.directInviteJoin = async (req, res) => {
-    try {
-        const { code } = req.params;
-        const token = req.headers.authorization?.replace('Bearer ', '') || req.query.token;
-        
-        // First, verify the invite code is valid
-        const booth = await Booth.findOne({ inviteCode: code.toUpperCase() })
-            .populate('creator', 'name');
-        
-        if (!booth) {
-            // Redirect to client with error
-            return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/booth/join?error=invalid_code`);
-        }
-        
-        // If no token, redirect to login with the invite code
-        if (!token) {
-            const loginUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/login?invite=${code}&redirect=/booth/join/${code}`;
-            return res.redirect(loginUrl);
-        }
-        
-        // Verify the token
-        const jwt = require('jsonwebtoken');
-        let userId;
-        try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            userId = decoded.userId;
-        } catch (jwtErr) {
-            const loginUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/login?invite=${code}&redirect=/booth/join/${code}`;
-            return res.redirect(loginUrl);
-        }
-        
-        // Check if user is already a member or creator
-        const isMember = booth.isMember(userId);
-        const isCreator = booth.creator._id.toString() === userId;
-        
-        if (isMember || isCreator) {
-            return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/booth/${booth._id}`);
-        }
-        
-        // Check booth capacity
-        if (booth.members.length >= booth.maxMembers) {
-            return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/booth/join?error=booth_full`);
-        }
-        
-        // Check if booth is active
-        if (booth.status !== 'active') {
-            return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/booth/join?error=booth_inactive`);
-        }
-        
-        // Check email domain restriction
-        if (booth.settings?.allowedEmailDomains?.length > 0) {
-            const user = await User.findById(userId);
-            const userEmailDomain = user.email.split('@')[1];
-            const isAllowed = booth.settings.allowedEmailDomains.some(domain => {
-                const cleanDomain = domain.startsWith('@') ? 
-                    domain.slice(1) : domain;
-                return cleanDomain.toLowerCase() === userEmailDomain.toLowerCase();
-            });
-            
-            if (!isAllowed) {
-                return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/booth/join?error=domain_restricted`);
-            }
-        }
-        
-        // Add user to booth
-        try {
-            await booth.addMember(userId);
-            
-            // Update user's joined booths
-            const user = await User.findById(userId);
-            if (!user.joinedBooths.includes(booth._id)) {
-                user.joinedBooths.push(booth._id);
-                await user.save();
-            }
-            
-            // Redirect to booth with success message
-            return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/booth/${booth._id}?joined=true`);
-            
-        } catch (memberErr) {
-            console.error('Error adding member via direct invite:', memberErr);
-            return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/booth/join?error=join_failed`);
-        }
-        
-    } catch (err) {
-        console.error('Direct invite join error:', err);
-        res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/booth/join?error=server_error`);
-    }
-};
+// Legacy direct-invite handler removed — front-end join flow and API are used instead.
 

@@ -23,7 +23,6 @@ async function migrate() {
         // User collection indexes
         const userCollection = db.collection('users');
         await userCollection.createIndex({ email: 1 }, { unique: true });
-        await userCollection.createIndex({ aadharCardNumber: 1 }, { unique: true, sparse: true });
         await userCollection.createIndex({ role: 1 });
         await userCollection.createIndex({ createdAt: -1 });
         await userCollection.createIndex({ lastLogin: -1 });
@@ -71,13 +70,15 @@ async function migrate() {
             }
         );
         
-        // Update existing booths with new settings
-        console.log('🔄 Updating booth documents...');
+        // Update existing booths with new settings defaults
+        console.log('🔄 Updating booth documents with new defaults...');
         await boothCollection.updateMany(
-            { 'settings.allowMultipleVotes': { $exists: false } },
+            { 'settings.resultsVisibleToVoters': { $exists: false } },
             {
                 $set: {
-                    'settings.allowMultipleVotes': false,
+                    'settings.resultsVisibleToVoters': true,
+                    'settings.showLiveResults': false,
+                    'settings.requireApproval': false,
                     totalVotes: 0
                 }
             }

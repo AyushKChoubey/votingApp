@@ -17,20 +17,21 @@ const AboutPage = () => {
         </div>
       </div>
 
-      {/* Mission Section */}
+      {/* Mission / Story Section */}
       <div className="py-12 sm:py-16">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 items-center">
             <div className="px-2 sm:px-0">
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 sm:mb-6">Our Mission</h2>
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 sm:mb-6">What We Do</h2>
               <p className="text-base sm:text-lg text-gray-600 mb-4 sm:mb-6 leading-relaxed">
-                At VoteBooth, we believe that every voice matters and every vote counts. Our mission is to make 
-                democratic participation accessible, secure, and transparent for organizations, communities, and 
-                institutions worldwide.
+                VoteBooth helps groups make decisions together — simply and fairly. Whether it's a school choosing
+                a student council, a neighborhood deciding on a community project, or a club picking a meeting time,
+                VoteBooth provides an easy way to collect choices and share the results.
               </p>
               <p className="text-base sm:text-lg text-gray-600 mb-4 sm:mb-6 leading-relaxed">
-                We're building the future of digital democracy, where technology serves to enhance trust, 
-                participation, and accountability in the decision-making process.
+                Our focus is on making participation welcoming: clear instructions, straightforward options, and
+                results everyone can understand. We remove the confusion so groups can focus on what matters — the
+                decision itself.
               </p>
               <div className="flex items-center space-x-3 sm:space-x-4">
                 <div className="bg-teal-100 p-2 sm:p-3 rounded-lg transition-all duration-300 hover:scale-110 flex-shrink-0">
@@ -38,56 +39,55 @@ const AboutPage = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <span className="text-sm sm:text-base text-gray-700 font-medium">Trusted by 10,000+ organizations worldwide</span>
+                <span className="text-sm sm:text-base text-gray-700 font-medium">Trusted by communities and organizations</span>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Values Section */}
+      {/* What Guides Us (values, non-technical) */}
       <div className="py-12 sm:py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
           <div className="text-center mb-8 sm:mb-12 px-2 sm:px-0">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4">Our Core Values</h2>
-            <p className="text-base sm:text-lg text-gray-600">The principles that guide everything we do</p>
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4">The Story & Our Values</h2>
+            <p className="text-base sm:text-lg text-gray-600">Why we started VoteBooth and what we care about</p>
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 px-2 sm:px-0">
             <div className="text-center px-2 sm:px-4">
               <div className="bg-blue-100 w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
                 <svg className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.1 0-2 .9-2 2v4h4v-4c0-1.1-.9-2-2-2z" />
                 </svg>
               </div>
-              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">Security First</h3>
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">People First</h3>
               <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
-                We implement industry-leading security measures to protect every vote and maintain the integrity of the democratic process.
+                We design for people — clear language, simple choices, and a friendly experience so everyone can join in.
               </p>
             </div>
             
             <div className="text-center px-2 sm:px-4">
               <div className="bg-green-100 w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
                 <svg className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2l2 5 5 .5-4 3 1.5 5L12 14l-4.5 2.5L9 10 5 7.5 10 7z" />
                 </svg>
               </div>
-              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">Transparency</h3>
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">Fairness</h3>
               <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
-                Open processes, clear results, and verifiable outcomes ensure trust and accountability in every election.
+                We make options clear and results easy to read so groups can reach fair outcomes without confusion.
               </p>
             </div>
             
             <div className="text-center px-2 sm:px-4">
               <div className="bg-purple-100 w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
                 <svg className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M3 12h18M3 17h18" />
                 </svg>
               </div>
-              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">Accessibility</h3>
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">Simplicity</h3>
               <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
-                Making democratic participation possible for everyone, regardless of technical expertise or physical location.
+                No jargon, no complicated steps — just a straightforward way for groups to gather opinions and decide together.
               </p>
             </div>
           </div>

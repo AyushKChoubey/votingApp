@@ -82,8 +82,6 @@ async function seed() {
             maxMembers: 50,
             settings: {
                 resultsVisibleToVoters: true,
-                anonymousVoting: true,
-                allowVoteChange: false,
                 showLiveResults: true
             },
             members: [{ user: adminUser._id, hasVoted: false }]
@@ -105,8 +103,6 @@ async function seed() {
             maxMembers: 20,
             settings: {
                 resultsVisibleToVoters: false,
-                anonymousVoting: true,
-                allowVoteChange: true,
                 showLiveResults: false,
                 votingEndTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 1 week from now
             },
@@ -133,8 +129,6 @@ async function seed() {
             maxMembers: 100,
             settings: {
                 resultsVisibleToVoters: true,
-                anonymousVoting: true,
-                allowVoteChange: false,
                 showLiveResults: false,
                 allowedEmailDomains: ['university.edu', 'student.edu'],
                 votingStartTime: new Date(),

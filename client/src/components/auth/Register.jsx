@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { LoadingButton } from '../layout/Loading';
 import { Alert } from '../layout/Alert';
 import GoogleSignInButton from './GoogleSignInButton';
+import BackButton from '../layout/BackButton';
 
 const Register = () => {
     const [formData, setFormData] = useState({
@@ -16,8 +17,34 @@ const Register = () => {
     const [error, setError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [passwordRequirements, setPasswordRequirements] = useState({
+        length: false,
+        uppercase: false,
+        lowercase: false,
+        number: false
+    });
     const { register } = useAuth();
     const navigate = useNavigate();
+
+    const validatePassword = (password) => {
+        const errors = [];
+        if (password.length < 8) {
+            errors.push('Password must be at least 8 characters long');
+        }
+        if (password.length > 128) {
+            errors.push('Password must be less than 128 characters');
+        }
+        if (!/(?=.*[a-z])/.test(password)) {
+            errors.push('Password must contain at least one lowercase letter');
+        }
+        if (!/(?=.*[A-Z])/.test(password)) {
+            errors.push('Password must contain at least one uppercase letter');
+        }
+        if (!/(?=.*\d)/.test(password)) {
+            errors.push('Password must contain at least one number');
+        }
+        return errors;
+    };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -25,14 +52,61 @@ const Register = () => {
             ...prev,
             [name]: value
         }));
+        
+        // Update password requirements visual feedback
+        if (name === 'password') {
+            setPasswordRequirements({
+                length: value.length >= 8,
+                uppercase: /(?=.*[A-Z])/.test(value),
+                lowercase: /(?=.*[a-z])/.test(value),
+                number: /(?=.*\d)/.test(value)
+            });
+        }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
         
-        if (formData.password !== formData.confirmPassword) {
-            setError('Passwords do not match');
+        // Validate all fields
+        const errors = [];
+        
+        // Name validation
+        if (!formData.name.trim()) {
+            errors.push('Name is required');
+        } else if (formData.name.trim().length < 2) {
+            errors.push('Name must be at least 2 characters long');
+        } else if (formData.name.trim().length > 50) {
+            errors.push('Name must be less than 50 characters');
+        } else if (!/^[a-zA-Z\s\-'\.]+$/.test(formData.name.trim())) {
+            errors.push('Name can only contain letters, spaces, hyphens, apostrophes, and periods');
+        }
+        
+        // Email validation
+        if (!formData.email.trim()) {
+            errors.push('Email is required');
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+            errors.push('Please enter a valid email address');
+        }
+        
+        // Password validation
+        if (!formData.password) {
+            errors.push('Password is required');
+        } else {
+            const passwordErrors = validatePassword(formData.password);
+            errors.push(...passwordErrors);
+        }
+        
+        // Confirm password validation
+        if (!formData.confirmPassword) {
+            errors.push('Please confirm your password');
+        } else if (formData.password !== formData.confirmPassword) {
+            errors.push('Passwords do not match');
+        }
+        
+        // Display validation errors
+        if (errors.length > 0) {
+            setError(errors[0]); // Show first error
             return;
         }
 
@@ -65,18 +139,10 @@ const Register = () => {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 flex items-center justify-center py-2 sm:py-6 px-3 sm:px-4 relative">
-            {/* Back to Home Link - Hidden on mobile, visible on sm screens and up */}
-            <div className="absolute top-4 left-4 sm:top-6 sm:left-6 hidden sm:block">
-                <Link 
-                    to="/" 
-                    className="inline-flex items-center text-teal-600 hover:text-teal-700 transition-colors duration-300 group bg-white/50 backdrop-blur-sm px-3 py-2 rounded-lg hover:bg-white/70"
-                >
-                    <svg className="w-5 h-5 mr-2 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                    </svg>
-                        Back to Home
-                    </Link>
-                </div>
+            {/* Back button styled like admin header */}
+            <div className="absolute top-4 left-4 sm:top-6 sm:left-6">
+                <BackButton to="/" label="Back" className="text-sm px-2 py-1 md:px-3 md:py-1.5 bg-white" />
+            </div>
             
             <div className="max-w-md w-full">
                 <div className="text-center">
@@ -160,6 +226,61 @@ const Register = () => {
                                     )}
                                 </button>
                             </div>
+                            {formData.password && (
+                                <div className="mt-2">
+                                    <p className="text-xs text-gray-500 mb-1">Password requirements:</p>
+                                    <div className="flex items-center space-x-4 text-xs">
+                                        <div className="flex items-center space-x-1">
+                                            {passwordRequirements.length ? (
+                                                <svg className="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                </svg>
+                                            ) : (
+                                                <svg className="w-3 h-3 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                                </svg>
+                                            )}
+                                            <span className={passwordRequirements.length ? 'text-green-600' : 'text-red-500'} title="At least 8 characters">8+ chars</span>
+                                        </div>
+                                        <div className="flex items-center space-x-1">
+                                            {passwordRequirements.uppercase ? (
+                                                <svg className="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                </svg>
+                                            ) : (
+                                                <svg className="w-3 h-3 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                                </svg>
+                                            )}
+                                            <span className={passwordRequirements.uppercase ? 'text-green-600' : 'text-red-500'} title="Uppercase letter">A-Z</span>
+                                        </div>
+                                        <div className="flex items-center space-x-1">
+                                            {passwordRequirements.lowercase ? (
+                                                <svg className="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                </svg>
+                                            ) : (
+                                                <svg className="w-3 h-3 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                                </svg>
+                                            )}
+                                            <span className={passwordRequirements.lowercase ? 'text-green-600' : 'text-red-500'} title="Lowercase letter">a-z</span>
+                                        </div>
+                                        <div className="flex items-center space-x-1">
+                                            {passwordRequirements.number ? (
+                                                <svg className="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                </svg>
+                                            ) : (
+                                                <svg className="w-3 h-3 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                                </svg>
+                                            )}
+                                            <span className={passwordRequirements.number ? 'text-green-600' : 'text-red-500'} title="Number">0-9</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                         
                         <div>
@@ -194,6 +315,25 @@ const Register = () => {
                                     )}
                                 </button>
                             </div>
+                            {formData.confirmPassword && (
+                                <div className="mt-1 flex items-center space-x-2">
+                                    {formData.password === formData.confirmPassword ? (
+                                        <>
+                                            <svg className="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                            </svg>
+                                            <span className="text-xs text-green-600">Passwords match</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg className="w-3 h-3 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                            </svg>
+                                            <span className="text-xs text-red-500">Passwords don't match</span>
+                                        </>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         <div className="flex items-start sm:items-center">

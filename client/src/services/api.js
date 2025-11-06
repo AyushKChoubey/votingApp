@@ -28,29 +28,28 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response.data,
   (error) => {
-    console.error('API Error:', {
-      message: error.message,
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      config: {
-        method: error.config?.method,
-        url: error.config?.url,
-        baseURL: error.config?.baseURL
-      }
-    });
+    // API errors are propagated to callers; avoid noisy console output here.
     
     const message = error.response?.data?.error || error.response?.data?.message || error.message;
     
     // Handle CORS errors
-    if (error.message.includes('Network Error') || error.code === 'ERR_NETWORK') {
-      console.error('🚨 CORS or Network Error - Check if server is running on localhost:5000');
-    }
+    // Network/CORS errors are handled by callers; do not log here.
     
-    // Handle 401 unauthorized
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login?message=session_expired';
+    // Handle 401 unauthorized or 403 forbidden (token expired or invalid)
+    const status = error.response?.status;
+    const serverMsg = (error.response?.data && (error.response.data.error || error.response.data.message || error.response.data.msg)) || '';
+
+    const isTokenExpiredMsg = /token expired|jwt expired|session expired|invalid token/i.test(serverMsg);
+
+    if (status === 401 || status === 403 || isTokenExpiredMsg) {
+      // Clear stored token and navigate to login with a query indicating session expiration.
+      try {
+        localStorage.removeItem('token');
+      } catch (e) {
+        // ignore
+      }
+      // Use replace so user can't go back to the expired session page
+      window.location.replace('/login?message=session_expired');
     }
     
     // Preserve the original error structure but with our message
@@ -117,7 +116,7 @@ export const boothService = {
   },
 
   async deleteBooth(boothId) {
-    return api.delete(`/api/booth/${boothId}/delete`);
+    return api.delete(`/api/booth/${boothId}`);
   },
 
   async joinBooth(inviteCode) {
@@ -140,8 +139,20 @@ export const boothService = {
     return api.put(`/api/booth/${boothId}/settings`, settings);
   },
 
+  async getAdmin(boothId) {
+    return api.get(`/api/booth/${boothId}/admin`);
+  },
+
+  async approveRequest(boothId, userId) {
+    return api.post(`/api/booth/${boothId}/requests/${userId}/approve`);
+  },
+
+  async rejectRequest(boothId, userId) {
+    return api.post(`/api/booth/${boothId}/requests/${userId}/reject`);
+  },
+
   async removeMember(boothId, memberId) {
-    return api.post(`/api/booth/${boothId}/remove-member/${memberId}`);
+    return api.delete(`/api/booth/${boothId}/members/${memberId}`);
   },
 
   async toggleStatus(boothId) {

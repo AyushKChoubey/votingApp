@@ -64,8 +64,14 @@ router.get('/dashboard', jwtAuthMiddleware, async (req, res) => {
                     name: booth.name,
                     description: booth.description,
                     status: booth.status,
-                    creator: booth.creator,
+                    // return a small creator object to keep payload minimal
+                    creator: {
+                        id: booth.creator._id,
+                        name: booth.creator.name
+                    },
                     memberCount: booth.members.length,
+                    totalVotes: booth.totalVotes || 0,
+                    candidateCount: (booth.candidates || []).length,
                     hasVoted: booth.hasUserVoted(userId)
                 })),
                 stats
@@ -121,6 +127,9 @@ router.get('/join/:code', jwtAuthMiddleware, async (req, res) => {
         res.json({
             success: true,
             data: {
+                permissions: {
+                    isCreator: true
+                },
                 booth: {
                     id: booth._id,
                     name: booth.name,
@@ -193,7 +202,8 @@ router.get('/:boothId', jwtAuthMiddleware, async (req, res) => {
                     isCreator,
                     isMember,
                     hasVoted,
-                    canVote: votingStatus.allowed && (!hasVoted || booth.settings.allowVoteChange)
+                    // allowVoteChange removed: users cannot change votes once cast
+                    canVote: votingStatus.allowed && !hasVoted
                 },
                 votingStatus,
                 stats
@@ -276,7 +286,8 @@ router.get('/:boothId/admin', jwtAuthMiddleware, async (req, res) => {
         
         const booth = await Booth.findById(boothId)
             .populate('members.user', 'name email')
-            .populate('creator', 'name email');
+            .populate('creator', 'name email')
+            .populate('pendingRequests.user', 'name email');
         
         if (!booth) {
             return res.status(404).json({ error: 'Booth not found' });
@@ -300,6 +311,9 @@ router.get('/:boothId/admin', jwtAuthMiddleware, async (req, res) => {
         res.json({
             success: true,
             data: {
+                permissions: {
+                    isCreator: true
+                },
                 booth: {
                     id: booth._id,
                     name: booth.name,
@@ -307,6 +321,7 @@ router.get('/:boothId/admin', jwtAuthMiddleware, async (req, res) => {
                     creator: booth.creator,
                     members: booth.members,
                     candidates: booth.candidates,
+                    pendingRequests: booth.pendingRequests,
                     settings: booth.settings,
                     status: booth.status,
                     inviteCode: booth.inviteCode,
@@ -402,23 +417,44 @@ router.delete('/:boothId/members/:memberId', jwtAuthMiddleware, async (req, res)
     try {
         const { boothId, memberId } = req.params;
         const userId = req.user.id;
-        
+
         const booth = await Booth.findById(boothId);
-        
+
         if (!booth) {
             return res.status(404).json({ error: 'Booth not found' });
         }
-        
+
         if (booth.creator.toString() !== userId) {
             return res.status(403).json({ error: 'Only booth creator can remove members' });
         }
-        
+
         if (memberId === userId) {
             return res.status(400).json({ error: 'Cannot remove yourself' });
         }
-        
-        await booth.removeMember(memberId);
-        
+
+        // Find any votes by this member for this booth so we can adjust counts
+        const memberVotes = await Vote.find({ booth: boothId, voter: memberId });
+
+        // Remove member from the booth (model method saves and returns updated doc)
+        const updatedBooth = await booth.removeMember(memberId);
+
+        // If votes exist, decrement candidate voteCounts and totalVotes on the booth
+        if (memberVotes && memberVotes.length > 0) {
+            let modified = false;
+            for (const v of memberVotes) {
+                const idx = v.candidateIndex;
+                if (typeof idx === 'number' && updatedBooth.candidates[idx]) {
+                    updatedBooth.candidates[idx].voteCount = Math.max(0, (updatedBooth.candidates[idx].voteCount || 0) - 1);
+                    updatedBooth.totalVotes = Math.max(0, (updatedBooth.totalVotes || 0) - 1);
+                    modified = true;
+                }
+            }
+
+            if (modified) {
+                await updatedBooth.save();
+            }
+        }
+
         // Also remove from user's joined booths
         const User = require('../models/user');
         const user = await User.findById(memberId);
@@ -426,10 +462,10 @@ router.delete('/:boothId/members/:memberId', jwtAuthMiddleware, async (req, res)
             user.joinedBooths = user.joinedBooths.filter(id => id.toString() !== boothId);
             await user.save();
         }
-        
-        // Remove member's votes if any
+
+        // Finally remove member's Vote documents
         await Vote.deleteMany({ booth: boothId, voter: memberId });
-        
+
         res.json({ success: true, message: 'Member removed successfully' });
     } catch (err) {
         console.error('Remove member API error:', err);
@@ -445,8 +481,8 @@ router.post('/create', jwtAuthMiddleware, boothController.createBooth);
 // Join booth (via code)
 router.post('/join/:code', jwtAuthMiddleware, boothController.joinBooth);
 
-// Direct invite link join (handles login redirect)
-router.get('/invite/:code', boothController.directInviteJoin);
+// NOTE: The legacy direct-invite endpoint has been removed. Clients should use the
+// front-end join route `/booth/join/:code` which uses the API `POST /api/booth/join/:code`.
 
 // Vote
 router.post('/:boothId/vote', jwtAuthMiddleware, boothController.vote);
@@ -457,6 +493,10 @@ router.post('/:boothId/reset-code', jwtAuthMiddleware, boothController.resetInvi
 // Update booth settings
 router.put('/:boothId/settings', jwtAuthMiddleware, boothController.updateBoothSettings);
 
+// Approve or reject pending join requests
+router.post('/:boothId/requests/:userId/approve', jwtAuthMiddleware, boothController.approveJoinRequest);
+router.post('/:boothId/requests/:userId/reject', jwtAuthMiddleware, boothController.rejectJoinRequest);
+
 // Toggle booth status
 router.post('/:boothId/toggle-status', jwtAuthMiddleware, boothController.toggleBoothStatus);
 
@@ -465,6 +505,9 @@ router.delete('/:boothId', jwtAuthMiddleware, boothController.deleteBooth);
 
 // Edit booth
 router.put('/:boothId', jwtAuthMiddleware, boothController.editBooth);
+
+// Also accept POST /:boothId/edit for clients that post edits (keeps compatibility)
+router.post('/:boothId/edit', jwtAuthMiddleware, boothController.editBooth);
 
 // Get user's booths (API)
 router.get('/user/booths', jwtAuthMiddleware, boothController.getUserBooths);

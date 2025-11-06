@@ -92,12 +92,6 @@ const userSchema = new mongoose.Schema({
         type: String,
         maxlength: [200, 'Address cannot exceed 200 characters']
     },
-    aadharCardNumber: {
-        type: String,
-        unique: true,
-        sparse: true,
-        match: [/^\d{12}$/, 'Aadhar card number must be 12 digits']
-    },
     age: {
         type: Number,
         min: [13, 'Age must be at least 13'],
@@ -175,7 +169,7 @@ const userSchema = new mongoose.Schema({
         },
         maxMembersPerBooth: {
             type: Number,
-            default: 100
+            default: 99
         }
     },
     
@@ -384,7 +378,6 @@ userSchema.statics.findByPasswordResetToken = function(token) {
 
 // Indexes for better performance and constraints
 userSchema.index({ email: 1 }, { unique: true });
-userSchema.index({ aadharCardNumber: 1 }, { unique: true, sparse: true });
 userSchema.index({ role: 1 });
 userSchema.index({ createdAt: -1 });
 userSchema.index({ lastLogin: -1 });

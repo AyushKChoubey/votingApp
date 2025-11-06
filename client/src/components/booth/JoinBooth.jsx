@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useEffect } from 'react';
 import api from '../../services/api';
-import { Alert } from '../layout/Alert';
+import { useToast } from '../layout/Toast';
 import { LoadingButton } from '../layout/Loading';
 
 export function JoinBooth() {
@@ -15,6 +15,7 @@ export function JoinBooth() {
     
     const navigate = useNavigate();
     const { code } = useParams();
+    const { addToast } = useToast();
 
     useEffect(() => {
         if (code) {
@@ -40,7 +41,10 @@ export function JoinBooth() {
             
             setBooth(booth);
         } catch (err) {
-            setError(err.response?.data?.error || 'Invalid invite code');
+            const msg = err.response?.data?.error || 'Invalid invite code';
+            setError(msg);
+            // surface via toast instead of relying only on inline alert
+            try { addToast(msg, 'error'); } catch (e) { /* noop */ }
             setBooth(null);
         } finally {
             setLoading(false);
@@ -60,12 +64,16 @@ export function JoinBooth() {
         
         try {
             await api.post(`/booth/api/join/${inviteCode}`);
-            setSuccess('Successfully joined the booth!');
+            const msg = 'Successfully joined the booth!';
+            setSuccess(msg);
+            try { addToast(msg, 'success'); } catch (e) { /* noop */ }
             setTimeout(() => {
                 navigate(`/booth/${booth.id}`);
             }, 1500);
         } catch (err) {
-            setError(err.response?.data?.error || 'Failed to join booth');
+            const msg = err.response?.data?.error || 'Failed to join booth';
+            setError(msg);
+            try { addToast(msg, 'error'); } catch (e) { /* noop */ }
         } finally {
             setJoining(false);
         }
@@ -80,8 +88,6 @@ export function JoinBooth() {
                 </div>
 
                 <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-                    {error && <Alert type="error" message={error} />}
-                    {success && <Alert type="success" message={success} />}
 
                     {!booth ? (
                         <form onSubmit={handleCodeSubmit} className="space-y-6">

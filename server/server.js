@@ -207,13 +207,23 @@ app.use((err, req, res, next) => {
 });
 
 // Start the API server
+const http = require('http');
+const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
 // Use 0.0.0.0 for production (cloud platforms) and localhost for development
 const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : (process.env.HOST || 'localhost');
 
+// Initialize socket.io (lazy module to avoid circular requires)
+try {
+    const socket = require('./socket');
+    socket.init(server);
+} catch (err) {
+    console.error('Failed to initialize socket.io:', err);
+}
+
 const startServer = async () => {
     try {
-        app.listen(PORT, HOST, () => {
+        server.listen(PORT, HOST, () => {
             console.log(`🚀 VoteBooth API Server running at http://${HOST}:${PORT}`);
             console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
             console.log(`🔗 Health check: http://${HOST}:${PORT}/health`);

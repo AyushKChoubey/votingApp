@@ -57,6 +57,18 @@ const boothSchema = new mongoose.Schema({
             default: false
         }
     }],
+    // Pending join requests when `settings.requireApproval` is enabled
+    pendingRequests: [{
+        user: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            required: true
+        },
+        requestedAt: {
+            type: Date,
+            default: Date.now
+        }
+    }],
     maxMembers: {
         type: Number,
         default: 100,
@@ -74,33 +86,13 @@ const boothSchema = new mongoose.Schema({
             type: Boolean,
             default: true
         },
-        anonymousVoting: {
-            type: Boolean,
-            default: true
-        },
-        allowVoteChange: {
-            type: Boolean,
-            default: false
-        },
         showLiveResults: {
             type: Boolean,
             default: false
         },
-        allowMultipleVotes: {
-            type: Boolean,
-            default: false
-        },
-        
+
         // Access Control
-        requireEmailVerification: {
-            type: Boolean,
-            default: false
-        },
         requireApproval: {
-            type: Boolean,
-            default: false
-        },
-        sendNotifications: {
             type: Boolean,
             default: false
         },
@@ -207,13 +199,62 @@ boothSchema.methods.addMember = async function(userId) {
         throw new Error('Booth is full');
     }
     
-    this.members.push({
-        user: userId,
-        hasVoted: false
-    });
+    // Use atomic update to prevent race conditions
+    const result = await this.constructor.findOneAndUpdate(
+        { 
+            _id: this._id,
+            $expr: { $lt: [{ $size: '$members' }, '$maxMembers'] }, // Ensure we don't exceed limit
+            'members.user': { $ne: userId } // Ensure user not already a member
+        },
+        { 
+            $push: { 
+                members: {
+                    user: userId,
+                    hasVoted: false,
+                    joinedAt: new Date()
+                }
+            }
+        },
+        { new: true }
+    );
     
+    if (!result) {
+        // Check specific reason for failure
+        const currentBooth = await this.constructor.findById(this._id);
+        if (currentBooth.isMember(userId)) {
+            throw new Error('User is already a member');
+        }
+        if (currentBooth.members.length >= currentBooth.maxMembers) {
+            throw new Error('Booth is full');
+        }
+        throw new Error('Failed to add member');
+    }
+    
+    // Update this instance with the new data
+    this.members = result.members;
+    return this;
+};
 
-    
+// Add a pending join request (used when requireApproval is enabled)
+boothSchema.methods.addPendingRequest = async function(userId) {
+    // Prevent if already a member
+    if (this.isMember(userId)) {
+        throw new Error('User is already a member');
+    }
+
+    // Prevent duplicate requests
+    if (this.pendingRequests && this.pendingRequests.some(r => (r.user._id || r.user).toString() === userId.toString())) {
+        throw new Error('Join request already submitted');
+    }
+
+    this.pendingRequests = this.pendingRequests || [];
+    this.pendingRequests.push({ user: userId, requestedAt: new Date() });
+    return this.save();
+};
+
+// Remove a pending request (used on approve/reject)
+boothSchema.methods.removePendingRequest = async function(userId) {
+    this.pendingRequests = (this.pendingRequests || []).filter(r => (r.user._id || r.user).toString() !== userId.toString());
     return this.save();
 };
 
@@ -238,7 +279,7 @@ boothSchema.methods.markAsVoted = async function(userId) {
         throw new Error('User is not a member of this booth');
     }
     
-    if (member.hasVoted && !this.settings.allowVoteChange) {
+    if (member.hasVoted) {
         throw new Error('User has already voted');
     }
     

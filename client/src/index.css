@@ -5,6 +5,11 @@ body {
   font-family: 'Inter', system-ui, sans-serif;
 }
 
+/* Prevent horizontal scroll caused by toasts or other full-width elements */
+html, body {
+  overflow-x: hidden;
+}
+
 /* Custom Loading Animations */
 @keyframes shimmer {
   0% {

@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import api, { boothService } from '../../services/api';
-import { Alert } from '../../components/layout/Alert';
+import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../components/layout/Toast';
 import { LoadingButton } from '../../components/layout/Loading';
+import BackButton from '../../components/layout/BackButton';
 
 const JoinBoothPage = () => {
     const [inviteCode, setInviteCode] = useState('');
@@ -14,14 +16,28 @@ const JoinBoothPage = () => {
 
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [pendingRequest, setPendingRequest] = useState(false);
+    const socketRef = useRef(null);
+        const { addToast } = useToast();
 
     
     const navigate = useNavigate();
     const { code } = useParams();
     const [searchParams] = useSearchParams();
+    const { isAuthenticated, isLoading } = useAuth();
 
     useEffect(() => {
         if (code) {
+            // Wait for auth initialization first
+            if (isLoading) return;
+
+            // If user is not authenticated, redirect them to login with invite+redirect so
+            // after login they return to this join page with the code prefilled.
+            if (!isAuthenticated) {
+                navigate(`/login?invite=${code}&redirect=/booth/join/${code}`);
+                return;
+            }
+
             setInviteCode(code.toUpperCase());
             // Auto-check the invite code from the URL
             checkInviteCode(code);
@@ -40,13 +56,34 @@ const JoinBoothPage = () => {
                 'join_failed': 'Failed to join booth. Please try again.',
                 'server_error': 'Server error occurred. Please try again later.'
             };
-            setError(errorMessages[error] || 'An error occurred while joining the booth');
+            const msg = errorMessages[error] || 'An error occurred while joining the booth';
+            setError(msg);
+            // Show a toast as well so users don't miss the message
+            try {
+                addToast(msg, 'error');
+            } catch (e) {
+                // no-op if toast system isn't initialized
+            }
         }
         
         if (joined === 'true') {
             setSuccess('Successfully joined the booth!');
         }
     }, [code, searchParams]);
+
+    // Cleanup socket on unmount
+    useEffect(() => {
+        return () => {
+            try {
+                if (socketRef.current) {
+                    socketRef.current.disconnect();
+                    socketRef.current = null;
+                }
+            } catch (e) {
+                // ignore
+            }
+        };
+    }, []);
 
 
 
@@ -62,19 +99,36 @@ const JoinBoothPage = () => {
             
             if (response.success && response.data) {
                 const { booth: boothData, isMember, isCreator } = response.data;
-                
+
                 if (isMember || isCreator) {
                     navigate(`/booth/${boothData.id}`);
                     return;
                 }
-                
+
+                // Show booth preview even if closed — UI will render an appropriate closed-state card
+                setError('');
                 setBooth(boothData);
             } else {
                 setError('Invalid invite code');
+                    addToast('Invalid invite code', 'error');
             }
         } catch (err) {
-            console.error('Check invite code error:', err);
-            setError(err.message || 'Invalid invite code');
+            // Prefer a clear message for 404 (not found) invite codes
+            const status = err.status || err.response?.status;
+            let msg;
+            if (status === 404) {
+                msg = 'Invite not found — please verify the code or link';
+            } else {
+                msg = err.message || 'Invalid invite code';
+            }
+
+            setError(msg);
+            // show toast so it's visible regardless of inline alert
+            try {
+                addToast(msg, 'error');
+            } catch (e) {
+                // ignore
+            }
             setBooth(null);
         } finally {
             setLoading(false);
@@ -98,69 +152,192 @@ const JoinBoothPage = () => {
             const response = await boothService.joinBooth(inviteCode);
             
             if (response.success) {
-                setSuccess('Successfully joined the booth!');
-                setTimeout(() => {
-                    // Use the boothId from the join response instead of the booth object
-                    navigate(`/booth/${response.boothId || booth.id}`);
-                }, 1500);
+                // If server indicates the join is pending approval, do not navigate — show a pending message instead
+                const msg = response.message || '';
+                if (/pending/i.test(msg) || (!response.boothId && booth?.settings?.requireApproval)) {
+                    setSuccess(msg || 'Join request submitted and is pending approval');
+                    setPendingRequest(true);
+                    // Initialize socket listener to receive approve/reject events for this user
+                    (async () => {
+                        try {
+                            if (!socketRef.current) {
+                                const mod = await import('socket.io-client');
+                                const ioClient = mod.io || mod.default || mod;
+                                const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+                                const token = localStorage.getItem('token');
+                                const socket = ioClient(SOCKET_URL, {
+                                    transports: ['websocket', 'polling'],
+                                    auth: { token }
+                                });
+                                socketRef.current = socket;
+
+                                socket.on('connect', () => {
+                                    // Optionally join booth room (not required for user notifications)
+                                });
+
+                                socket.on('joinRequest:status', async (payload) => {
+                                    try {
+                                        if (!payload) return;
+                                        const payloadBoothId = (payload.boothId || '').toString();
+                                        const currentBoothId = (booth?.id || booth?._id || '').toString();
+                                        if (!payloadBoothId || payloadBoothId !== currentBoothId) return;
+
+                                        if (payload.status === 'approved') {
+                                            addToast(payload.message || 'Your join request has been approved.', 'success');
+                                            // Refresh booth details and navigate into the booth
+                                            try {
+                                                await boothService.getBooth(payloadBoothId);
+                                            } catch (e) {
+                                                // ignore
+                                            }
+                                            // cleanup socket and navigate
+                                            try {
+                                                socketRef.current.disconnect();
+                                            } catch (e) {}
+                                            socketRef.current = null;
+                                            navigate(`/booth/${payloadBoothId}`);
+                                        } else if (payload.status === 'rejected') {
+                                            addToast(payload.message || 'Your join request has been rejected.', 'error');
+                                            setPendingRequest(false);
+                                            // keep socket open briefly or disconnect
+                                            try {
+                                                socketRef.current.disconnect();
+                                            } catch (e) {}
+                                            socketRef.current = null;
+                                        }
+                                    } catch (innerErr) {
+                                        console.error('Error handling joinRequest:status', innerErr);
+                                    }
+                                });
+
+                                socket.on('connect_error', (err) => {
+                                    console.warn('Socket connect_error', err?.message || err);
+                                });
+                            }
+                        } catch (sockErr) {
+                            console.error('Failed to initialize socket for join requests', sockErr);
+                        }
+                    })();
+                    addToast(msg || 'Join request submitted and is pending approval', 'info');
+                    // Do not navigate; user must wait for approval
+                } else {
+                    setSuccess('Successfully joined the booth!');
+                    addToast('Successfully joined the booth!', 'success');
+                    setTimeout(() => {
+                        // Use the boothId from the join response instead of the booth object
+                        navigate(`/booth/${response.boothId || booth.id}`);
+                    }, 1500);
+                }
             } else {
                 setError(response.error || 'Failed to join booth');
+                addToast(response.error || 'Failed to join booth', 'error');
             }
-        } catch (err) {
-            console.error('Join booth error:', err);
-            setError(err.message || 'Failed to join booth');
+    } catch (err) {
+        // Provide a friendly message when booth is closed or full
+        if (err.status === 400 && /not accepting|full|inactive/i.test(err.message || '')) {
+                if (/full/i.test(err.message || '')) {
+                        setError('This booth is full and cannot accept more members.');
+                        addToast('This booth is full and cannot accept more members.', 'error');
+                } else {
+                        setError('This booth is closed and is not accepting new members.');
+                        addToast('This booth is closed and is not accepting new members.', 'error');
+                }
+            } else if (err.status === 403) {
+                    setError(err.message || 'You are not allowed to join this booth.');
+                    addToast(err.message || 'You are not allowed to join this booth.', 'error');
+            } else {
+                    setError(err.message || 'Failed to join booth');
+                    addToast(err.message || 'Failed to join booth', 'error');
+            }
         } finally {
             setJoining(false);
+        }
+    };
+
+    const handleCopyInvite = async () => {
+        if (!booth) return;
+        const link = `${window.location.origin}/booth/join/${booth.inviteCode}`;
+        try {
+            await navigator.clipboard.writeText(link);
+            setSuccess('Invite link copied to clipboard');
+            setTimeout(() => setSuccess(''), 2500);
+        } catch (err) {
+            setError('Failed to copy invite link');
         }
     };
 
 
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 py-8 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-4xl mx-auto">
+        <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 py-6 px-3 sm:py-8 sm:px-6 lg:px-8">
+            <div className="max-w-3xl mx-auto">
                 {/* Header */}
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">Join a Booth</h1>
-                    <p className="text-gray-600 text-lg mb-4">Enter an invite code to join a booth</p>
+                <div className="mb-6">
+                    <div className="flex items-center justify-start mb-4">
+                        <BackButton />
+                    </div>
                     
-                    {/* How to Join Instructions */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 max-w-2xl mx-auto">
-                        <h3 className="text-sm font-semibold text-blue-800 mb-2">💡 How to Join:</h3>
-                        <div className="grid md:grid-cols-2 gap-3 text-xs text-blue-700">
-                            <div className="flex items-start gap-2">
-                                <span className="text-blue-600">🔗</span>
-                                <span><strong>Direct Link:</strong> Click the invite link shared by the booth creator</span>
+                    {/* Invitation Banner - Show when code is from URL (invite link) */}
+                    {code ? (
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-6 text-center">
+                            <div className="inline-flex items-center justify-center w-10 h-10 bg-blue-100 rounded-full mb-3">
+                                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 19v-8.93a2 2 0 01.89-1.664l7-4.666a2 2 0 012.22 0l7 4.666A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M9 10l3-2 3 2" />
+                                </svg>
                             </div>
-                            <div className="flex items-start gap-2">
-                                <span className="text-blue-600">🔤</span>
-                                <span><strong>Manual Entry:</strong> Enter the invite code below</span>
+                            <h2 className="text-lg font-semibold text-gray-900 mb-2">You've Been Invited!</h2>
+                            <p className="text-sm text-gray-600">Someone has invited you to participate in their voting booth. Review the details below and join when ready.</p>
+                            <p className="text-xs text-gray-500 mt-2">Click on the join button to request access if needed or directly join the booth.</p>
+                        </div>
+                    ) : null}
+                    
+                    <div className="text-center">
+                        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                            {code ? 'Join Invited Booth' : 'Join a Booth'}
+                        </h1>
+                        <p className="text-gray-600 text-sm sm:text-base mb-3">
+                            {code ? 'You can review the booth details and join below' : 'Enter an invite code to join a booth'}
+                        </p>
+
+                        {/* Compact hint on mobile, full instructions on sm+ */}
+                        {!code && (
+                            <p className="text-xs text-gray-500 mb-3 sm:hidden">Tip: paste an invite link or enter the code below.</p>
+                        )}
+                    </div>
+
+                    {/* Compact hint on mobile, full instructions on sm+ */}
+                    {!code && (
+                        <div className="hidden sm:block">
+                            {/* How to Join Instructions (desktop) */}
+                            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 max-w-2xl mx-auto">
+                                <h3 className="text-sm font-semibold text-blue-800 mb-2">💡 How to Join:</h3>
+                                <div className="grid md:grid-cols-2 gap-3 text-xs text-blue-700">
+                                    <div className="flex items-start gap-2">
+                                        <span className="text-blue-600">🔗</span>
+                                        <span><strong>Direct Link:</strong> Click the invite link shared by the booth creator</span>
+                                    </div>
+                                    <div className="flex items-start gap-2">
+                                        <span className="text-blue-600">🔤</span>
+                                        <span><strong>Manual Entry:</strong> Enter the invite code below</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    )}
                 </div>
 
-                {/* Alerts */}
-                {error && <Alert type="error" message={error} />}
-                {success && <Alert type="success" message={success} />}
+                {/* Alerts are shown via toast; inline alerts removed */}
 
                 {/* Invite Code Section */}
-                <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden mb-8">
-                    <div className="p-8">
+                <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden mb-6">
+                    <div className="p-6 sm:p-8">
                         <div className="max-w-md mx-auto">
                             <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
                                 {code ? 'Invite Code from Link' : 'Enter Invite Code'}
                             </h2>
                             
-                            {code && (
-                                <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4 text-center">
-                                    <span className="text-green-700 text-sm">
-                                        ✓ Code detected from invite link: <strong>{code}</strong>
-                                    </span>
-                                </div>
-                            )}
-                            
-                            <form onSubmit={handleCodeSubmit} className="space-y-6">
+                            {!code ? (
+                                <form onSubmit={handleCodeSubmit} className="space-y-4">
                                     <div>
                                         <label htmlFor="inviteCode" className="block text-sm font-medium text-gray-700 mb-2">
                                             Booth Invite Code
@@ -171,7 +348,7 @@ const JoinBoothPage = () => {
                                             value={inviteCode}
                                             onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                                             placeholder="Enter 6-8 character code"
-                                            className="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-300 font-mono text-center text-lg tracking-wider"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200 font-mono text-center text-base sm:text-lg sm:tracking-wider"
                                             maxLength={8}
                                         />
                                         <p className="text-sm text-gray-500 mt-2">
@@ -185,41 +362,79 @@ const JoinBoothPage = () => {
                                         disabled={!inviteCode.trim() || inviteCode.length < 4}
                                         variant="teal"
                                         size="lg"
-                                        className="w-full py-3"
+                                        className="w-full py-2.5 text-sm"
                                     >
                                         Check Invite Code
                                     </LoadingButton>
-                            </form>
+                                </form>
+                            ) : null}
 
                             {/* Booth Preview */}
                             {booth && (
                                 <div className="max-w-md mx-auto mt-8">
-                                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
-                                        <div className="text-center mb-4">
-                                            <h3 className="text-lg font-semibold text-gray-900">{booth.name}</h3>
-                                            <p className="text-gray-600 text-sm mt-1">{booth.description}</p>
-                                        </div>
-                                        
-                                        <div className="grid grid-cols-2 gap-4 text-sm text-center mb-4">
-                                            <div className="bg-white rounded-lg p-3">
-                                                <div className="font-semibold text-gray-900">{booth.memberCount || 0}</div>
-                                                <div className="text-gray-600">Members</div>
+                                    <div className={`${code ? 'bg-gradient-to-br from-teal-50 to-cyan-50 border border-teal-200' : 'bg-gray-50 border border-gray-200'} rounded-xl p-4 sm:p-6`}>
+                                            <div className="text-center mb-3">
+                                                <h3 className="text-md sm:text-lg font-semibold text-gray-900">{booth.name}</h3>
+                                                <p className="text-gray-600 text-xs sm:text-sm mt-1 line-clamp-2">{booth.description}</p>
                                             </div>
-                                            <div className="bg-white rounded-lg p-3">
-                                                <div className="font-semibold text-gray-900">{booth.creator?.name}</div>
-                                                <div className="text-gray-600">Created by</div>
+
+                                            <div className="grid grid-cols-2 gap-2 text-xs text-center mb-3">
+                                                <div className="bg-white rounded-lg p-2">
+                                                    <div className="font-semibold text-gray-900 text-sm">{booth.memberCount || 0}</div>
+                                                    <div className="text-gray-600 text-xs">Members</div>
+                                                </div>
+                                                <div className="bg-white rounded-lg p-2">
+                                                    <div className="font-semibold text-gray-900 text-sm">{booth.creator?.name}</div>
+                                                    <div className="text-gray-600 text-xs">Created by</div>
+                                                </div>
                                             </div>
-                                        </div>
                                         
-                                        <LoadingButton
-                                            onClick={handleJoinBooth}
-                                            loading={joining}
-                                            variant="green"
-                                            size="lg"
-                                            className="w-full py-3"
-                                        >
-                                            Join This Booth
-                                        </LoadingButton>
+                                        {booth.status === 'active' ? (
+                                            <LoadingButton
+                                                onClick={handleJoinBooth}
+                                                loading={joining}
+                                                variant="green"
+                                                size="lg"
+                                                className="w-full py-2.5 text-sm"
+                                            >
+                                                Join This Booth
+                                            </LoadingButton>
+                                        ) : (
+                                            <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-center">
+                                                <div className="flex items-center justify-center mb-2">
+                                                    <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M4.93 4.93l14.14 14.14" />
+                                                    </svg>
+                                                </div>
+                                                <h4 className="text-md font-semibold text-gray-900 mb-1">This booth is closed</h4>
+                                                <p className="text-xs text-gray-600 mb-3">The organizer has closed this booth and is not accepting new members.</p>
+
+                                                <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
+                                                    {booth.creator?.email && (
+                                                        <a
+                                                            href={`mailto:${booth.creator.email}?subject=${encodeURIComponent(`Request to join ${booth.name}`)}`}
+                                                            className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs text-gray-800 hover:bg-gray-50 w-full sm:w-auto text-center"
+                                                        >
+                                                            Contact organizer
+                                                        </a>
+                                                    )}
+
+                                                    <button
+                                                        onClick={handleCopyInvite}
+                                                        className="px-3 py-2 bg-teal-600 text-white rounded-lg text-xs hover:bg-teal-700 w-full sm:w-auto"
+                                                    >
+                                                        Copy invite link
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {pendingRequest && (
+                                            <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-center">
+                                                <div className="font-semibold text-yellow-800">Join request pending</div>
+                                                <div className="text-sm text-yellow-700 mt-1">Your request has been submitted and is awaiting approval from the organizer. You will be notified here when a decision is made.</div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -230,12 +445,6 @@ const JoinBoothPage = () => {
                 {/* Quick Actions */}
                 <div className="text-center">
                     <div className="flex flex-wrap justify-center gap-4">
-                        <button
-                            onClick={() => navigate('/dashboard')}
-                            className="bg-gray-600 hover:bg-gray-700 text-white py-2 px-6 rounded-lg font-semibold transition-colors"
-                        >
-                            Back to Dashboard
-                        </button>
                         <button
                             onClick={() => navigate('/booth/create')}
                             className="bg-green-600 hover:bg-green-700 text-white py-2 px-6 rounded-lg font-semibold transition-colors"

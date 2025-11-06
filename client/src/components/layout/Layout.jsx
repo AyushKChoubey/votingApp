@@ -1,10 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 const Navigation = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+  const mobileMenuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      // If neither the desktop menu nor the mobile menu contain the click, close menu
+      const clickedInsideDesktop = menuRef.current && menuRef.current.contains(e.target);
+      const clickedInsideMobile = mobileMenuRef.current && mobileMenuRef.current.contains(e.target);
+      if (isMenuOpen && !clickedInsideDesktop && !clickedInsideMobile) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isMenuOpen) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isMenuOpen]);
+  
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMenuOpen) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = prev; };
+    }
+    return undefined;
+  }, [isMenuOpen]);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -25,8 +64,6 @@ const Navigation = () => {
 
   const userNavItems = [
     { path: '/dashboard', label: 'Dashboard' },
-    { path: '/booth/create', label: 'Create Booth' },
-    { path: '/booth/join', label: 'Join Booth' },
   ];
 
   return (
@@ -46,113 +83,130 @@ const Navigation = () => {
           </div>
 
           {/* Desktop Navigation - Wider viewports */}
-          <div className="hidden md:block">
-            <div className="ml-6 flex items-center space-x-4 lg:space-x-6">
-              {/* Public nav items */}
-              {!isAuthenticated && publicNavItems.map((item) => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`px-2 lg:px-3 py-2 text-xs lg:text-sm font-medium transition-all duration-300 rounded-md ${
-                    isActivePath(item.path) 
-                      ? 'text-teal-600 bg-teal-50' 
-                      : 'text-gray-700 hover:text-teal-600 hover:bg-gray-50'
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              ))}
-
-              {/* User nav items */}
-              {isAuthenticated && userNavItems.map((item) => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`px-2 lg:px-3 py-2 text-xs lg:text-sm font-medium transition-all duration-300 rounded-md ${
-                    isActivePath(item.path) 
-                      ? 'text-teal-600 bg-teal-50' 
-                      : 'text-gray-700 hover:text-teal-600 hover:bg-gray-50'
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              ))}
-
-              {/* Auth buttons */}
-              {!isAuthenticated ? (
-                <div className="flex items-center space-x-2 lg:space-x-4">
-                  <Link 
-                    to="/login" 
-                    className="px-3 lg:px-4 py-1.5 lg:py-2 text-xs lg:text-sm font-medium text-gray-700 hover:text-teal-600 hover:bg-gray-50 rounded-lg transition-all duration-300"
+          <div className="hidden md:block flex-1">
+            <div className="flex items-center justify-between">
+              {/* Left side - All nav items always visible */}
+              <div className="ml-6 flex items-center space-x-4 lg:space-x-6">
+                {publicNavItems.map((item) => (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`px-2 lg:px-3 py-2 text-xs lg:text-sm font-medium transition-all duration-300 rounded-md ${
+                      isActivePath(item.path) 
+                        ? 'text-teal-600 bg-teal-50' 
+                        : 'text-gray-700 hover:text-teal-600 hover:bg-gray-50'
+                    }`}
                   >
-                    Sign In
+                    {item.label}
                   </Link>
-                  <Link 
-                    to="/register" 
-                    className="px-4 lg:px-6 py-1.5 lg:py-2 text-xs lg:text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-all duration-300 shadow-md"
+                ))}
+              </div>
+
+              {/* Right side - Dashboard + Auth */}
+              <div className="flex items-center space-x-2 lg:space-x-4">
+                {/* Dashboard - only when authenticated */}
+                {isAuthenticated && (
+                  <Link
+                    to="/dashboard"
+                    className={`flex items-center px-3 lg:px-4 py-2 text-sm font-semibold rounded-full transition-all duration-300 ${
+                      isActivePath('/dashboard')
+                        ? 'bg-gradient-to-r from-teal-600 to-cyan-500 text-white shadow-md'
+                        : 'text-teal-700 bg-teal-50 hover:from-teal-500 hover:to-cyan-500 hover:text-white hover:bg-gradient-to-r'
+                    }`}
                   >
-                    Sign Up
-                  </Link>
-                </div>
-              ) : (
-                <div className="relative">
-                  <button
-                    onClick={() => setIsMenuOpen(!isMenuOpen)}
-                    className="flex items-center space-x-2 px-2 py-1.5 text-gray-700 hover:text-teal-600 transition-colors rounded-md hover:bg-gray-50"
-                  >
-                    <div className="w-6 h-6 lg:w-8 lg:h-8 bg-teal-100 rounded-full flex items-center justify-center">
-                      <span className="text-teal-600 font-medium text-xs lg:text-sm">
-                        {user?.name?.charAt(0)?.toUpperCase()}
-                      </span>
-                    </div>
-                    <span className="font-medium text-xs lg:text-sm hidden sm:block">{user?.name}</span>
-                    <svg className="w-3 h-3 lg:w-4 lg:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h7v7H3V3zm0 11h7v7H3v-7zm11-11h7v7h-7V3zm0 11h7v7h-7v-7z" />
                     </svg>
-                  </button>
+                    <span className="hidden sm:inline">Dashboard</span>
+                  </Link>
+                )}
 
-                  {/* Dropdown menu */}
-                  {isMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 py-1 z-50">
-                      <Link
-                        to="/profile"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        Profile
-                      </Link>
-                      <Link
-                        to="/settings"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        Settings
-                      </Link>
-                      <Link
-                        to="/help"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        Help
-                      </Link>
-                      <hr className="my-1 border-gray-200" />
-                      <button
-                        onClick={handleLogout}
-                        className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                      >
-                        Sign Out
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
+                {/* Auth buttons */}
+                {!isAuthenticated ? (
+                  <>
+                    <Link 
+                      to="/login" 
+                      className="px-3 lg:px-4 py-1.5 lg:py-2 text-xs lg:text-sm font-medium text-gray-700 hover:text-teal-600 hover:bg-gray-50 rounded-lg transition-all duration-300"
+                    >
+                      Sign In
+                    </Link>
+                    <Link 
+                      to="/register" 
+                      className="px-4 lg:px-6 py-1.5 lg:py-2 text-xs lg:text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-all duration-300 shadow-md"
+                    >
+                      Sign Up
+                    </Link>
+                  </>
+                ) : (
+                  <div className="relative" ref={menuRef}>
+                    <button
+                      onClick={() => setIsMenuOpen(!isMenuOpen)}
+                      className="flex items-center space-x-2 px-2 py-1.5 text-gray-700 hover:text-teal-600 transition-colors rounded-md hover:bg-gray-50"
+                    >
+                      <div className="w-6 h-6 lg:w-8 lg:h-8 bg-teal-100 rounded-full flex items-center justify-center">
+                        <span className="text-teal-600 font-medium text-xs lg:text-sm">
+                          {user?.name?.charAt(0)?.toUpperCase()}
+                        </span>
+                      </div>
+                      <span className="font-medium text-xs lg:text-sm hidden sm:block">{user?.name}</span>
+                      <svg className="w-3 h-3 lg:w-4 lg:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+
+                    {/* Dropdown menu */}
+                    {isMenuOpen && (
+                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 py-1 z-50">
+                        <Link
+                          to="/profile"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          Profile
+                        </Link>
+                        <Link
+                          to="/settings"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          Settings
+                        </Link>
+                        <Link
+                          to="/help"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          Help
+                        </Link>
+                        <hr className="my-1 border-gray-200" />
+                        <button
+                          onClick={handleLogout}
+                          className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          Sign Out
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
 
 
-          {/* Mobile menu button - Enhanced Design */}
-          <div className="md:hidden">
+          {/* Mobile menu button + Profile icon - Enhanced Design */}
+          <div className="md:hidden flex items-center space-x-2">
+            {/* Profile icon - only when authenticated */}
+            {isAuthenticated && (
+              <div className="w-8 h-8 bg-teal-100 rounded-full flex items-center justify-center">
+                <span className="text-teal-600 font-medium text-sm">
+                  {user?.name?.charAt(0)?.toUpperCase()}
+                </span>
+              </div>
+            )}
+            
+            {/* Hamburger menu */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
@@ -168,7 +222,7 @@ const Navigation = () => {
           </div>
         </div>
 
-        {/* Mobile Navigation Popup */}
+        {/* Mobile Navigation Popup (full-screen, non-scrollable) */}
         {isMenuOpen && (
           <div className="md:hidden fixed inset-0 z-50">
             {/* Backdrop */}
@@ -177,8 +231,8 @@ const Navigation = () => {
               onClick={() => setIsMenuOpen(false)}
             ></div>
             
-            {/* Mobile Menu Panel - Optimized Width */}
-            <div className="fixed inset-y-0 right-0 w-72 sm:w-80 max-w-[85vw] bg-white shadow-2xl transform transition-transform duration-300 ease-out">
+            {/* Fullscreen Mobile Menu Panel - covers entire viewport and prevents scrolling */}
+            <div ref={mobileMenuRef} className="fixed inset-0 bg-white shadow-2xl transform transition-transform duration-300 ease-out overflow-hidden">
               <div className="flex flex-col h-full">
                 {/* Header - Improved Spacing */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
@@ -200,10 +254,11 @@ const Navigation = () => {
                   </button>
                 </div>
 
-                {/* Navigation Links - Enhanced Spacing */}
-                <div className="flex-1 overflow-y-auto py-4 px-4">
-                  <div className="space-y-1">
-                    {(!isAuthenticated ? publicNavItems : userNavItems).map((item) => (
+                {/* Navigation Links - enhanced spacing; content is fixed (no scroll) */}
+                <div className="flex-1 py-4 px-4">
+                  <div className="space-y-1 h-full">
+                    {/* Always show public nav items */}
+                    {publicNavItems.map((item) => (
                       <Link
                         key={item.path}
                         to={item.path}
@@ -246,21 +301,25 @@ const Navigation = () => {
                       </div>
                     )}
 
-                    {/* User Profile Section for Authenticated Users */}
+                    {/* Dashboard + User Settings for Authenticated Users */}
                     {isAuthenticated && (
                       <>
                         <div className="border-t border-gray-200 my-4 pt-4">
-                          <div className="flex items-center px-4 py-3 mb-2 bg-gray-50 rounded-xl">
-                            <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center mr-3 shadow-sm">
-                              <span className="text-teal-600 font-semibold text-base">
-                                {user?.name?.charAt(0)?.toUpperCase()}
-                              </span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-base font-semibold text-gray-900 truncate">{user?.name}</p>
-                              <p className="text-sm text-gray-500 truncate">{user?.email}</p>
-                            </div>
-                          </div>
+                          {/* Dashboard with unique styling */}
+                          <Link
+                            to="/dashboard"
+                            className={`flex items-center px-4 py-3 text-base font-medium rounded-xl transition-all duration-200 mb-3 ${
+                              isActivePath('/dashboard')
+                                ? 'bg-gradient-to-r from-teal-600 to-cyan-500 text-white shadow-md border-0'
+                                : 'text-teal-700 bg-teal-50 hover:from-teal-500 hover:to-cyan-500 hover:text-white hover:bg-gradient-to-r'
+                            }`}
+                            onClick={() => setIsMenuOpen(false)}
+                          >
+                            <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h7v7H3V3zm0 11h7v7H3v-7zm11-11h7v7h-7V3zm0 11h7v7h-7v-7z" />
+                            </svg>
+                            Dashboard
+                          </Link>
                         </div>
                         
                         <Link 
@@ -280,7 +339,7 @@ const Navigation = () => {
                           onClick={() => setIsMenuOpen(false)}
                         >
                           <svg className="w-5 h-5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.50 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                           </svg>
                           Settings

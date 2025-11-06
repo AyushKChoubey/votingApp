@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Alert } from '../layout/Alert';
 import { LoadingButton } from '../layout/Loading';
 import GoogleSignInButton from './GoogleSignInButton';
+import BackButton from '../layout/BackButton';
 
 export function Login() {
     const [formData, setFormData] = useState({
@@ -29,7 +30,12 @@ export function Login() {
             setInviteCode(invite);
         }
         if (redirect) {
-            setRedirectUrl(redirect);
+            // redirect may be URL-encoded (encoded by ProtectedRoute). Decode safely.
+            try {
+                setRedirectUrl(decodeURIComponent(redirect));
+            } catch (e) {
+                setRedirectUrl(redirect);
+            }
         }
     }, [searchParams]);
 
@@ -70,34 +76,33 @@ export function Login() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 flex items-center justify-center py-2 sm:py-4 px-3 sm:px-4 lg:px-8 relative">
-            {/* Back to Home Link - Hidden on mobile, visible on sm screens and up */}
-            <div className="absolute top-4 left-4 sm:top-6 sm:left-6 hidden sm:block">
-                <Link 
-                    to="/" 
-                    className="inline-flex items-center text-teal-600 hover:text-teal-700 transition-colors duration-300 group bg-white/50 backdrop-blur-sm px-3 py-2 rounded-lg hover:bg-white/70"
-                >
-                    <svg className="w-5 h-5 mr-2 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                    </svg>
-                    Back to Home
-                </Link>
+            {/* Back button styled like admin header */}
+            <div className="absolute top-4 left-4 sm:top-6 sm:left-6">
+                <BackButton to="/" label="Back" className="text-sm px-2 py-1 md:px-3 md:py-1.5 bg-white" />
             </div>
             
             <div className="max-w-md w-full">
                 
                 {/* Invite Code Banner */}
                 {inviteCode && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center mb-3 sm:mb-4">
-                        <div className="flex items-center justify-center mb-2">
-                            <svg className="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2m-2-4h4m-4-4v8m-6-4V8a4 4 0 118 0v4M3 12a9 9 0 0118 0 9 9 0 01-18 0z" />
-                            </svg>
-                            <span className="text-blue-800 font-semibold">Booth Invitation</span>
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 sm:p-6 text-center mb-4 sm:mb-6 shadow-lg">
+                        <div className="flex items-center justify-center mb-3">
+                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2m-2-4h4m-4-4v8m-6-4V8a4 4 0 118 0v4M3 12a9 9 0 0118 0 9 9 0 01-18 0z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 className="text-blue-800 font-bold text-lg">🎉 You're Invited!</h3>
+                                <p className="text-blue-600 text-sm">Join a voting booth</p>
+                            </div>
                         </div>
-                        <p className="text-blue-700 text-sm">
-                            You've been invited to join a booth! Sign in to continue.
+                        <p className="text-blue-700 text-sm mb-2">
+                            You've been invited to join a booth! Sign in to continue and start voting.
                         </p>
-                        <p className="text-blue-600 text-xs mt-1">Invite Code: <strong>{inviteCode}</strong></p>
+                        <div className="bg-white/70 rounded-lg px-3 py-2 inline-block">
+                            <p className="text-blue-800 text-xs font-medium">Invite Code: <span className="font-mono font-bold">{inviteCode}</span></p>
+                        </div>
                     </div>
                 )}
                 
