@@ -1,48 +1,6 @@
 // middleware/security.js
-const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const mongoSanitize = require('express-mongo-sanitize');
-
-// Rate limiting configurations
-const createBoothLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // limit each IP to 5 booth creations per windowMs
-    message: {
-        error: 'Too many booth creation attempts, please try again later.'
-    },
-    standardHeaders: true,
-    legacyHeaders: false,
-});
-
-const voteLimiter = rateLimit({
-    windowMs: 60 * 1000, // 1 minute
-    max: 10, // limit each IP to 10 votes per minute
-    message: {
-        error: 'Too many voting attempts, please try again later.'
-    },
-    standardHeaders: true,
-    legacyHeaders: false,
-});
-
-const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 10, // limit each IP to 10 auth attempts per windowMs
-    message: {
-        error: 'Too many authentication attempts, please try again later.'
-    },
-    standardHeaders: true,
-    legacyHeaders: false,
-});
-
-const joinBoothLimiter = rateLimit({
-    windowMs: 5 * 60 * 1000, // 5 minutes
-    max: 20, // limit each IP to 20 join attempts per 5 minutes
-    message: {
-        error: 'Too many join attempts, please try again later.'
-    },
-    standardHeaders: true,
-    legacyHeaders: false,
-});
 
 // Security headers middleware
 const securityHeaders = helmet({
@@ -160,10 +118,6 @@ const securityLogger = (req, res, next) => {
 };
 
 module.exports = {
-    createBoothLimiter,
-    voteLimiter,
-    authLimiter,
-    joinBoothLimiter,
     securityHeaders,
     validateInput,
     xssProtection,

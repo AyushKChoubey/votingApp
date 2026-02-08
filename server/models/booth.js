@@ -5,13 +5,13 @@ const boothSchema = new mongoose.Schema({
         type: String,
         required: true,
         trim: true,
-        maxLength: 100
+        maxLength: 50
     },
     description: {
         type: String,
         required: true,
         trim: true,
-        maxLength: 500
+        maxLength: 200
     },
     creator: {
         type: mongoose.Schema.Types.ObjectId,
@@ -331,6 +331,24 @@ boothSchema.methods.isVotingAllowed = function() {
     }
     
     return { allowed: true };
+};
+
+// Close booth if votingEndTime has passed
+boothSchema.methods.closeIfExpired = async function() {
+    try {
+        if (this.status === 'active' && this.settings && this.settings.votingEndTime) {
+            const end = new Date(this.settings.votingEndTime);
+            const now = new Date();
+            if (now > end) {
+                this.status = 'closed';
+                await this.save();
+                return true;
+            }
+        }
+    } catch (err) {
+        // swallow errors here; callers may log if needed
+    }
+    return false;
 };
 
 // Static method to find booth by invite code

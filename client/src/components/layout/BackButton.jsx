@@ -23,13 +23,14 @@ const BackButton = ({
       aria-label="Go Back"
       className={`
         inline-flex items-center gap-2 
-        text-gray-700 hover:text-gray-900 
+        theme-text hover:text-accent
         transition-all duration-200 
         rounded-lg font-medium
-        bg-gray-50 hover:bg-gray-100 
+        bg-theme-surface hover:bg-theme-surface/80
+        border border-border
         active:scale-95 shadow-sm
         px-2.5 py-1.5 md:px-4 md:py-2 
-        focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-1
+        focus:outline-none focus-ring
         ${className}
       `}
     >

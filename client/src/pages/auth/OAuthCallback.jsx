@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { PageLoading } from '../components/layout/Loading';
+import { PageLoading } from '../../components/layout/Loading';
 
 const OAuthCallback = () => {
   const navigate = useNavigate();

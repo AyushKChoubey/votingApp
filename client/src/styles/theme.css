@@ -1,0 +1,674 @@
+/* Centralized theme variables for light and dark modes.
+   Edit variables here to update colors app-wide.
+   Use [data-theme="dark"] on <html> or <body> to toggle dark mode.
+*/
+
+:root {
+  /* Brand */
+  --color-primary: #475569; /* slate-500 */
+  --color-on-primary: #ffffff;
+  --color-secondary: #7c3aed; /* violet-600 */
+  --color-accent: #06b6d4; /* sky-500 */
+  --color-on-accent: #0f172a; /* dark text on light accent bg */
+
+  /* Surfaces */
+  --color-bg: #f8fafc; /* slate-50 */
+  --color-surface: #ffffff; /* card background */
+  --color-border: #cbd5e1; /* slate-300 - more visible border */
+
+  /* Text */
+  --color-text: #0f172a; /* slate-900 */
+  --color-text-muted: #475569; /* slate-600 */
+  --color-muted: #94a3b8; /* slate-400 */
+
+  /* Feedback */
+  --color-success: #16a34a; /* green-600 */
+  --color-error: #ef4444; /* red-500 */
+  --color-info: #0284c7; /* sky-600 */
+  --color-warning: #f59e0b; /* amber-500 */
+
+  /* Progress */
+  --color-progress-start: #14b8a6; /* teal-500 */
+  --color-progress-end: #06b6d4; /* cyan-500 */
+
+  /* Elevation / shadows */
+  --elevation-1: 0 6px 18px rgba(16, 24, 40, 0.06);
+  --elevation-2: 0 10px 30px rgba(2, 6, 23, 0.12);
+
+  /* Motion */
+  --motion-fast: 160ms;
+  --motion-base: 240ms;
+  --motion-damping: cubic-bezier(0.2, 0.9, 0.2, 1);
+
+  /* Glass / backdrop */
+  --glass: rgba(255, 255, 255, 0.7);
+}
+
+/* Dark theme overrides */
+[data-theme="dark"] {
+  --color-primary: #06b6d4; /* sky-500 */
+  --color-on-primary: #022c40;
+  --color-secondary: #8b5cf6;
+  --color-accent: #22d3ee;
+  --color-on-accent: #ffffff; /* white text on dark accent bg */
+
+  --color-bg: #071026; /* very dark slate */
+  --color-surface: rgba(9, 10, 14, 0.8); /* semi-opaque card */
+  --color-border: #334155; /* slate-700 - visible in dark mode */
+
+  --color-text: #e6eef5;
+  --color-text-muted: #94a3b9;
+  --color-muted: #6b7280;
+
+  --color-success: #22c55e;
+  --color-error: #fb7185;
+  --color-info: #38bdf8;
+  --color-warning: #fbbf24;
+
+  --color-progress-start: #3f0b6c; /* teal-400 */
+  --color-progress-end: #cf3827; /* cyan-400 */
+
+  --elevation-1: 0 10px 30px rgba(2, 6, 23, 0.45);
+  --elevation-2: 0 18px 50px rgba(2, 6, 23, 0.6);
+
+  --glass: rgba(12, 15, 20, 0.55);
+}
+
+/* Helper utilities that use variables (small, centralized helpers)
+   Use these classes alongside Tailwind utilities where helpful.
+*/
+
+.theme-bg {
+  background-color: var(--color-bg);
+}
+
+.theme-surface {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+.theme-text {
+  color: var(--color-text);
+}
+
+.theme-muted {
+  color: var(--color-text-muted);
+}
+
+.btn-theme {
+  background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+  color: var(--color-on-primary);
+  box-shadow: var(--elevation-1);
+  transition:
+    transform var(--motion-fast) var(--motion-damping),
+    box-shadow var(--motion-fast) var(--motion-damping);
+}
+
+.btn-theme:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--elevation-2);
+}
+
+.interactive-scale {
+  transition: transform var(--motion-base) var(--motion-damping);
+}
+.interactive-scale:active {
+  transform: scale(0.98);
+}
+
+/* Accessible focus ring */
+.focus-ring {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(14, 165, 164, 0.12);
+}
+
+/* Accent borders */
+.border-accent {
+  border-color: var(--color-accent);
+}
+
+/* Accent text/background helpers (small, opt-in helpers for legacy Tailwind usages) */
+.text-accent {
+  color: var(--color-accent);
+}
+.bg-accent-50 {
+  background-color: rgba(6, 182, 212, 0.06);
+}
+.bg-accent-100 {
+  background-color: rgba(6, 182, 212, 0.1);
+}
+.hover\:text-accent:hover {
+  color: var(--color-accent);
+}
+.focus\:ring-accent:focus {
+  box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.12);
+}
+
+/* Additional color utilities for icons and text */
+.text-primary {
+  color: var(--color-primary);
+}
+.text-secondary {
+  color: var(--color-secondary);
+}
+.text-warning {
+  color: var(--color-warning);
+}
+.text-info {
+  color: var(--color-info);
+}
+.text-on-accent {
+  color: var(--color-on-accent);
+}
+
+/* Semantic helpers for feedback colors */
+.text-success {
+  color: var(--color-success);
+}
+.bg-success-50 {
+  background-color: rgba(22, 163, 74, 0.06);
+}
+.border-success {
+  border-color: rgba(22, 163, 74, 0.12);
+}
+.text-error {
+  color: var(--color-error);
+}
+.bg-error-50 {
+  background-color: rgba(239, 68, 68, 0.06);
+}
+.border-error {
+  border-color: rgba(239, 68, 68, 0.12);
+}
+.text-warning {
+  color: var(--color-warning);
+}
+.bg-warning-50 {
+  background-color: rgba(245, 158, 11, 0.06);
+}
+.border-warning {
+  border-color: rgba(245, 158, 11, 0.12);
+}
+
+/* Small badge helpers */
+.badge-soft {
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
+/* Subtle glass container */
+.glass-card {
+  background: var(--glass);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+/* Card hover animation helper: subtle lift, shadow, and animated accent overlay */
+.card-hover {
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform var(--motion-fast) var(--motion-damping),
+    box-shadow var(--motion-fast) var(--motion-damping);
+}
+.card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--elevation-2);
+}
+.card-hover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    120deg,
+    rgba(255, 255, 255, 0.06),
+    rgba(255, 255, 255, 0.02)
+  );
+  opacity: 0;
+  transform: translateY(8px) scale(1.02);
+  transition:
+    opacity var(--motion-fast) var(--motion-damping),
+    transform var(--motion-fast) var(--motion-damping);
+}
+.card-hover:hover::after {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* Accent glow for primary-colored cards */
+.card-accent::before {
+  content: "";
+  position: absolute;
+  left: -30%;
+  top: -40%;
+  width: 160%;
+  height: 160%;
+  background:
+    radial-gradient(
+      circle at 20% 20%,
+      rgba(14, 165, 164, 0.08),
+      transparent 20%
+    ),
+    radial-gradient(circle at 80% 80%, rgba(6, 182, 212, 0.06), transparent 25%);
+  opacity: 0;
+  transition:
+    opacity 300ms var(--motion-damping),
+    transform 300ms var(--motion-damping);
+  pointer-events: none;
+}
+.card-hover.card-accent:hover::before {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Per-card color variants - use CSS variables so colors update centrally */
+.card-variant-primary::before,
+.card-variant-secondary::before,
+.card-variant-accent::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  opacity: 0.06;
+  transition:
+    opacity 220ms var(--motion-damping),
+    transform 220ms var(--motion-damping);
+}
+
+.card-variant-primary::before {
+  background: var(--color-primary);
+}
+.card-variant-secondary::before {
+  background: var(--color-secondary);
+}
+.card-variant-accent::before {
+  background: var(--color-accent);
+}
+
+/* Slight stronger glow on hover */
+.card-hover.card-variant-primary:hover::before,
+.card-hover.card-variant-secondary:hover::before,
+.card-hover.card-variant-accent:hover::before {
+  opacity: 0.12;
+  transform: scale(1.02);
+}
+
+/* Ensure svgs inside variant cards inherit an appropriate accent color */
+.card-variant-primary svg {
+  color: var(--color-primary);
+}
+.card-variant-secondary svg {
+  color: var(--color-secondary);
+}
+.card-variant-accent svg {
+  color: var(--color-accent);
+}
+
+/* Utility for toggling theme via attribute (js can toggle data-theme on html/body) */
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+html:not([data-theme="dark"]) {
+  color-scheme: light;
+}
+
+/* Motion variable extensions and animation helpers */
+:root {
+  --motion-slow: 420ms;
+  --motion-long: 680ms;
+  --motion-ease: cubic-bezier(0.2, 0.9, 0.2, 1);
+  --motion-bouncy: cubic-bezier(0.28, 1.8, 0.5, 1);
+  --spin-speed: 900ms;
+  --ripple-duration: 380ms;
+
+  /* Z-index layers for proper stacking */
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+
+  /* Spacing scale (optional, if not using Tailwind's) */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+
+  /* Border radius tokens */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-full: 9999px;
+}
+
+/* Respect user preference for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 1ms;
+    --motion-base: 1ms;
+    --motion-damping: linear;
+  }
+  * {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}
+
+/* Keyframes */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  80% {
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes wiggle {
+  0% {
+    transform: rotate(-1deg);
+  }
+  50% {
+    transform: rotate(1deg);
+  }
+  100% {
+    transform: rotate(-1deg);
+  }
+}
+
+/* Core animation helpers */
+.animate-fadeIn {
+  animation: fade-in var(--motion-base) var(--motion-ease) both;
+}
+.animate-fadeOut {
+  animation: fade-out var(--motion-fast) var(--motion-ease) both;
+}
+.animate-slideUp {
+  animation: slide-up var(--motion-base) var(--motion-ease) both;
+}
+.animate-slideDown {
+  animation: slide-down var(--motion-base) var(--motion-ease) both;
+}
+.animate-pop {
+  animation: pop-in var(--motion-fast) var(--motion-bouncy) both;
+}
+.animate-wiggle {
+  animation: wiggle 600ms ease-in-out infinite;
+}
+
+/* Smooth transition utilities */
+.transition-smooth {
+  transition: all var(--motion-base) var(--motion-ease);
+}
+.transition-fast {
+  transition: all var(--motion-fast) var(--motion-ease);
+}
+
+/* Skeleton / shimmer placeholder */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.04) 0%,
+    rgba(0, 0, 0, 0.02) 50%,
+    rgba(0, 0, 0, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer var(--motion-long) linear infinite;
+  border-radius: var(--radius-md);
+}
+
+/* Dark mode skeleton adjustment */
+[data-theme="dark"] .skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0.03) 50%,
+    rgba(255, 255, 255, 0.06) 100%
+  );
+}
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.06) 50%,
+    transparent 100%
+  );
+  transform: translateX(-120%);
+  animation: shimmer var(--motion-long) linear infinite;
+}
+
+/* Spinner */
+.spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 9999px;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  border-top-color: var(--color-accent);
+  animation: spin var(--spin-speed) linear infinite;
+}
+.spinner-lg {
+  width: 2rem;
+  height: 2rem;
+  border-width: 3px;
+}
+
+/* Loading button subtle ripple */
+.ripple {
+  position: relative;
+  overflow: hidden;
+}
+.ripple::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--ripple-duration) ease;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.06) 0%,
+    transparent 40%
+  );
+}
+.ripple:active::after {
+  opacity: 1;
+  transition: none;
+}
+
+/* Popover / dropdown transition helper */
+.transition-popover {
+  transform-origin: top right;
+  transition:
+    transform var(--motion-fast) var(--motion-ease),
+    opacity var(--motion-fast) var(--motion-ease);
+}
+
+/* Small utilities */
+.visually-hidden,
+.sr-only {
+  position: absolute !important;
+  height: 1px;
+  width: 1px;
+  overflow: hidden;
+  clip: rect(1px, 1px, 1px, 1px);
+  white-space: nowrap;
+}
+.focus-visible-ring:focus-visible {
+  box-shadow: 0 0 0 6px rgba(99, 102, 241, 0.12);
+  outline: none;
+}
+
+/* Marquee / slow scroll (use sparingly) */
+.marquee {
+  overflow: hidden;
+  position: relative;
+}
+.marquee > .marquee-track {
+  display: inline-block;
+  white-space: nowrap;
+  animation: marquee 12s linear infinite;
+}
+@keyframes marquee {
+  from {
+    transform: translateX(0%);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Utility for subtle floating motion used on decorative elements */
+.float {
+  animation: floatY 6s ease-in-out infinite;
+}
+@keyframes floatY {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+/* small scale/bounce for attention states */
+.pulse-quick {
+  animation: pulse 900ms ease-in-out infinite;
+}
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Ensure tooltips, modals and animated elements degrade gracefully */
+.motion-reduce {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Stagger animations for lists (apply to parent, children auto-delay) */
+.stagger-children > * {
+  animation-delay: calc(var(--stagger-delay, 50ms) * var(--stagger-index, 0));
+}
+
+/* Gradient text helper */
+.text-gradient {
+  background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Backdrop blur utility (for modals/overlays) */
+.backdrop-blur {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Border gradient helper (useful for card accents) */
+.border-gradient {
+  border: 2px solid transparent;
+  background:
+    linear-gradient(var(--color-surface), var(--color-surface)) padding-box,
+    linear-gradient(135deg, var(--color-primary), var(--color-accent))
+      border-box;
+}
+
+/* Export color token list as comments for quick reference
+  --color-primary, --color-on-primary, --color-secondary, --color-accent,
+  --color-bg, --color-surface, --color-border, --color-text, --color-text-muted,
+  --color-muted, --color-success, --color-error, --color-info, --color-warning
+  
+  Motion: --motion-fast, --motion-base, --motion-slow, --motion-long, --motion-damping, --motion-ease, --motion-bouncy
+  Z-index: --z-dropdown, --z-sticky, --z-fixed, --z-modal-backdrop, --z-modal, --z-popover, --z-tooltip
+  Radius: --radius-sm, --radius-md, --radius-lg, --radius-xl, --radius-full
+*/

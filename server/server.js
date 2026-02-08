@@ -4,6 +4,16 @@ const app = express();
 const db = require('./config/database');
 require('dotenv').config();
 
+// Initialize email service
+const emailService = require('./utils/emailService');
+emailService.initialize().catch(err => {
+    console.error('Failed to initialize email service:', err);
+});
+
+// Initialize Cloudinary
+const { verifyCloudinaryConfig } = require('./config/cloudinary');
+verifyCloudinaryConfig();
+
 const bodyParser = require('body-parser');
 const path = require('path');
 const compression = require('compression');
@@ -19,9 +29,6 @@ const {
     xssProtection,
     securityLogger
 } = require('./middleware/security');
-
-// Import enhanced JWT middleware
-const { optionalAuth } = require('./middleware/jwt');
 
 // Security middleware (must be first)
 app.use(securityHeaders);
@@ -214,8 +221,8 @@ const PORT = process.env.PORT || 5000;
 const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : (process.env.HOST || 'localhost');
 
 // Initialize socket.io (lazy module to avoid circular requires)
-try {
-    const socket = require('./socket');
+    try {
+    const socket = require('./config/socket');
     socket.init(server);
 } catch (err) {
     console.error('Failed to initialize socket.io:', err);

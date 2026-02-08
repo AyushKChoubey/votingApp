@@ -1,6 +1,8 @@
 // routes/api.js (API-only routes)
 const express = require('express');
 const router = express.Router();
+const { csrfProtection } = require('../middleware/security');
+const emailService = require('../utils/emailService');
 
 // API Health check
 router.get('/health', (req, res) => {
@@ -23,7 +25,7 @@ router.get('/status', (req, res) => {
 });
 
 // Contact form submission (API only)
-router.post('/contact', async (req, res) => {
+router.post('/contact', csrfProtection, async (req, res) => {
     try {
         const { name, email, subject, message } = req.body;
         
@@ -53,7 +55,20 @@ router.post('/contact', async (req, res) => {
             });
         }
         
-        // TODO: Send email or save to database
+        // Send email to support
+        await emailService.initialize();
+        const result = await emailService.sendContactFormEmail({
+            name: name.trim(),
+            email: email.trim(),
+            subject: subject.trim(),
+            message: message.trim()
+        });
+        
+        if (!result.success) {
+            console.error('Email sending failed:', result.message);
+            // Still return success to user - email failure shouldn't block submission
+        }
+        
         res.json({
             success: true,
             message: 'Thank you for your message! We will get back to you soon.'

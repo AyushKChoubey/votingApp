@@ -10,7 +10,7 @@ const FeaturesPage = () => {
       ),
       title: "Secure Voting Booths",
       description: "Create private voting booths with unique invite codes. Only authorized members can participate in your polls.",
-      color: "teal"
+      variant: "primary"
     },
     {
       icon: (
@@ -19,8 +19,8 @@ const FeaturesPage = () => {
         </svg>
       ),
       title: "User Management",
-      description: "Invite participants with unique codes, track membership, and manage voting permissions with our intuitive admin dashboard.",
-      color: "green"
+      description: "Invite participants with unique codes, track membership, and manage voting permissions with an intuitive admin dashboard.",
+      variant: "secondary"
     },
     {
       icon: (
@@ -30,7 +30,7 @@ const FeaturesPage = () => {
       ),
       title: "Real-Time Results",
       description: "Watch voting results update live as votes are cast. Control result visibility with customizable privacy settings.",
-      color: "purple"
+      variant: "accent"
     },
     {
       icon: (
@@ -40,7 +40,7 @@ const FeaturesPage = () => {
       ),
       title: "Flexible Voting Rules",
       description: "Configure anonymous voting, vote changes, scheduled voting periods, and result visibility to match your needs.",
-      color: "yellow"
+      variant: "success"
     },
     {
       icon: (
@@ -50,7 +50,7 @@ const FeaturesPage = () => {
       ),
       title: "Mobile Optimized",
       description: "Vote from anywhere, anytime. Our responsive design works seamlessly on all devices and screen sizes.",
-      color: "indigo"
+      variant: "info"
     },
     {
       icon: (
@@ -61,53 +61,79 @@ const FeaturesPage = () => {
       ),
       title: "Vote Tracking & Analytics",
       description: "Complete audit trail with detailed vote tracking, member statistics, and voting participation insights.",
-      color: "red"
+      variant: "warning"
     }
   ];
 
-  const getColorClasses = (color) => {
-    const colors = {
-      teal: "bg-teal-100 text-teal-600",
-      green: "bg-emerald-100 text-emerald-600",
-      purple: "bg-purple-100 text-purple-600",
-      yellow: "bg-cyan-100 text-cyan-600",
-      indigo: "bg-indigo-100 text-indigo-600",
-      red: "bg-rose-100 text-rose-600"
-    };
-    return colors[color] || colors.teal;
-  };
-
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen theme-bg">
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-teal-50 via-cyan-50 to-blue-50">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-16 sm:pt-20 pb-12 sm:pb-16">
-          <div className="text-center px-2 sm:px-0">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4 sm:mb-6 leading-tight">
+      <div className="relative py-16 sm:py-24 overflow-hidden">
+        {/* Floating orbs */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl float" style={{"--float-distance": "30px"}}></div>
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl float" style={{"--float-distance": "-40px", "--float-duration": "8s"}}></div>
+        </div>
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <div className="text-center stagger-children">
+            <div className="inline-block glass-card px-4 py-2 rounded-full mb-6 animate-fadeIn" style={{"--stagger-index": 0}}>
+              <span className="text-sm font-semibold text-accent">✨ POWERFUL FEATURES</span>
+            </div>
+            
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold theme-text mb-6 leading-tight animate-slideUp" style={{"--stagger-index": 1}}>
               Everything You Need for
-              <span className="block bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">Secure Voting</span>
+              <span className="block text-gradient mt-2">Secure Voting</span>
             </h1>
-            <p className="text-base sm:text-xl text-gray-600 max-w-3xl mx-auto mb-6 sm:mb-8 leading-relaxed">
-              Create private voting booths, invite participants, and conduct secure polls with our 
-              modern, user-friendly voting platform.
+            
+            <p className="text-lg sm:text-xl theme-muted max-w-3xl mx-auto leading-relaxed animate-fadeIn" style={{"--stagger-index": 2}}>
+              Create private voting booths, invite participants, and conduct secure polls with our modern, user-friendly platform.
             </p>
           </div>
         </div>
       </div>
 
       {/* Features Grid */}
-      <div className="py-12 sm:py-16">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+      <div className="py-12 sm:py-16 relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 stagger-children">
             {features.map((feature, index) => (
-              <div key={index} className="bg-white p-5 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl border border-gray-100 hover:border-teal-200 hover:shadow-lg sm:hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] sm:hover:scale-105 hover:bg-gradient-to-br hover:from-teal-50 hover:to-cyan-50 mx-1 sm:mx-0 shadow-sm">
-                <div className={`w-10 h-10 sm:w-12 sm:h-12 lg:w-16 lg:h-16 rounded-lg sm:rounded-xl ${getColorClasses(feature.color)} flex items-center justify-center mb-3 sm:mb-4 lg:mb-6 flex-shrink-0`}>
-                  <div className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8">
-                    {feature.icon}
+              <div 
+                key={index} 
+                className="group relative animate-pop"
+                style={{"--stagger-index": index}}
+              >
+                {/* Card with enhanced styling */}
+                <div className={`h-full theme-surface rounded-2xl p-8 border-2 border-border hover:border-accent/50 transition-all duration-500 relative overflow-hidden card-hover`}>
+                  {/* Gradient overlay on hover */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl"></div>
+                  
+                  {/* Content */}
+                  <div className="relative z-10">
+                    {/* Icon with animated background */}
+                    <div className="relative mb-6">
+                      <div className="absolute inset-0 bg-accent/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                      <div className={`glass-card p-4 rounded-2xl w-fit relative backdrop-blur-xl border-2 border-accent/20 group-hover:border-accent/40 group-hover:scale-110 transition-all duration-500`}>
+                        <div className="w-8 h-8 text-accent">
+                          {feature.icon}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Title */}
+                    <h3 className="text-xl font-bold theme-text mb-4 group-hover:text-gradient transition-all duration-300">
+                      {feature.title}
+                    </h3>
+                    
+                    {/* Description */}
+                    <p className="theme-muted leading-relaxed text-[15px]">
+                      {feature.description}
+                    </p>
                   </div>
+                  
+                  {/* Bottom accent line */}
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-accent via-primary to-secondary transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left rounded-b-2xl"></div>
                 </div>
-                <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 mb-2 sm:mb-3 lg:mb-4 leading-tight">{feature.title}</h3>
-                <p className="text-xs sm:text-sm lg:text-base text-gray-600 leading-relaxed">{feature.description}</p>
               </div>
             ))}
           </div>
@@ -115,19 +141,31 @@ const FeaturesPage = () => {
       </div>
 
       {/* How It Works Section */}
-      <div className="py-12 sm:py-16 bg-gradient-to-br from-gray-50 to-teal-50">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-          <div className="text-center mb-10 sm:mb-12 px-2 sm:px-0">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4">How VoteBooth Works</h2>
-            <p className="text-base sm:text-lg text-gray-600 leading-relaxed">Get started with secure voting in just three simple steps</p>
+      <div className="py-16 sm:py-20 theme-surface relative overflow-hidden">
+        {/* Background pattern */}
+        <div className="absolute inset-0 opacity-30">
+          <div className="absolute inset-0" style={{backgroundImage: "radial-gradient(circle at 2px 2px, var(--color-border) 1px, transparent 0)", backgroundSize: "32px 32px"}}></div>
+        </div>
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <div className="text-center mb-12 sm:mb-16 stagger-children">
+            <div className="inline-block glass-card px-4 py-2 rounded-full mb-4 animate-fadeIn" style={{"--stagger-index": 0}}>
+              <span className="text-sm font-semibold text-accent">HOW IT WORKS</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold theme-text mb-4 animate-slideUp" style={{"--stagger-index": 1}}>
+              Start Voting in 3 Simple Steps
+            </h2>
+            <p className="text-lg theme-muted max-w-2xl mx-auto animate-fadeIn" style={{"--stagger-index": 2}}>
+              Get up and running with secure voting in minutes
+            </p>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12 stagger-children">
             {[
               {
                 step: "01",
                 title: "Create Your Booth",
-                description: "Set up your voting booth with candidates, configure privacy settings, and set voting rules. Get a unique invite code.",
+                description: "Set up your voting booth with candidates, configure privacy settings, and get a unique invite code.",
                 icon: (
                   <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -137,7 +175,7 @@ const FeaturesPage = () => {
               {
                 step: "02",
                 title: "Invite Participants",
-                description: "Share your unique invite code with participants. Members join using the code and can start voting immediately.",
+                description: "Share your unique invite code with participants. Members join using the code and start voting immediately.",
                 icon: (
                   <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
@@ -147,7 +185,7 @@ const FeaturesPage = () => {
               {
                 step: "03",
                 title: "Vote & View Results",
-                description: "Cast votes securely and view real-time results. Track participation and export detailed voting analytics.",
+                description: "Cast votes securely and view real-time results. Track participation and analyze voting trends.",
                 icon: (
                   <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -155,17 +193,27 @@ const FeaturesPage = () => {
                 )
               }
             ].map((step, index) => (
-              <div key={index} className="text-center px-3 sm:px-4 lg:px-0">
-                <div className="bg-gradient-to-br from-teal-600 to-cyan-600 text-white w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 lg:mb-6 shadow-lg transform hover:scale-110 transition-all duration-300">
-                  <div className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8">
-                    {step.icon}
+              <div key={index} className="relative animate-fadeIn" style={{"--stagger-index": index}}>
+                {/* Connector line (hidden on mobile) */}
+                {index < 2 && (
+                  <div className="hidden md:block absolute top-16 left-1/2 w-full h-0.5 bg-gradient-to-r from-accent via-accent/50 to-transparent z-0"></div>
+                )}
+                
+                <div className="text-center relative z-10">
+                  <div className="relative inline-block mb-6">
+                    <div className="glass-card w-16 h-16 rounded-2xl flex items-center justify-center mx-auto backdrop-blur-xl border-2 border-accent/20 group-hover:border-accent/40 transition-all duration-300 interactive-scale">
+                      <div className="w-8 h-8 text-accent">
+                        {step.icon}
+                      </div>
+                    </div>
+                    <div className="absolute -top-2 -right-2 glass-card px-2.5 py-1 rounded-full text-xs font-bold text-accent border border-accent/20">
+                      {step.step}
+                    </div>
                   </div>
+                  
+                  <h3 className="text-xl font-bold theme-text mb-3">{step.title}</h3>
+                  <p className="theme-muted leading-relaxed max-w-sm mx-auto">{step.description}</p>
                 </div>
-                <div className="bg-teal-100 text-teal-800 text-xs font-bold px-3 py-1 rounded-full inline-block mb-3 lg:mb-4 shadow-sm">
-                  STEP {step.step}
-                </div>
-                <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 mb-2 sm:mb-3 lg:mb-3 leading-tight">{step.title}</h3>
-                <p className="text-xs sm:text-sm lg:text-base text-gray-600 leading-relaxed">{step.description}</p>
               </div>
             ))}
           </div>

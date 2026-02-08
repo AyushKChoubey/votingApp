@@ -83,21 +83,6 @@ const userSchema = new mongoose.Schema({
         default: 0
     },
     
-    // Legacy fields for backwards compatibility
-    mobile: {
-        type: String,
-        match: [/^\+?[\d\s\-\(\)]+$/, 'Please provide a valid mobile number']
-    },
-    address: {
-        type: String,
-        maxlength: [200, 'Address cannot exceed 200 characters']
-    },
-    age: {
-        type: Number,
-        min: [13, 'Age must be at least 13'],
-        max: [150, 'Age cannot exceed 150']
-    },
-    
     // Track booths created by this user
     createdBooths: [{
         type: mongoose.Schema.Types.ObjectId,
@@ -124,10 +109,6 @@ const userSchema = new mongoose.Schema({
             type: String,
             maxlength: [100, 'Organization name cannot exceed 100 characters']
         },
-        website: {
-            type: String,
-            match: [/^https?:\/\//, 'Website must be a valid URL']
-        },
         timezone: {
             type: String,
             default: 'UTC'
@@ -140,10 +121,6 @@ const userSchema = new mongoose.Schema({
             type: Boolean,
             default: true
         },
-        smsNotifications: {
-            type: Boolean,
-            default: false
-        },
         theme: {
             type: String,
             enum: ['light', 'dark', 'auto'],
@@ -152,24 +129,6 @@ const userSchema = new mongoose.Schema({
         language: {
             type: String,
             default: 'en'
-        }
-    },
-    
-    // Subscription/Plan information
-    subscription: {
-        plan: {
-            type: String,
-            enum: ['free', 'premium', 'enterprise'],
-            default: 'free'
-        },
-        expiresAt: Date,
-        maxBooths: {
-            type: Number,
-            default: 5
-        },
-        maxMembersPerBooth: {
-            type: Number,
-            default: 99
         }
     },
     
@@ -278,7 +237,7 @@ userSchema.methods.getStats = async function() {
             totalVotes: votesCount,
             memberSince: this.createdAt,
             lastLogin: this.lastLogin,
-            accountType: this.subscription.plan
+            accountType: 'standard'
         };
     } catch (err) {
         console.error('Error getting user stats:', err);
@@ -288,7 +247,7 @@ userSchema.methods.getStats = async function() {
             totalVotes: 0,
             memberSince: this.createdAt,
             lastLogin: this.lastLogin,
-            accountType: this.subscription.plan
+            accountType: 'standard'
         };
     }
 };
@@ -299,8 +258,8 @@ userSchema.methods.canCreateBooth = async function() {
         const Booth = mongoose.model('Booth');
         const boothCount = await Booth.countDocuments({ creator: this._id });
         
-        // Check subscription limits
-        const maxBooths = this.subscription.maxBooths || 5;
+        // Allow up to 10 booths per user
+        const maxBooths = 10;
         return boothCount < maxBooths;
     } catch (err) {
         console.error('Error checking booth creation limit:', err);
@@ -381,7 +340,6 @@ userSchema.index({ email: 1 }, { unique: true });
 userSchema.index({ role: 1 });
 userSchema.index({ createdAt: -1 });
 userSchema.index({ lastLogin: -1 });
-userSchema.index({ 'subscription.plan': 1 });
 userSchema.index({ emailVerificationToken: 1 });
 userSchema.index({ passwordResetToken: 1 });
 

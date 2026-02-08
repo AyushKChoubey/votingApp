@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './components/layout/Toast';
 import Layout from './components/layout/Layout';
 import { PageLoading } from './components/layout/Loading';
@@ -11,19 +12,27 @@ import { apiService } from './services/api';
 
 // Pages - will be created next
 import HomePage from './pages/HomePage';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import DashboardPage from './pages/DashboardPage';
+import LoginPage from './pages/auth/LoginPage';
+import RegisterPage from './pages/auth/RegisterPage';
+import Dashboard from './pages/user/DashboardPage';
 import AboutPage from './pages/AboutPage';
 import FeaturesPage from './pages/FeaturesPage';
-import PricingPage from './pages/PricingPage';
 import ContactPage from './pages/ContactPage';
 import HelpPage from './pages/HelpPage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
-import ProfilePage from './pages/ProfilePage';
-import SettingsPage from './pages/SettingsPage';
-import OAuthCallback from './pages/OAuthCallback';
+import ProfilePage from './pages/user/ProfilePage';
+import SettingsPage from './pages/user/SettingsPage';
+import OAuthCallback from './pages/auth/OAuthCallback';
+
+// Email Verification Pages
+import CheckEmailPage from './pages/auth/email-verification/CheckEmailPage';
+import EmailVerifiedPage from './pages/auth/email-verification/EmailVerifiedPage';
+import VerificationErrorPage from './pages/auth/email-verification/VerificationErrorPage';
+
+// Password Reset Pages
+import ForgotPasswordPage from './pages/auth/forgot-password/ForgotPasswordPage';
+import ResetPasswordPage from './pages/auth/forgot-password/ResetPasswordPage';
 
 // Booth Pages
 import CreateBoothPage from './pages/booth/CreateBoothPage';
@@ -92,23 +101,24 @@ const PublicRoute = ({ children }) => {
   return children;
 };
 
-// App Routes Component
+// App Routes Component (must be inside AuthProvider)
 const AppRoutes = () => {
   return (
-    <Layout>
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<HomePage />} />
-        <Route path="/about" element={<AboutPage />} />
-        <Route path="/features" element={<FeaturesPage />} />
-        <Route path="/pricing" element={<PricingPage />} />
-        <Route path="/contact" element={<ContactPage />} />
-        <Route path="/help" element={<HelpPage />} />
-        <Route path="/privacy" element={<PrivacyPage />} />
-        <Route path="/terms" element={<TermsPage />} />
+    <Routes>
+      {/* Public Routes */}
+      <Route path="/" element={<HomePage />} />
+      <Route path="/about" element={<AboutPage />} />
+      <Route path="/features" element={<FeaturesPage />} />
+      <Route path="/contact" element={<ContactPage />} />
+      <Route path="/help" element={<HelpPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/terms" element={<TermsPage />} />
 
         {/* Auth Routes */}
         <Route path="/auth/callback" element={<OAuthCallback />} />
+        <Route path="/auth/check-email" element={<CheckEmailPage />} />
+        <Route path="/auth/verify-email" element={<EmailVerifiedPage />} />
+        <Route path="/auth/verification-error" element={<VerificationErrorPage />} />
         <Route 
           path="/login" 
           element={
@@ -125,18 +135,20 @@ const AppRoutes = () => {
             </PublicRoute>
           } 
         />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         {/* Protected Routes */}
         <Route 
           path="/dashboard" 
           element={
             <ProtectedRoute>
-              <DashboardPage />
+              <Dashboard />
             </ProtectedRoute>
           } 
         />
         <Route 
-          path="/profile" 
+          path="/user/profile" 
           element={
             <ProtectedRoute>
               <ProfilePage />
@@ -144,7 +156,7 @@ const AppRoutes = () => {
           } 
         />
         <Route 
-          path="/settings" 
+          path="/user/settings" 
           element={
             <ProtectedRoute>
               <SettingsPage />
@@ -206,7 +218,6 @@ const AppRoutes = () => {
         {/* 404 Route */}
         <Route path="*" element={<div>404 - Page Not Found</div>} />
       </Routes>
-    </Layout>
   );
 };
 
@@ -219,32 +230,56 @@ function App() {
     let mounted = true;
 
     const waitForServer = async () => {
-      const maxAttempts = 5;
-      let attempt = 0;
-      let delay = 1000; // start with 1s
-
-      while (attempt < maxAttempts && mounted) {
+      // First attempt
+      try {
+        await apiService.healthCheck();
+        if (mounted) {
+          setAppReady(true);
+          setStartupError(null);
+        }
+        return;
+      } catch (err) {
+        // First attempt failed, wait 2 seconds and try again
+        await new Promise((res) => setTimeout(res, 2000));
+        
+        // Second attempt
         try {
-          attempt += 1;
           await apiService.healthCheck();
           if (mounted) {
             setAppReady(true);
             setStartupError(null);
           }
           return;
-        } catch (err) {
-          // Keep trying until max attempts
-          setStartupError(`Attempt ${attempt} failed—waiting ${delay / 1000}s to retry`);
-          // exponential backoff
-          // eslint-disable-next-line no-await-in-loop
-          await new Promise((res) => setTimeout(res, delay));
-          delay *= 2;
-        }
-      }
+        } catch (err2) {
+          // Both attempts failed: show message and poll for up to 40s
+          if (mounted) {
+            setStartupError('Waking up backend service — this may take up to 40 seconds.');
+          }
 
-      if (mounted) {
-        setStartupError('Unable to reach backend after multiple attempts. You can retry or continue offline.');
-        setAppReady(true); // allow app to continue (user can retry actions manually)
+          const maxWaitMs = 40 * 1000; // 40 seconds
+          const intervalMs = 5000; // check every 5 seconds
+          const start = Date.now();
+
+          while (mounted && Date.now() - start < maxWaitMs) {
+            // eslint-disable-next-line no-await-in-loop
+            await new Promise((res) => setTimeout(res, intervalMs));
+            try {
+              await apiService.healthCheck();
+              if (mounted) {
+                setAppReady(true);
+                setStartupError(null);
+              }
+              return;
+            } catch (e) {
+              // keep waiting until timeout
+            }
+          }
+
+          if (mounted) {
+            setStartupError('Unable to reach backend after waiting. You can retry or continue offline.');
+            setAppReady(true); // allow app to continue (user can retry actions manually)
+          }
+        }
       }
     };
 
@@ -256,18 +291,20 @@ function App() {
   }, []);
 
   if (!appReady) {
-    return <PageLoading message={startupError || 'Waking up backend service — this may take a few seconds...'} />;
+    return <PageLoading message={startupError || 'Spinning up backend service — this may take a few seconds...'} />;
   }
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
-        <AuthProvider>
-          <ToastProvider>
-            <div className="App">
-              <AppRoutes />
-            </div>
-          </ToastProvider>
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <ToastProvider>
+              <Layout>
+                <AppRoutes />
+              </Layout>
+            </ToastProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </Router>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>

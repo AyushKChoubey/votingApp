@@ -166,63 +166,14 @@ const blacklistToken = (token) => {
     }
 };
 
-// Middleware to check if user is admin
-const requireAdmin = (req, res, next) => {
-    if (!req.user || req.user.role !== 'admin') {
-        if (req.accepts('html')) {
-            return res.status(403).render('error', { 
-                error: 'Admin access required' 
-            });
-        }
-        return res.status(403).json({ error: 'Admin access required' });
-    }
-    next();
-};
-
-// Middleware to check booth ownership
-const requireBoothOwnership = async (req, res, next) => {
-    try {
-        const { boothId } = req.params;
-        const userId = req.user.id;
-        
-        const Booth = require('../models/booth');
-        const booth = await Booth.findById(boothId);
-        
-        if (!booth) {
-            if (req.accepts('html')) {
-                return res.status(404).render('error', { error: 'Booth not found' });
-            }
-            return res.status(404).json({ error: 'Booth not found' });
-        }
-        
-        if (booth.creator.toString() !== userId) {
-            if (req.accepts('html')) {
-                return res.status(403).render('error', { 
-                    error: 'Only booth creator can perform this action' 
-                });
-            }
-            return res.status(403).json({ 
-                error: 'Only booth creator can perform this action' 
-            });
-        }
-        
-        req.booth = booth;
-        next();
-    } catch (err) {
-        console.error('Booth ownership check error:', err);
-        if (req.accepts('html')) {
-            return res.status(500).render('error', { error: 'Server error' });
-        }
-        res.status(500).json({ error: 'Server error' });
-    }
-};
+// Note: `requireAdmin` and `requireBoothOwnership` helpers removed —
+// they were not referenced elsewhere in the codebase. If you need
+// admin or ownership checks later, re-add focused middleware here.
 
 module.exports = {
     jwtAuthMiddleware,
     optionalAuth,
     generateToken,
     generateRefreshToken,
-    blacklistToken,
-    requireAdmin,
-    requireBoothOwnership
+    blacklistToken
 };

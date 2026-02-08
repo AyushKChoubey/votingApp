@@ -12,10 +12,10 @@ const GoogleSignInButton = ({ text = 'Continue with Google' }) => {
   return (
     <button
       onClick={handleGoogleSignIn}
-      className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white border-2 border-gray-300 rounded-lg hover:border-teal-600 hover:shadow-md transition-all duration-200 group"
+      className="w-full flex items-center justify-center gap-3 px-4 py-3.5 glass-card border-2 border-border rounded-xl hover:border-accent theme-text font-medium transition-all duration-300 interactive-scale focus-ring group"
     >
       <FcGoogle className="text-2xl" />
-      <span className="text-gray-700 font-medium group-hover:text-teal-700">
+      <span className="group-hover:text-accent transition-colors">
         {text}
       </span>
     </button>

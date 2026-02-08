@@ -32,8 +32,9 @@ async (accessToken, refreshToken, profile, done) => {
         let user = await User.findOne({ googleId: profile.id });
 
         if (user) {
-            // User exists, update last login
+            // User exists, update last login and ensure email is verified
             user.lastLogin = new Date();
+            user.isEmailVerified = true; // Google accounts are already verified
             await user.save();
             return done(null, user);
         }
@@ -44,7 +45,7 @@ async (accessToken, refreshToken, profile, done) => {
         if (user) {
             // Link Google account to existing user
             user.googleId = profile.id;
-            user.emailVerified = true; // Google accounts are already verified
+            user.isEmailVerified = true; // Google accounts are already verified
             user.lastLogin = new Date();
             await user.save();
             return done(null, user);
@@ -55,7 +56,7 @@ async (accessToken, refreshToken, profile, done) => {
             googleId: profile.id,
             email: profile.emails[0].value,
             name: profile.displayName,
-            emailVerified: true, // Google accounts are already verified
+            isEmailVerified: true, // Google accounts are already verified
             authProvider: 'google',
             profilePicture: profile.photos && profile.photos.length > 0 ? profile.photos[0].value : null,
             lastLogin: new Date()

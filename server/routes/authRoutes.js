@@ -3,6 +3,8 @@ const express = require('express');
 const router = express.Router();
 const passport = require('../config/passport');
 const { generateToken } = require('../middleware/jwt');
+const { resendLimiter, verifyEmailLimiter, passwordResetLimiter } = require('../middleware/rateLimiter');
+const { verifyEmail, resendVerificationEmail, forgotPassword, resetPassword } = require('../controllers/userController');
 
 // Google OAuth Login
 router.get('/google',
@@ -47,5 +49,13 @@ router.get('/status', (req, res) => {
         }
     });
 });
+
+// Email Verification Routes
+router.get('/verify-email', verifyEmailLimiter, verifyEmail); // GET /api/auth/verify-email?token=xxx
+router.post('/resend-verification', resendLimiter, resendVerificationEmail); // POST /api/auth/resend-verification
+
+// Password Reset Routes
+router.post('/forgot-password', passwordResetLimiter, forgotPassword); // POST /api/auth/forgot-password
+router.post('/reset-password', passwordResetLimiter, resetPassword); // POST /api/auth/reset-password
 
 module.exports = router;

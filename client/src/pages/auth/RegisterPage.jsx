@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LoadingButton } from '../layout/Loading';
-import { Alert } from '../layout/Alert';
-import GoogleSignInButton from './GoogleSignInButton';
-import BackButton from '../layout/BackButton';
+import { LoadingButton } from '../../components/layout/Loading';
+import { Alert } from '../../components/layout/Alert';
+import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
 
 const Register = () => {
     const [formData, setFormData] = useState({
@@ -113,6 +112,18 @@ const Register = () => {
         setLoading(true);
         try {
             const result = await register(formData);
+            
+            // Check if email verification is required
+            if (result.requiresVerification) {
+                // Redirect to check email page
+                navigate('/auth/check-email', {
+                    state: { 
+                        email: formData.email.trim().toLowerCase() 
+                    }
+                });
+                return;
+            }
+            
             if (result.success) {
                 navigate('/dashboard');
             } else {
@@ -138,32 +149,32 @@ const Register = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 flex items-center justify-center py-2 sm:py-6 px-3 sm:px-4 relative">
-            {/* Back button styled like admin header */}
-            <div className="absolute top-4 left-4 sm:top-6 sm:left-6">
-                <BackButton to="/" label="Back" className="text-sm px-2 py-1 md:px-3 md:py-1.5 bg-white" />
+        <div className="min-h-screen theme-bg flex items-center justify-center py-4 sm:py-8 px-4 relative overflow-hidden">
+            {/* Floating orbs background */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl float" style={{"--float-distance": "30px"}}></div>
+                <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl float" style={{"--float-distance": "-40px", "--float-duration": "8s"}}></div>
             </div>
             
-            <div className="max-w-md w-full">
-                <div className="text-center">
-                    <Link to="/" className="inline-flex items-center space-x-2 mb-0 sm:mb-1">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-teal-600 rounded-lg sm:rounded-xl flex items-center justify-center transition-all duration-300 hover:scale-110 hover:bg-teal-700">
-                            <svg className="w-5 h-5 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="max-w-md w-full relative z-10">
+                <div className="text-center mb-8 animate-fadeIn">
+                    <div className="flex justify-center mb-4">
+                        <div className="glass-card p-4 rounded-2xl interactive-scale border-2 border-accent/20">
+                            <svg className="w-10 h-10 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </div>
-                        <span className="text-xl sm:text-2xl font-bold text-gray-900">VoteBooth</span>
-                    </Link>
-                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">Create Account</h2>
-                    <p className="text-sm sm:text-base text-gray-600">Join thousands of users creating secure polls</p>
+                    </div>
+                    <h1 className="text-3xl sm:text-4xl font-bold theme-text mb-2">Create Account</h1>
+                    <p className="text-base theme-muted">Join thousands creating secure polls</p>
                 </div>
                 
-                <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl sm:shadow-2xl p-4 sm:p-8 backdrop-blur-sm transition-all duration-300 hover:shadow-3xl mt-2 sm:mt-4">
+                <div className="glass-card rounded-2xl p-6 sm:p-8 border-2 border-border animate-pop">
                     {error && <Alert type="error" message={error} />}
                     
-                    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+                    <form onSubmit={handleSubmit} className="space-y-5">
                         <div>
-                            <label htmlFor="name" className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                            <label htmlFor="name" className="block text-sm font-medium theme-text mb-2">
                                 Full Name
                             </label>
                             <input
@@ -173,13 +184,13 @@ const Register = () => {
                                 required
                                 value={formData.name}
                                 onChange={handleChange}
-                                className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
+                                className="w-full px-4 py-3 theme-surface border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent theme-text transition-all duration-300"
                                 placeholder="Enter your full name"
                             />
                         </div>
                         
                         <div>
-                            <label htmlFor="email" className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                            <label htmlFor="email" className="block text-sm font-medium theme-text mb-2">
                                 Email Address
                             </label>
                             <input
@@ -189,13 +200,13 @@ const Register = () => {
                                 required
                                 value={formData.email}
                                 onChange={handleChange}
-                                className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-300 text-sm"
+                                className="w-full px-4 py-3 theme-surface border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent theme-text transition-all duration-300"
                                 placeholder="Enter your email"
                             />
                         </div>
                         
                         <div>
-                            <label htmlFor="password" className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                            <label htmlFor="password" className="block text-sm font-medium theme-text mb-2">
                                 Password
                             </label>
                             <div className="relative">
@@ -206,13 +217,13 @@ const Register = () => {
                                     required
                                     value={formData.password}
                                     onChange={handleChange}
-                                    className="w-full px-3 sm:px-4 py-2 sm:py-3 pr-10 sm:pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-300 text-sm"
+                                    className="w-full px-4 py-3 pr-12 theme-surface border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent theme-text transition-all duration-300"
                                     placeholder="Create a strong password"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                                    className="absolute inset-y-0 right-0 pr-3 flex items-center theme-muted hover:text-accent transition-colors"
                                 >
                                     {showPassword ? (
                                         <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -228,7 +239,7 @@ const Register = () => {
                             </div>
                             {formData.password && (
                                 <div className="mt-2">
-                                    <p className="text-xs text-gray-500 mb-1">Password requirements:</p>
+                                    <p className="text-xs theme-muted mb-1">Password requirements:</p>
                                     <div className="flex items-center space-x-4 text-xs">
                                         <div className="flex items-center space-x-1">
                                             {passwordRequirements.length ? (
@@ -284,7 +295,7 @@ const Register = () => {
                         </div>
                         
                         <div>
-                            <label htmlFor="confirmPassword" className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+                            <label htmlFor="confirmPassword" className="block text-sm font-medium theme-text mb-2">
                                 Confirm Password
                             </label>
                             <div className="relative">
@@ -295,13 +306,13 @@ const Register = () => {
                                     required
                                     value={formData.confirmPassword}
                                     onChange={handleChange}
-                                    className="w-full px-3 sm:px-4 py-2 sm:py-3 pr-10 sm:pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-300 text-sm"
+                                    className="w-full px-4 py-3 pr-12 theme-surface border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent theme-text transition-all duration-300"
                                     placeholder="Confirm your password"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                                    className="absolute inset-y-0 right-0 pr-3 flex items-center theme-muted hover:text-accent transition-colors"
                                 >
                                     {showConfirmPassword ? (
                                         <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -342,15 +353,15 @@ const Register = () => {
                                 name="terms"
                                 type="checkbox"
                                 required
-                                className="h-3 w-3 sm:h-4 sm:w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded mt-1 sm:mt-0 flex-shrink-0"
+                                className="h-4 w-4 text-accent focus:ring-accent border-border rounded mt-1 sm:mt-0 flex-shrink-0"
                             />
-                            <label htmlFor="terms" className="ml-2 block text-xs sm:text-sm text-gray-700 leading-relaxed">
+                            <label htmlFor="terms" className="ml-2 block text-sm theme-text leading-relaxed">
                                 I agree to the{' '}
-                                <Link to="/terms" className="text-teal-600 hover:text-teal-500 font-medium transition-colors duration-300">
+                                <Link to="/terms" className="text-accent hover:text-accent/80 font-medium transition-colors">
                                     Terms of Service
                                 </Link>{' '}
                                 and{' '}
-                                <Link to="/privacy" className="text-teal-600 hover:text-teal-500 font-medium transition-colors duration-300">
+                                <Link to="/privacy" className="text-accent hover:text-accent/80 font-medium transition-colors">
                                     Privacy Policy
                                 </Link>
                             </label>
@@ -359,11 +370,11 @@ const Register = () => {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full flex items-center justify-center px-4 py-3 sm:py-3.5 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-400 border border-teal-600 rounded-lg text-sm sm:text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200 shadow-sm hover:shadow-md disabled:cursor-not-allowed"
+                            className="w-full btn-theme ripple py-3.5 text-base font-semibold focus-ring disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                         >
                             {loading ? (
                                 <>
-                                    <svg className="animate-spin -ml-1 mr-3 h-4 w-4 sm:h-5 sm:w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <svg className="animate-spin mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
@@ -371,7 +382,7 @@ const Register = () => {
                                 </>
                             ) : (
                                 <>
-                                    <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                                     </svg>
                                     Create Account
@@ -381,27 +392,27 @@ const Register = () => {
                     </form>
                     
                     {/* Social Login */}
-                    <div className="mt-2 sm:mt-4">
+                    <div className="mt-6">
                         <div className="relative">
                             <div className="absolute inset-0 flex items-center">
-                                <div className="w-full border-t border-gray-100" />
+                                <div className="w-full border-t border-border" />
                             </div>
-                            <div className="relative flex justify-center text-xs sm:text-sm">
-                                <span className="px-3 bg-white text-gray-400 font-medium">or</span>
+                            <div className="relative flex justify-center text-sm">
+                                <span className="px-3 glass-card theme-muted font-medium">or</span>
                             </div>
                         </div>
                         
-                        <div className="mt-2 sm:mt-4">
+                        <div className="mt-4">
                             <GoogleSignInButton text="Continue with Google" />
                         </div>
                     </div>
                     
-                    <div className="mt-2 sm:mt-4 text-center px-2">
-                        <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
+                    <div className="mt-6 text-center">
+                        <p className="text-sm theme-muted">
                             Already have an account?{' '}
                             <Link 
                                 to="/login" 
-                                className="text-teal-600 hover:text-teal-500 font-semibold transition-colors duration-200 hover:underline"
+                                className="text-accent hover:text-accent/80 font-semibold transition-colors"
                             >
                                 Sign in
                             </Link>
