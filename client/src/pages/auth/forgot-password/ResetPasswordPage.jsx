@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Lock, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
+import { Lock, Eye, EyeOff, CheckCircle2, AlertTriangle, XCircle, RefreshCw } from 'lucide-react';
 import api from '../../../services/api';
 import { Alert } from '../../../components/layout/Alert';
 
@@ -18,6 +18,8 @@ export default function ResetPasswordPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
+    const [tokenValid, setTokenValid] = useState(true);
+    const [countdown, setCountdown] = useState(3);
 
     // Password strength validation state
     const [validations, setValidations] = useState({
@@ -31,9 +33,27 @@ export default function ResetPasswordPage() {
     // Check if token exists
     useEffect(() => {
         if (!token) {
-            setError('Invalid or missing reset token. Please request a new password reset link.');
+            setError('Invalid or missing reset token.');
+            setTokenValid(false);
         }
     }, [token]);
+
+    // Countdown for redirect after success
+    useEffect(() => {
+        if (success && countdown > 0) {
+            const timer = setTimeout(() => {
+                setCountdown(countdown - 1);
+            }, 1000);
+            return () => clearTimeout(timer);
+        } else if (success && countdown === 0) {
+            navigate('/login', { 
+                state: { 
+                    message: 'Password reset successful! Please log in with your new password.',
+                    type: 'success'
+                }
+            });
+        }
+    }, [success, countdown, navigate]);
 
     // Validate password in real-time
     useEffect(() => {
@@ -54,14 +74,13 @@ export default function ResetPasswordPage() {
         // Validate all requirements met
         const allValid = Object.values(validations).every(v => v === true);
         if (!allValid) {
-            setError('Please meet all password requirements');
+            setError('Please meet all password requirements before submitting.');
             return;
         }
 
         setLoading(true);
 
         try {
-            // Call reset password API
             const response = await api.post('/api/auth/reset-password', {
                 token,
                 password
@@ -69,13 +88,25 @@ export default function ResetPasswordPage() {
 
             if (response.success) {
                 setSuccess(true);
-                // Redirect to login after 3 seconds
-                setTimeout(() => {
-                    navigate('/login');
-                }, 3000);
             }
         } catch (err) {
-            setError(err.response?.data?.error || 'Failed to reset password. The link may have expired.');
+            let errorMsg;
+            
+            if (!err.response) {
+                errorMsg = 'Network error. Please check your internet connection and try again.';
+            } else if (err.response.status === 400) {
+                errorMsg = err.response?.data?.error || 'Invalid reset link. Please request a new password reset.';
+                setTokenValid(false);
+            } else if (err.response.status === 404) {
+                errorMsg = 'Reset link has expired or is invalid. Please request a new password reset.';
+                setTokenValid(false);
+            } else if (err.response.status >= 500) {
+                errorMsg = 'Server error. Please try again in a few moments.';
+            } else {
+                errorMsg = err.response?.data?.error || 'Failed to reset password. Please try again.';
+            }
+            
+            setError(errorMsg);
         } finally {
             setLoading(false);
         }
@@ -110,10 +141,11 @@ export default function ResetPasswordPage() {
                             </p>
                         </div>
 
-                        {/* Redirecting Message */}
+                        {/* Countdown Message */}
                         <div className="glass-card border-2 border-accent/20 rounded-xl p-4 mb-6">
-                            <p className="text-sm theme-muted text-center">
-                                Redirecting to login page...
+                            <p className="text-sm theme-text text-center flex items-center justify-center gap-2">
+                                <RefreshCw className="w-4 h-4 text-accent" />
+                                Redirecting to login in <strong className="text-accent">{countdown}</strong> second{countdown !== 1 ? 's' : ''}...
                             </p>
                         </div>
 
@@ -159,8 +191,58 @@ export default function ResetPasswordPage() {
                 </div>
 
                 <div className="glass-card rounded-2xl p-6 sm:p-8 border-2 border-border animate-pop">
-                    {error && <Alert type="error" message={error} />}
+                    {/* Token Invalid Warning */}
+                    {!tokenValid && (
+                        <Alert 
+                            type="error" 
+                            message={
+                                <div className="space-y-2">
+                                    <p className="font-semibold">Invalid or Expired Reset Link</p>
+                                    <p className="text-sm">This password reset link is no longer valid. Reset links expire after 10 minutes for security reasons.</p>
+                                </div>
+                            }
+                            className="mb-5"
+                        />
+                    )}
+                    
+                    {error && tokenValid && <Alert type="error" message={error} className="mb-5" />}
 
+                    {/* Token Invalid State */}
+                    {!tokenValid ? (
+                        <div className="space-y-5">
+                            <div className="glass-card border-2 border-amber-500/20 bg-amber-50 dark:bg-amber-900/10 rounded-lg p-4">
+                                <div className="flex items-start gap-3">
+                                    <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                                    <div className="space-y-2">
+                                        <p className="text-sm font-medium text-amber-900 dark:text-amber-100">What you can do:</p>
+                                        <ul className="text-xs text-amber-700 dark:text-amber-300 space-y-1 list-disc list-inside">
+                                            <li>Request a new password reset link</li>
+                                            <li>Check your email for the most recent link</li>
+                                            <li>Make sure you're using the complete link from the email</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <Link
+                                to="/forgot-password"
+                                className="w-full btn-theme ripple py-3.5 rounded text-base font-semibold focus-ring flex items-center justify-center gap-2"
+                            >
+                                <RefreshCw className="w-5 h-5" />
+                                Request New Reset Link
+                            </Link>
+
+                            <div className="text-center pt-4 border-t border-border">
+                                <p className="text-sm theme-muted">
+                                    Remember your password?{' '}
+                                    <Link to="/login" className="text-accent hover:text-accent/80 font-semibold transition-colors">
+                                        Sign in
+                                    </Link>
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                    <>
                     {/* Form */}
                     <form onSubmit={handleSubmit} className="space-y-5">
                         {/* New Password Input */}
@@ -178,7 +260,13 @@ export default function ResetPasswordPage() {
                                     placeholder="Enter new password"
                                     required
                                     disabled={!token}
-                                    className="w-full px-4 py-3 pr-12 theme-surface border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent theme-text transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className={`w-full px-4 py-3 pr-12 theme-surface border-2 rounded-xl focus:outline-none focus:ring-2 theme-text transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${
+                                        password && Object.values(validations).slice(0, 4).every(v => v)
+                                            ? 'border-green-500 focus:border-green-500 focus:ring-green-500/20'
+                                            : password
+                                            ? 'border-amber-500 focus:border-amber-500 focus:ring-amber-500/20'
+                                            : 'border-border focus:ring-accent focus:border-accent'
+                                    }`}
                                 />
                                 <button
                                     type="button"
@@ -205,7 +293,13 @@ export default function ResetPasswordPage() {
                                     placeholder="Confirm new password"
                                     required
                                     disabled={!token}
-                                    className="w-full px-4 py-3 pr-12 theme-surface border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent theme-text transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className={`w-full px-4 py-3 pr-12 theme-surface border-2 rounded-xl focus:outline-none focus:ring-2 theme-text transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${
+                                        confirmPassword && validations.passwordsMatch
+                                            ? 'border-green-500 focus:border-green-500 focus:ring-green-500/20'
+                                            : confirmPassword && !validations.passwordsMatch
+                                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20'
+                                            : 'border-border focus:ring-accent focus:border-accent'
+                                    }`}
                                 />
                                 <button
                                     type="button"
@@ -236,22 +330,17 @@ export default function ResetPasswordPage() {
                         {/* Submit Button */}
                         <button
                             type="submit"
-                            disabled={loading || !token}
-                            className="w-full btn-theme ripple py-3.5 rounded text-base font-semibold focus-ring disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                            disabled={loading || !token || !Object.values(validations).every(v => v)}
+                            className="w-full btn-theme ripple py-3.5 rounded text-base font-semibold focus-ring disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all duration-200"
                         >
                             {loading ? (
                                 <>
-                                    <svg className="animate-spin mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
+                                    <RefreshCw className="animate-spin mr-3 h-5 w-5" />
                                     Resetting Password...
                                 </>
                             ) : (
                                 <>
-                                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                                    </svg>
+                                    <Lock className="w-5 h-5 mr-2" />
                                     Reset Password
                                 </>
                             )}
@@ -267,6 +356,8 @@ export default function ResetPasswordPage() {
                             </Link>
                         </p>
                     </div>
+                    </>
+                    )}
                 </div>
             </div>
         </div>

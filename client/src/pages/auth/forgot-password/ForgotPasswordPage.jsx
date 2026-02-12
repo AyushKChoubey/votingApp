@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail } from 'lucide-react';
+import { Mail, RefreshCw, AlertCircle, CheckCircle, HelpCircle, Clock, XCircle } from 'lucide-react';
 import api from '../../../services/api';
 import { Alert } from '../../../components/layout/Alert';
 
@@ -8,33 +8,121 @@ export default function ForgotPasswordPage() {
     // Form state
     const [email, setEmail] = useState('');
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
+    const [emailValidation, setEmailValidation] = useState({ isValid: false, message: '' });
+    const [showTroubleshooting, setShowTroubleshooting] = useState(false);
+    const [cooldown, setCooldown] = useState(0);
+    const [error, setError] = useState('');
+    const [successMsg, setSuccessMsg] = useState('');
+
+    // Mask email for privacy (show first 2-3 chars, mask middle, show last 2 chars and domain)
+    const maskEmail = (email) => {
+        if (!email || !email.includes('@')) return email;
+        
+        const [localPart, domain] = email.split('@');
+        
+        if (localPart.length <= 3) {
+            return email;
+        } else if (localPart.length <= 5) {
+            return `${localPart.substring(0, 2)}*${localPart.substring(localPart.length - 2)}@${domain}`;
+        } else {
+            const visibleStart = 3;
+            const visibleEnd = 2;
+            const maskedLength = localPart.length - visibleStart - visibleEnd;
+            const maskedPart = '*'.repeat(Math.min(maskedLength, 5));
+            return `${localPart.substring(0, visibleStart)}${maskedPart}${localPart.substring(localPart.length - visibleEnd)}@${domain}`;
+        }
+    };
+
+    // Real-time email validation
+    const validateEmailInput = (value) => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!value) {
+            setEmailValidation({ isValid: false, message: '' });
+        } else if (!emailRegex.test(value)) {
+            setEmailValidation({ isValid: false, message: 'Please enter a valid email address' });
+        } else {
+            setEmailValidation({ isValid: true, message: 'Valid email format' });
+        }
+    };
+
+    const handleEmailChange = (e) => {
+        const value = e.target.value;
+        setEmail(value);
+        validateEmailInput(value);
+    };
 
     // Handle form submission
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setSuccessMsg('');
+
+        if (!emailValidation.isValid) {
+            setError('Please enter a valid email address.');
+            return;
+        }
+
+        if (cooldown > 0) {
+            setError(`Please wait ${cooldown} seconds before requesting again.`);
+            return;
+        }
+
         setLoading(true);
 
         try {
-            // Call forgot password API
             const response = await api.post('/api/auth/forgot-password', { email });
             
             if (response.success) {
                 setSuccess(true);
+                setSuccessMsg('Password reset email sent! Please check your inbox.');
+
+                // Set 60-second cooldown
+                setCooldown(60);
+                const interval = setInterval(() => {
+                    setCooldown(prev => {
+                        if (prev <= 1) {
+                            clearInterval(interval);
+                            return 0;
+                        }
+                        return prev - 1;
+                    });
+                }, 1000);
             } else {
                 setError('Failed to send reset email. Please try again.');
             }
         } catch (err) {
-            setError(err.response?.data?.error || 'Failed to send reset email. Please try again.');
+            let errorMsg;
+            if (!err.response) {
+                errorMsg = 'Network error. Please check your internet connection and try again.';
+                setShowTroubleshooting(true);
+            } else if (err.response.status >= 500) {
+                errorMsg = 'Server error. Please try again in a few moments.';
+            } else {
+                errorMsg = err.response?.data?.error || 'Failed to send reset email. Please try again.';
+            }
+            
+            setError(errorMsg);
         } finally {
             setLoading(false);
         }
     };
 
+    const handleResend = () => {
+        if (cooldown > 0) {
+            setError(`Please wait ${cooldown} seconds before requesting again.`);
+            return;
+        }
+        
+        setSuccess(false);
+        setError('');
+        setSuccessMsg('');
+    };
+
     // Show success message after email sent
     if (success) {
+        const maskedEmail = maskEmail(email);
+        
         return (
             <div className="min-h-screen theme-bg flex items-center justify-center py-4 sm:py-8 px-4 relative overflow-hidden">
                 {/* Floating orbs background */}
@@ -44,32 +132,96 @@ export default function ForgotPasswordPage() {
                 </div>
                 
                 <div className="max-w-md w-full relative z-10">
-                    {/* Success Card */}
-                    <div className="glass-card rounded-2xl p-6 sm:p-8 border-2 border-border animate-pop">
+                    <div className="glass-card rounded-2xl p-6 sm:p-8 border-2 border-border animate-pop space-y-6">
                         {/* Success Icon */}
-                        <div className="flex justify-center mb-6 animate-fadeIn">
+                        <div className="flex justify-center animate-fadeIn">
                             <div className="glass-card p-4 rounded-2xl border-2 border-green-500/30">
-                                <svg className="w-12 h-12 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
+                                <CheckCircle className="w-12 h-12 text-green-600 dark:text-green-400" />
                             </div>
                         </div>
 
                         {/* Success Message */}
-                        <div className="text-center space-y-3 mb-6">
+                        <div className="text-center space-y-3">
                             <h2 className="text-2xl sm:text-3xl font-bold theme-text">Check Your Email</h2>
                             <p className="theme-muted text-base">
-                                If an account exists with <span className="font-semibold theme-text">{email}</span>, 
+                                If an account exists with <span className="font-semibold theme-text">{maskedEmail}</span>, 
                                 you will receive a password reset link shortly.
                             </p>
                         </div>
 
-                        {/* Instructions */}
-                        <div className="glass-card border-2 border-accent/20 rounded-xl p-4 mb-6">
-                            <p className="text-sm theme-muted text-center">
-                                The reset link will expire in <strong className="theme-text">10 minutes</strong>. 
-                                If you don't see the email, check your spam folder.
+                        {/* Info Box */}
+                        <div className="glass-card border-2 border-accent/20 rounded-lg p-4 space-y-3">
+                            <p className="text-sm theme-text font-medium flex items-center gap-2">
+                                <Mail className="w-4 h-4" />
+                                What to do next:
                             </p>
+                            <ul className="text-sm theme-muted space-y-2">
+                                <li className="flex items-start gap-2">
+                                    <span className="text-accent mt-0.5">1.</span>
+                                    <span>Check your email inbox</span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                    <span className="text-accent mt-0.5">2.</span>
+                                    <span>Look for an email from VoteBooth <strong>(check spam folder)</strong></span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                    <span className="text-accent mt-0.5">3.</span>
+                                    <span>Click the reset link <strong>(valid for 10 minutes)</strong></span>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                    <span className="text-accent mt-0.5">4.</span>
+                                    <span>Create your new password</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        {/* Troubleshooting Section */}
+                        <div className="space-y-3">
+                            <button
+                                onClick={() => setShowTroubleshooting(!showTroubleshooting)}
+                                className="w-full flex items-center justify-between px-4 py-3 glass-card border border-border rounded-lg theme-text hover:border-accent transition-all duration-200"
+                            >
+                                <span className="flex items-center gap-2 text-sm font-medium">
+                                    <HelpCircle className="w-4 h-4" />
+                                    Not receiving emails?
+                                </span>
+                                <svg
+                                    className={`w-4 h-4 transition-transform duration-200 ${showTroubleshooting ? 'rotate-180' : ''}`}
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+
+                            {showTroubleshooting && (
+                                <div className="glass-card border border-border rounded-lg p-4 space-y-3 animate-fadeIn">
+                                    <p className="text-sm theme-text font-medium">🔍 Troubleshooting Tips:</p>
+                                    <ul className="text-xs theme-muted space-y-2">
+                                        <li className="flex items-start gap-2">
+                                            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-amber-500" />
+                                            <span>Check your <strong>spam or junk mail</strong> folder</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <Clock className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-blue-500" />
+                                            <span>Wait a few minutes - emails can be delayed</span>
+                                        </li>
+                                        <li className="flex items-start gap-2">
+                                            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-amber-500" />
+                                            <span>Verify you entered the correct email address</span>
+                                        </li>
+                                    </ul>
+                                    <div className="pt-2 border-t border-border">
+                                        <p className="text-xs theme-muted">
+                                            Still having issues?{' '}
+                                            <Link to="/contact" className="text-accent hover:underline font-medium">
+                                                Contact Support
+                                            </Link>
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Back to Login */}
@@ -84,17 +236,20 @@ export default function ForgotPasswordPage() {
                         </Link>
 
                         {/* Resend Option */}
-                        <div className="mt-6 text-center">
+                        <div className="text-center">
                             <button
-                                onClick={() => setSuccess(false)}
-                                className="text-sm text-accent hover:text-accent/80 font-medium transition-colors"
+                                onClick={handleResend}
+                                disabled={cooldown > 0}
+                                className="text-sm text-accent hover:text-accent/80 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Didn't receive the email? Try again
+                                {cooldown > 0 
+                                    ? `Resend available in ${cooldown}s` 
+                                    : "Didn't receive the email? Try again"
+                                }
                             </button>
                         </div>
                     </div>
-                </div>
-            </div>
+                </div>            </div>
         );
     }
 
@@ -125,7 +280,8 @@ export default function ForgotPasswordPage() {
 
                 {/* Forgot Password Form */}
                 <div className="glass-card rounded-2xl p-6 sm:p-8 border-2 border-border animate-pop">
-                    {error && <Alert type="error" message={error} />}
+                    {error && <Alert type="error" message={error} className="mb-5" />}
+                    {successMsg && <Alert type="success" message={successMsg} className="mb-5" />}
                     
                     <form onSubmit={handleSubmit} className="space-y-5">
                         {/* Email Input */}
@@ -133,37 +289,58 @@ export default function ForgotPasswordPage() {
                             <label htmlFor="email" className="block text-sm font-medium theme-text mb-2">
                                 Email Address
                             </label>
-                            <input
-                                type="email"
-                                id="email"
-                                name="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                placeholder="Enter your email"
-                                required
-                                className="w-full px-4 py-3 theme-surface border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent theme-text transition-all duration-300"
-                            />
+                            <div className="relative">
+                                <input
+                                    type="email"
+                                    id="email"
+                                    name="email"
+                                    value={email}
+                                    onChange={handleEmailChange}
+                                    placeholder="Enter your email"
+                                    required
+                                    className={`w-full px-4 py-3 theme-surface border-2 rounded-xl focus:outline-none focus:ring-2 theme-text transition-all duration-300 ${
+                                        emailValidation.isValid 
+                                            ? 'border-green-500 focus:border-green-500 focus:ring-green-500/20' 
+                                            : email && !emailValidation.isValid
+                                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20'
+                                            : 'border-border focus:ring-accent focus:border-accent'
+                                    }`}
+                                />
+                                {email && (
+                                    <div className={`absolute right-3 top-1/2 -translate-y-1/2 ${
+                                        emailValidation.isValid ? 'text-green-500' : 'text-red-500'
+                                    }`}>
+                                        {emailValidation.isValid ? (
+                                            <CheckCircle className="w-5 h-5" />
+                                        ) : (
+                                            <XCircle className="w-5 h-5" />
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            {emailValidation.message && (
+                                <p className={`text-xs mt-1.5 ${emailValidation.isValid ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                    {emailValidation.message}
+                                </p>
+                            )}
                         </div>
 
                         {/* Submit Button */}
                         <button
                             type="submit"
-                            disabled={loading}
-                            className="w-full btn-theme ripple py-3.5 rounded text-base font-semibold focus-ring disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                            disabled={loading || !emailValidation.isValid || cooldown > 0}
+                            className="w-full btn-theme ripple py-3.5 rounded text-base font-semibold focus-ring disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all duration-200"
                         >
                             {loading ? (
                                 <>
-                                    <svg className="animate-spin mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
+                                    <RefreshCw className="animate-spin mr-3 h-5 w-5" />
                                     Sending...
                                 </>
+                            ) : cooldown > 0 ? (
+                                `Resend available in ${cooldown}s`
                             ) : (
                                 <>
-                                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                    </svg>
+                                    <Mail className="w-5 h-5 mr-2" />
                                     Send Reset Link
                                 </>
                             )}
