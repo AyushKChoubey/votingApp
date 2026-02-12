@@ -92,8 +92,15 @@ export const AuthProvider = ({ children }) => {
         const userObj = resp && resp.user ? resp.user : resp;
         dispatch({ type: "AUTH_SUCCESS", payload: userObj });
       } catch (error) {
+        // Token is invalid or expired - logout immediately
         localStorage.removeItem("token");
-        dispatch({ type: "AUTH_ERROR", payload: error.message });
+        dispatch({ type: "AUTH_LOGOUT" });
+        
+        // If this is a 401 error (token expired), redirect will be handled by interceptor
+        // For other errors, log for debugging
+        if (error.status !== 401) {
+          console.error('Auth check failed:', error.message);
+        }
       }
     };
 

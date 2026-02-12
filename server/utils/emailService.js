@@ -32,26 +32,26 @@ class EmailService {
     if (this.initialized) return;
 
     try {
-      // Check if real email credentials are configured
-      const hasEmailCredentials =
-        process.env.EMAIL_USER &&
-        process.env.EMAIL_PASS &&
-        process.env.EMAIL_USER !== "your_email@gmail.com";
+      // Check if Mailjet credentials are configured
+      const hasMailjetCredentials =
+        process.env.MAILJET_API_KEY &&
+        process.env.MAILJET_SECRET_KEY &&
+        process.env.EMAIL_USER;
 
       // Create transporter based on credentials availability
-      if (hasEmailCredentials) {
-        // Use real email service (Gmail, SendGrid, etc.) - works in both dev and production
+      if (hasMailjetCredentials) {
+        // Use Mailjet SMTP service
         this.transporter = nodemailer.createTransport({
-          service: process.env.EMAIL_SERVICE || "gmail",
+          host: "in-v3.mailjet.com",
+          port: 587,
+          secure: false, // true for 465, false for other ports
           auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
+            user: process.env.MAILJET_API_KEY,
+            pass: process.env.MAILJET_SECRET_KEY,
           },
         });
 
-        console.log(
-          `✅ Email service initialized with ${process.env.EMAIL_SERVICE || "Gmail"}`,
-        );
+        console.log(`✅ Email service initialized with Mailjet`);
         console.log(`   Sending from: ${process.env.EMAIL_USER}`);
       } else {
         // Development: Use Ethereal (fake SMTP service for testing)
@@ -69,7 +69,7 @@ class EmailService {
 
         console.log("📧 Email service initialized with Ethereal (test mode)");
         console.log(
-          "   💡 Configure EMAIL_USER and EMAIL_PASS in .env to send real emails",
+          "   💡 Configure MAILJET_API_KEY, MAILJET_SECRET_KEY, and EMAIL_USER in .env to send real emails",
         );
         console.log("   Preview emails at: https://ethereal.email");
       }

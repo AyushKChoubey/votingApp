@@ -24,6 +24,7 @@ function Login() {
     // Check for invite code and redirect URL in query parameters
     const invite = searchParams.get("invite");
     const redirect = searchParams.get("redirect");
+    const message = searchParams.get("message");
 
     if (invite) {
       setInviteCode(invite);
@@ -35,6 +36,11 @@ function Login() {
       } catch (e) {
         setRedirectUrl(redirect);
       }
+    }
+    
+    // Show session expired message
+    if (message === "session_expired") {
+      setError("Your session has expired. Please log in again.");
     }
   }, [searchParams]);
 

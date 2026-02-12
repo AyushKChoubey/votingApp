@@ -42,9 +42,6 @@ api.interceptors.response.use(
       error.message ||
       "An unexpected error occurred";
 
-    // Handle CORS errors
-    // Network/CORS errors are handled by callers; do not log here.
-
     // Handle 401 unauthorized or 403 forbidden (token expired or invalid)
     const status = error.response?.status;
     const serverMsg =
@@ -88,18 +85,18 @@ api.interceptors.response.use(
       if (!authRedirectInProgress) {
         authRedirectInProgress = true;
 
-        // Reset the flag after a short delay to allow future redirects if needed
-        setTimeout(() => {
-          authRedirectInProgress = false;
-        }, 2000);
-
+        // Clear token immediately
         try {
           localStorage.removeItem("token");
         } catch (e) {
           // ignore
         }
 
+        // Use replace instead of redirect to prevent back button showing empty page
         window.location.replace("/login?message=session_expired");
+        
+        // Don't reset the flag - we're navigating away anyway
+        return new Promise(() => {}); // Never resolve to prevent further execution
       }
     }
 
