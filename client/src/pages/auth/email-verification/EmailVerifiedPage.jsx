@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle, Loader2, ArrowRight } from 'lucide-react';
+import { CheckCircle, Loader2, ArrowRight, RefreshCw } from 'lucide-react';
 import api from '../../../services/api';
 
 const EmailVerifiedPage = () => {
@@ -164,6 +164,14 @@ const EmailVerifiedPage = () => {
                         </p>
                     </div>
 
+                    {/* Auto Redirect Notice with Countdown */}
+                    <div className="glass-card border-2 border-accent/20 rounded-lg p-4">
+                        <p className="text-sm theme-text text-center flex items-center justify-center gap-2">
+                            <RefreshCw className="w-4 h-4 text-accent" />
+                            Redirecting to login in <strong className="text-accent">{countdown}</strong> second{countdown !== 1 ? 's' : ''}...
+                        </p>
+                    </div>
+
                     {/* Action Button */}
                     <button
                         onClick={() => navigate('/login')}
@@ -172,11 +180,6 @@ const EmailVerifiedPage = () => {
                         Go to Login
                         <ArrowRight className="w-4 h-4" />
                     </button>
-
-                    {/* Auto Redirect Notice */}
-                    <p className="text-xs theme-muted">
-                        Redirecting to login in {countdown} seconds...
-                    </p>
                 </div>
             </div>
         );

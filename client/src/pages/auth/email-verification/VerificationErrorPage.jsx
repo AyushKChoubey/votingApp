@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { XCircle, RefreshCw, Mail, ArrowLeft } from 'lucide-react';
-import { Toast } from '../../../components/layout/Toast';
+import { XCircle, RefreshCw, Mail, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
+import { Alert } from '../../../components/layout/Alert';
 import api from '../../../services/api';
 
 const VerificationErrorPage = () => {
@@ -12,28 +12,40 @@ const VerificationErrorPage = () => {
     const [email, setEmail] = useState('');
     const [isResending, setIsResending] = useState(false);
     const [showEmailInput, setShowEmailInput] = useState(false);
-    const [toast, setToast] = useState({ show: false, message: '', type: 'info' });
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
+    const [emailError, setEmailError] = useState('');
+
+    // Real-time email validation
+    const validateEmail = (email) => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    };
+
+    const handleEmailChange = (e) => {
+        const value = e.target.value;
+        setEmail(value);
+        
+        if (value && !validateEmail(value)) {
+            setEmailError('Please enter a valid email address');
+        } else {
+            setEmailError('');
+        }
+    };
 
     const handleResendEmail = async () => {
         if (!email || !email.trim()) {
-            setToast({
-                show: true,
-                message: 'Please enter your email address.',
-                type: 'error'
-            });
+            setError('Please enter your email address.');
             return;
         }
 
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            setToast({
-                show: true,
-                message: 'Please enter a valid email address.',
-                type: 'error'
-            });
+        if (!validateEmail(email)) {
+            setError('Please enter a valid email address.');
             return;
         }
 
+        setError('');
+        setSuccess('');
         setIsResending(true);
 
         try {
@@ -41,15 +53,9 @@ const VerificationErrorPage = () => {
                 email: email.trim().toLowerCase() 
             });
 
-            // response received for resend verification
-
             // Check response - backend always returns success message
             if (response && (response.success || response.message)) {
-                setToast({
-                    show: true,
-                    message: response.message || 'Verification email sent! Please check your inbox.',
-                    type: 'success'
-                });
+                setSuccess(response.message || 'Verification email sent! Please check your inbox.');
 
                 // Redirect to check email page after 2 seconds
                 setTimeout(() => {
@@ -58,26 +64,28 @@ const VerificationErrorPage = () => {
                     });
                 }, 2000);
             } else {
-                setToast({
-                    show: true,
-                    message: response?.error || 'Unexpected response from server.',
-                    type: 'error'
-                });
+                setError(response?.error || 'Unexpected response from server.');
             }
-        } catch (error) {
-            console.error('Resend verification error:', error);
-            console.error('Error response:', error.response);
+        } catch (err) {
+            let errorMessage;
             
-            const errorMsg = error.response?.data?.error 
-                || error.response?.data?.message
-                || error.message
-                || 'Failed to resend verification email. Please try again.';
+            if (!err.response) {
+                // Network error
+                errorMessage = 'Network error. Please check your internet connection and try again.';
+            } else if (err.response.status >= 500) {
+                // Server error
+                errorMessage = 'Server error. Please try again in a few moments.';
+            } else if (err.response.status === 429) {
+                // Rate limit
+                errorMessage = 'Too many requests. Please wait a moment and try again.';
+            } else {
+                // Other errors
+                errorMessage = err.response?.data?.error 
+                    || err.response?.data?.message
+                    || 'Failed to resend verification email. Please try again.';
+            }
             
-            setToast({
-                show: true,
-                message: errorMsg,
-                type: 'error'
-            });
+            setError(errorMessage);
         } finally {
             setIsResending(false);
         }
@@ -94,8 +102,8 @@ const VerificationErrorPage = () => {
             <div className="max-w-md w-full space-y-6 relative z-10">
                 <div className="glass-card rounded-2xl border-2 border-border p-8 text-center space-y-6 animate-pop">
                     {/* Error Icon */}
-                    <div className="mx-auto w-20 h-20 glass-card border-2 border-red-500/30 rounded-full flex items-center justify-center">\n                        <XCircle className="w-12 h-12 text-red-600 dark:text-red-400" />
-                        <XCircle className="w-12 h-12 text-white" />
+                    <div className="mx-auto w-20 h-20 glass-card border-2 border-red-500/30 rounded-full flex items-center justify-center">
+                        <XCircle className="w-12 h-12 text-red-600 dark:text-red-400" />
                     </div>
 
                     {/* Error Message */}
@@ -108,6 +116,10 @@ const VerificationErrorPage = () => {
                         </p>
                     </div>
 
+                    {/* Alerts */}
+                    {error && <Alert type="error" message={error} className="text-left" />}
+                    {success && <Alert type="success" message={success} className="text-left" />}
+
                     {/* Info Box */}
                     <div className="glass-card border-2 border-red-500/20 rounded-lg p-4 text-left space-y-2">
                         <p className="text-sm theme-text font-medium">
@@ -117,6 +129,7 @@ const VerificationErrorPage = () => {
                             <li>Link has expired (valid for 24 hours)</li>
                             <li>Link was already used</li>
                             <li>Link was copied incorrectly</li>
+                            <li>Email may still be verifying (check inbox)</li>
                         </ul>
                     </div>
 
@@ -132,18 +145,36 @@ const VerificationErrorPage = () => {
                                         <input
                                             type="email"
                                             value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
+                                            onChange={handleEmailChange}
                                             onKeyDown={(e) => e.key === 'Enter' && handleResendEmail()}
                                             placeholder="your.email@example.com"
-                                            className="w-full pl-10 pr-4 py-3 border-2 border-border rounded-lg focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all duration-200 theme-surface theme-text"
+                                            className={`w-full pl-10 pr-12 py-3 border-2 rounded-lg focus:ring-2 outline-none transition-all duration-200 theme-surface theme-text ${
+                                                emailError
+                                                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20'
+                                                    : email && validateEmail(email)
+                                                    ? 'border-green-500 focus:border-green-500 focus:ring-green-500/20'
+                                                    : 'border-border focus:border-accent focus:ring-accent/20'
+                                            }`}
                                             autoFocus
                                         />
+                                        {email && (
+                                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                                {validateEmail(email) ? (
+                                                    <CheckCircle className="w-5 h-5 text-green-500" />
+                                                ) : (
+                                                    <AlertCircle className="w-5 h-5 text-red-500" />
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
+                                    {emailError && (
+                                        <p className="text-xs text-red-600 dark:text-red-400 mt-1">{emailError}</p>
+                                    )}
                                 </div>
 
                                 <button
                                     onClick={handleResendEmail}
-                                    disabled={isResending}
+                                    disabled={isResending || !email || emailError}
                                     className="w-full flex items-center justify-center gap-2 px-6 py-3 btn-theme rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 interactive-scale"
                                 >
                                     <RefreshCw className={`w-4 h-4 ${isResending ? 'animate-spin' : ''}`} />
@@ -192,15 +223,6 @@ const VerificationErrorPage = () => {
                         </p>
                     </div>
                 </div>
-
-            {/* Toast Notification */}
-            {toast.show && (
-                <Toast
-                    message={toast.message}
-                    type={toast.type}
-                    onClose={() => setToast({ ...toast, show: false })}
-                />
-            )}
         </div>
     );
 };
