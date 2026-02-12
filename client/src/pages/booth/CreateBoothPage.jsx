@@ -322,7 +322,7 @@ export function CreateBooth() {
   if (checkingPermissions || loading) {
     return (
       <PageLoading
-        text={
+        message={
           checkingPermissions ? "Checking permissions..." : "Creating booth..."
         }
       />

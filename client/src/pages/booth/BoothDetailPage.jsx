@@ -325,14 +325,7 @@ const BoothDetailPage = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen theme-bg flex items-center justify-center">
-        <div className="text-center">
-          <PageLoading size="lg" color="teal" />
-          <p className="theme-text mt-4 text-lg">Loading booth details...</p>
-        </div>
-      </div>
-    );
+    return <PageLoading message="Loading booth details..." />;
   }
 
   if (error && !booth) {

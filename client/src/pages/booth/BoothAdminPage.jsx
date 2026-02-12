@@ -471,16 +471,7 @@ const BoothAdminPage = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen theme-bg flex items-center justify-center p-4">
-        <div className="text-center">
-          <PageLoading size="lg" color="teal" />
-          <p className="theme-muted mt-4 text-sm sm:text-base">
-            Loading booth administration...
-          </p>
-        </div>
-      </div>
-    );
+    return <PageLoading message="Loading booth administration..." />;
   }
 
   if (error && !booth) {

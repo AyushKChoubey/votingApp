@@ -428,14 +428,7 @@ const BoothResultsPage = () => {
     };
 
     if (loading) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 flex items-center justify-center">
-                <div className="text-center">
-                    <PageLoading size="lg" color="teal" />
-                    <p className="text-gray-700 mt-4 text-lg">Loading results...</p>
-                </div>
-            </div>
-        );
+        return <PageLoading message="Loading results..." />;
     }
 
     if (error && !booth) {

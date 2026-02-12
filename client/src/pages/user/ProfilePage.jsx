@@ -224,7 +224,7 @@ const ProfilePage = () => {
   };
 
   if (loading) {
-    return <PageLoading text="Loading your profile..." />;
+    return <PageLoading message="Loading your profile..." />;
   }
 
   if (!user) {

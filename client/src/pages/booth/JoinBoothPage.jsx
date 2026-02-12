@@ -4,7 +4,7 @@ import api, { boothService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { Alert } from '../../components/layout/Alert';
 import { useToast } from '../../components/layout/Toast';
-import { LoadingButton } from '../../components/layout/Loading';
+import { LoadingButton, PageLoading } from '../../components/layout/Loading';
 
 const JoinBoothPage = () => {
     const [inviteCode, setInviteCode] = useState('');
@@ -221,12 +221,8 @@ const JoinBoothPage = () => {
                     addToast(msg || 'Join request submitted and is pending approval', 'info');
                     // Do not navigate; user must wait for approval
                 } else {
-                    setSuccess('Successfully joined the booth!');
-                    addToast('Successfully joined the booth!', 'success');
-                    setTimeout(() => {
-                        // Use the boothId from the join response instead of the booth object
-                        navigate(`/booth/${response.boothId || booth.id}`);
-                    }, 1500);
+                    // Navigate immediately with success param - the booth detail page will show the welcome toast
+                    navigate(`/booth/${response.boothId || booth.id}?joined=true`);
                 }
             } else {
                 setError(response.error || 'Failed to join booth');
@@ -266,7 +262,10 @@ const JoinBoothPage = () => {
         }
     };
 
-
+    // Show loading state while auth is initializing
+    if (isLoading) {
+        return <PageLoading message="Loading..." />;
+    }
 
     return (
         <div className="min-h-screen theme-bg py-6 px-3 sm:py-8 sm:px-6 lg:px-8 relative overflow-hidden">

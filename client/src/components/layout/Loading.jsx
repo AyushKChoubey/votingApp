@@ -273,11 +273,11 @@ export const PageLoading = ({
   showLogo = true,
 }) => {
   return (
-    <div className="min-h-screen theme-bg flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="w-full min-h-screen theme-bg flex items-center justify-center p-4 sm:p-6 md:p-8 relative overflow-hidden">
       {/* Animated background orbs */}
       <div className="absolute top-0 right-0 -translate-y-12 translate-x-12 pointer-events-none">
         <div 
-          className="w-64 h-64 rounded-full blur-3xl opacity-20 animate-pulse" 
+          className="w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 rounded-full blur-3xl opacity-20 animate-pulse" 
           style={{ 
             background: 'radial-gradient(circle, var(--color-primary), var(--color-accent))',
             animationDuration: '3s'
@@ -286,7 +286,7 @@ export const PageLoading = ({
       </div>
       <div className="absolute bottom-0 left-0 translate-y-12 -translate-x-12 pointer-events-none">
         <div 
-          className="w-64 h-64 rounded-full blur-3xl opacity-15 animate-pulse" 
+          className="w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 rounded-full blur-3xl opacity-15 animate-pulse" 
           style={{ 
             background: 'radial-gradient(circle, var(--color-accent), var(--color-secondary))',
             animationDuration: '4s',
@@ -295,13 +295,13 @@ export const PageLoading = ({
         />
       </div>
 
-      <div className="text-center max-w-md relative z-10">
+      <div className="text-center w-full max-w-md mx-auto px-4 relative z-10">
         {/* Logo */}
         {showLogo && (
-          <div className="mb-8 flex justify-center animate-fadeIn">
-            <div className="btn-theme p-5 rounded-2xl shadow-2xl">
+          <div className="mb-6 sm:mb-8 flex justify-center animate-fadeIn">
+            <div className="btn-theme p-4 sm:p-5 rounded-xl sm:rounded-2xl shadow-2xl">
               <svg
-                className="w-12 h-12 text-white"
+                className="w-10 h-10 sm:w-12 sm:h-12 text-white"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -318,10 +318,10 @@ export const PageLoading = ({
         )}
         
         {/* Main Spinner - VISIBLE AND OBVIOUS */}
-        <div className="flex justify-center mb-8 animate-fadeIn" style={{ animationDelay: '0.1s' }}>
-          <div className="relative w-20 h-20">
+        <div className="flex justify-center mb-6 sm:mb-8 animate-fadeIn" style={{ animationDelay: '0.1s' }}>
+          <div className="relative w-16 h-16 sm:w-20 sm:h-20">
             {/* Spinning gradient ring */}
-            <svg className="w-20 h-20 animate-spin" style={{ animationDuration: '1s' }} viewBox="0 0 50 50">
+            <svg className="w-16 h-16 sm:w-20 sm:h-20 animate-spin" style={{ animationDuration: '1s' }} viewBox="0 0 50 50">
               <circle
                 className="opacity-20"
                 cx="25"
@@ -351,11 +351,11 @@ export const PageLoading = ({
         </div>
         
         {/* Content card */}
-        <div className="glass-card rounded-2xl p-8 shadow-2xl animate-fadeIn border-accent/20" style={{ animationDelay: '0.2s' }}>
-          <h3 className="text-2xl font-bold theme-text mb-3">
+        <div className="glass-card rounded-xl sm:rounded-2xl p-6 sm:p-8 shadow-2xl animate-fadeIn border-accent/20" style={{ animationDelay: '0.2s' }}>
+          <h3 className="text-xl sm:text-2xl font-bold theme-text mb-2 sm:mb-3">
             VoteBooth
           </h3>
-          <p className="theme-muted text-sm leading-relaxed">{message}</p>
+          <p className="theme-muted text-xs sm:text-sm leading-relaxed">{message}</p>
           
           {/* Simple progress dots */}
           <div className="flex justify-center items-center space-x-2 mt-4">

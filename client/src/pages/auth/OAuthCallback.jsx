@@ -48,7 +48,7 @@ const OAuthCallback = () => {
     );
   }
 
-  return <PageLoading text="Signing you in..." />;
+  return <PageLoading message="Signing you in..." />;
 };
 
 export default OAuthCallback;

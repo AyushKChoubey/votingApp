@@ -174,7 +174,7 @@ const SettingsPage = () => {
   };
 
   if (loading) {
-    return <PageLoading text="Loading your settings..." />;
+    return <PageLoading message="Loading your settings..." />;
   }
 
   if (!user) {
