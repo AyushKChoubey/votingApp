@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Lock, Eye, EyeOff, CheckCircle2, AlertTriangle, XCircle, RefreshCw } from 'lucide-react';
 import api from '../../../services/api';
@@ -20,6 +20,29 @@ export default function ResetPasswordPage() {
     const [success, setSuccess] = useState(false);
     const [tokenValid, setTokenValid] = useState(true);
     const [countdown, setCountdown] = useState(3);
+    const alertTimeoutRef = useRef(null);
+
+    // Auto-dismiss non-token alerts after 8 seconds
+    useEffect(() => {
+        if (alertTimeoutRef.current) {
+            clearTimeout(alertTimeoutRef.current);
+            alertTimeoutRef.current = null;
+        }
+
+        if (error) {
+            alertTimeoutRef.current = setTimeout(() => {
+                setError('');
+                alertTimeoutRef.current = null;
+            }, 8000);
+        }
+
+        return () => {
+            if (alertTimeoutRef.current) {
+                clearTimeout(alertTimeoutRef.current);
+                alertTimeoutRef.current = null;
+            }
+        };
+    }, [error]);
 
     // Password strength validation state
     const [validations, setValidations] = useState({
