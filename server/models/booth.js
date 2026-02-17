@@ -312,6 +312,9 @@ boothSchema.methods.addPendingRequest = async function (userId) {
   if (!result) {
     // Check specific reason for failure
     const currentBooth = await this.constructor.findById(this._id);
+    if (!currentBooth) {
+      throw new Error("Booth not found");
+    }
     if (currentBooth.isMember(userId)) {
       throw new Error("User is already a member");
     }
@@ -376,6 +379,9 @@ boothSchema.methods.markAsVoted = async function (userId) {
   if (!result) {
     // Check specific reason for failure
     const currentBooth = await this.constructor.findById(this._id);
+    if (!currentBooth) {
+      throw new Error("Booth not found");
+    }
     if (!currentBooth.isMember(userId)) {
       throw new Error("User is not a member of this booth");
     }

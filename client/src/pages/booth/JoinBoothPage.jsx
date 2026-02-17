@@ -147,13 +147,9 @@ const JoinBoothPage = () => {
           socketRef.current = null;
         }
         // Clear any pending copy-to-clipboard timeout to avoid state updates after unmount
-        try {
-          if (copyTimeoutRef.current) {
-            clearTimeout(copyTimeoutRef.current);
-            copyTimeoutRef.current = null;
-          }
-        } catch (e) {
-          // ignore
+        if (copyTimeoutRef.current) {
+          clearTimeout(copyTimeoutRef.current);
+          copyTimeoutRef.current = null;
         }
       } catch (e) {
         // ignore

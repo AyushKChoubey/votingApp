@@ -466,24 +466,13 @@ const BoothResultsPage = () => {
     // Compute heading based on error type
     let errorHeading = "Failed to load booth results"; // Default fallback
 
-    // Normalize error shape: support string or { status, message }
-    const errorStatus = error && typeof error === "object" && error.status ? Number(error.status) : null;
-    const errorMsg =
-      error && typeof error === "string"
-        ? error
-        : error && typeof error === "object"
-        ? (error.message || "")
-        : "";
-    const msgLower = (errorMsg || "").toLowerCase();
+    // Normalize error to a string and check message text for known statuses
+    const errorMsg = (error || "").toString();
+    const msgLower = errorMsg.toLowerCase();
 
-    if (
-      errorStatus === 404 ||
-      msgLower.includes("not found") ||
-      msgLower.includes("404")
-    ) {
+    if (msgLower.includes("not found") || msgLower.includes("404")) {
       errorHeading = "Booth not found";
     } else if (
-      errorStatus === 403 ||
       msgLower.includes("not authorized") ||
       msgLower.includes("forbidden") ||
       msgLower.includes("unauthorized") ||
