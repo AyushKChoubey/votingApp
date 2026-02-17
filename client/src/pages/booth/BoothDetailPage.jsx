@@ -1,5 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom";
+import {
+  useParams,
+  useNavigate,
+  useSearchParams,
+  useLocation,
+} from "react-router-dom";
 import api, { boothService } from "../../services/api";
 import { Alert } from "../../components/layout/Alert";
 import { LoadingButton, PageLoading } from "../../components/layout/Loading";
@@ -26,7 +31,10 @@ const BoothDetailPage = () => {
   const [countdownText, setCountdownText] = useState(null);
 
   const location = useLocation();
-  const initialBooth = location && location.state && location.state.booth ? location.state.booth : null;
+  const initialBooth =
+    location && location.state && location.state.booth
+      ? location.state.booth
+      : null;
 
   useEffect(() => {
     // Load booth details first, then show any toasts that depend on membership
@@ -113,8 +121,12 @@ const BoothDetailPage = () => {
 
     const compute = () => {
       const settings = (booth && booth.settings) || {};
-      const start = settings.votingStartTime ? new Date(settings.votingStartTime) : null;
-      const end = settings.votingEndTime ? new Date(settings.votingEndTime) : null;
+      const start = settings.votingStartTime
+        ? new Date(settings.votingStartTime)
+        : null;
+      const end = settings.votingEndTime
+        ? new Date(settings.votingEndTime)
+        : null;
       const now = new Date();
 
       // No schedule
@@ -159,15 +171,18 @@ const BoothDetailPage = () => {
     };
   }, [booth?.settings, permissions]);
 
-  function pad(n) { return n.toString().padStart(2, '0'); }
+  function pad(n) {
+    return n.toString().padStart(2, "0");
+  }
   function formatDuration(ms) {
-    if (ms <= 0) return '00:00:00';
+    if (ms <= 0) return "00:00:00";
     const total = Math.floor(ms / 1000);
     const days = Math.floor(total / 86400);
     const hours = Math.floor((total % 86400) / 3600);
     const minutes = Math.floor((total % 3600) / 60);
     const seconds = total % 60;
-    if (days > 0) return `${days}d ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+    if (days > 0)
+      return `${days}d ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
     return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
   }
 
@@ -187,11 +202,12 @@ const BoothDetailPage = () => {
         return false;
       }
     } catch (err) {
-      if (err.status === 403) {
+      const status = err?.response?.status || err?.status;
+      if (status === 403) {
         setError(
           "You are not a member of this booth. Please join using an invite code.",
         );
-      } else if (err.status === 404) {
+      } else if (status === 404) {
         setError("Booth not found");
       } else {
         setError("Failed to load booth details");
@@ -267,7 +283,8 @@ const BoothDetailPage = () => {
     const source = initialBooth || booth;
     const max = Number(source?.maxMembers);
     const maxDisplay = !Number.isNaN(max) && max > 0 ? max : 50;
-    const membersCount = source?.memberCount ?? (source?.members ? source.members.length : 0);
+    const membersCount =
+      source?.memberCount ?? (source?.members ? source.members.length : 0);
     const link = `${window.location.origin}/booth/join/${booth.inviteCode}`;
 
     const details = `Booth: ${booth.name}\nDescription: ${booth.description || "No description"}\nInvite Code: ${booth.inviteCode}\nJoin Link: ${link}\nMembers: ${membersCount} / ${maxDisplay}`;
@@ -454,14 +471,12 @@ const BoothDetailPage = () => {
               </span>
             )}
             {/* Countdown visible to members */}
-            {countdownText && (permissions.isMember || permissions.isCreator) && (
-              <span
-                style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca' }}
-                className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold"
-              >
-                {countdownText}
-              </span>
-            )}
+            {countdownText &&
+              (permissions.isMember || permissions.isCreator) && (
+                <span className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-700/30">
+                  {countdownText}
+                </span>
+              )}
           </div>
 
           {/* Action Buttons (Admin only, centered below badges) */}
@@ -917,6 +932,15 @@ const BoothDetailPage = () => {
               </div>
 
               <div className="space-y-3 sm:space-y-4">
+                <div className="flex justify-between items-center p-2 rounded-lg hover:bg-theme-surface/50 transition-colors">
+                  <span className="theme-muted text-sm sm:text-base">
+                    Booth ID:
+                  </span>
+                  <span className="font-bold theme-text text-base sm:text-lg font-mono">
+                    {booth?.boothId}
+                  </span>
+                </div>
+
                 <div className="flex justify-between items-center p-2 rounded-lg hover:bg-theme-surface/50 transition-colors">
                   <span className="theme-muted text-sm sm:text-base">
                     Created by:

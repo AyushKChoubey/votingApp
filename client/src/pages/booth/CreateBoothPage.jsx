@@ -78,7 +78,8 @@ export function CreateBooth() {
         setError("Unable to verify permissions");
       }
     } catch (err) {
-      if (err.status === 401) {
+      const status = err?.response?.status || err?.status;
+      if (status === 401) {
         setError("Please log in to create booths");
         // Optionally redirect to login
         setTimeout(() => {
@@ -129,16 +130,9 @@ export function CreateBooth() {
       // Handle maxMembers specially: allow blank, enforce min 2 when typing
       let numValue = value;
       if (value === "" || value === null || value === undefined) {
-                  setTimeout(() => {
-                    if (response.booth.id) {
-                      // Include the submitted maxMembers value to avoid UI mismatch while backend stabilizes
-                      const navBooth = { ...response.booth, maxMembers: submitData.maxMembers };
-                      navigate(`/booth/${response.booth.id}`, { state: { booth: navBooth, requestedMaxMembers: submitData.maxMembers } });
-                    } else {
-                      // Force dashboard refresh by adding state
-                      navigate("/dashboard", { state: { refresh: true } });
-                    }
-                  }, 2000);
+        numValue = "";
+      } else {
+        numValue = parseInt(value) || "";
       }
       setFormData((prev) => ({
         ...prev,
@@ -289,8 +283,9 @@ export function CreateBooth() {
         setCanCreate(currentBooths < maxBooths - 1);
 
         // Navigate immediately to the newly created booth
-        if (response.booth.id) {
-          navigate(`/booth/${response.booth.id}`, { replace: true });
+        if (response.booth.boothId || response.booth.id) {
+          const boothIdentifier = response.booth.boothId || response.booth.id;
+          navigate(`/booth/${boothIdentifier}`, { replace: true });
         } else {
           // Force dashboard refresh by adding state
           navigate("/dashboard", { state: { refresh: true }, replace: true });
@@ -878,11 +873,29 @@ export function CreateBooth() {
                       onChange={(e) => {
                         const checked = e.target.checked;
                         // toggle scheduled flag
-                        handleInputChange({ target: { name: "settings.scheduled", type: "checkbox", checked } });
+                        handleInputChange({
+                          target: {
+                            name: "settings.scheduled",
+                            type: "checkbox",
+                            checked,
+                          },
+                        });
                         if (!checked) {
                           // clear times when disabling schedule
-                          handleInputChange({ target: { name: "settings.votingStartTime", type: "text", value: "" } });
-                          handleInputChange({ target: { name: "settings.votingEndTime", type: "text", value: "" } });
+                          handleInputChange({
+                            target: {
+                              name: "settings.votingStartTime",
+                              type: "text",
+                              value: "",
+                            },
+                          });
+                          handleInputChange({
+                            target: {
+                              name: "settings.votingEndTime",
+                              type: "text",
+                              value: "",
+                            },
+                          });
                         }
                       }}
                       className="mt-1 h-4 w-4 text-accent theme-surface border-border rounded focus:ring-accent"

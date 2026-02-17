@@ -159,9 +159,10 @@ const BoothAdminPage = () => {
         setError(response.error || "Failed to load booth details");
       }
     } catch (err) {
-      if (err.status === 403) {
+      const status = err?.response?.status || err?.status;
+      if (status === 403) {
         setError("You are not authorized to access this booth");
-      } else if (err.status === 404) {
+      } else if (status === 404) {
         setError("Booth not found");
       } else {
         setError(err.message || "Failed to load booth details");
@@ -309,8 +310,9 @@ const BoothAdminPage = () => {
           }
         } catch (err) {
           // If schedule expired, show a helpful warning and open settings to update schedule
+          const status = err?.response?.status || err?.status;
           const isExpired =
-            err?.status === 400 &&
+            status === 400 &&
             (err?.data?.code === "SCHEDULE_EXPIRED" ||
               /voting period has already ended/i.test(
                 err?.data?.error || err?.message || "",
@@ -544,8 +546,11 @@ const BoothAdminPage = () => {
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold theme-text mb-3 sm:mb-4 break-words">
                 <span className="text-gradient">{booth?.name}</span>
               </h1>
+              <p className="text-xl font-semibold theme-muted mb-1 font-mono">
+                Booth ID: {booth?.boothId}
+              </p>
               <p
-                className="text-sm sm:text-base lg:text-lg theme-muted mb-2 sm:mb-3 max-w-2xl mx-auto leading-relaxed animate-fadeIn break-words"
+                className="text-sm sm:text-base lg:text-lg font-semibold theme-text mb-2 sm:mb-3 max-w-2xl mx-auto leading-relaxed animate-fadeIn break-words"
                 style={{ "--stagger-index": 1 }}
               >
                 Admin Dashboard

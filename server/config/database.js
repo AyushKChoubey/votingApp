@@ -5,7 +5,7 @@ require("dotenv").config();
 const mongoURL =
   process.env.NODE_ENV === "production"
     ? process.env.MONGODB_URI
-    : process.env.MONGODB_LOCAL_URL || "mongodb://localhost:27017/votingApp";
+    : "mongodb://localhost:27017/votingApp";
 
 // Validate connection URL
 if (!mongoURL) {
@@ -14,7 +14,10 @@ if (!mongoURL) {
 }
 
 // Set up MongoDB connection
-mongoose.connect(mongoURL);
+mongoose.connect(mongoURL).catch((err) => {
+  console.error("❌ MongoDB initial connection error:", err);
+  process.exit(1);
+});
 
 // Get the default connection
 // Mongoose maintains a default connection object representing the MongoDB connection.

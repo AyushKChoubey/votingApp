@@ -30,6 +30,8 @@ router.get("/dashboard", jwtAuthMiddleware, async (req, res) => {
       createdAt: -1,
     });
 
+    // logging removed
+
     // Get booths where user is a member
     const joinedBooths = await Booth.find({
       "members.user": userId,
@@ -49,6 +51,9 @@ router.get("/dashboard", jwtAuthMiddleware, async (req, res) => {
       activeBooths: createdBooths.filter((b) => b.status === "active").length,
     };
 
+    // DEBUG: Log sample booth to verify boothId is included
+    // logging removed
+
     res.json({
       success: true,
       data: {
@@ -59,6 +64,7 @@ router.get("/dashboard", jwtAuthMiddleware, async (req, res) => {
         },
         createdBooths: createdBooths.map((booth) => ({
           id: booth._id,
+          boothId: booth.boothId,
           name: booth.name,
           description: booth.description,
           status: booth.status,
@@ -70,6 +76,7 @@ router.get("/dashboard", jwtAuthMiddleware, async (req, res) => {
         })),
         joinedBooths: joinedBooths.map((booth) => ({
           id: booth._id,
+          boothId: booth.boothId,
           name: booth.name,
           description: booth.description,
           status: booth.status,
@@ -87,7 +94,7 @@ router.get("/dashboard", jwtAuthMiddleware, async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Dashboard API error:", err);
+    // logging removed
     res.status(500).json({ error: "Failed to load dashboard data" });
   }
 });
@@ -113,7 +120,7 @@ router.get("/create", jwtAuthMiddleware, async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Create check API error:", err);
+    // logging removed
     res.status(500).json({ error: "Failed to check creation permissions" });
   }
 });
@@ -138,7 +145,7 @@ router.get("/join/:code", jwtAuthMiddleware, async (req, res) => {
         await booth.closeIfExpired();
       }
     } catch (e) {
-      console.error("Error auto-closing booth:", e);
+      // logging removed
     }
     const isCreator = booth.creator._id.toString() === userId;
 
@@ -150,6 +157,7 @@ router.get("/join/:code", jwtAuthMiddleware, async (req, res) => {
         },
         booth: {
           id: booth._id,
+          boothId: booth.boothId,
           name: booth.name,
           description: booth.description,
           creator: booth.creator,
@@ -162,7 +170,7 @@ router.get("/join/:code", jwtAuthMiddleware, async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Join code API error:", err);
+    // logging removed
     res.status(500).json({ error: "Failed to process invite code" });
   }
 });
@@ -173,19 +181,27 @@ router.get("/:boothId", jwtAuthMiddleware, async (req, res) => {
     const { boothId } = req.params;
     const userId = req.user.id;
 
-    // Validate ObjectId format
-    const mongoose = require("mongoose");
-    if (!mongoose.Types.ObjectId.isValid(boothId)) {
-      return res.status(400).json({ error: "Invalid booth ID format" });
-    }
+    let booth;
 
-    const booth = await Booth.findById(boothId)
-      .populate("creator", "name email")
-      .populate("members.user", "name");
+    // Check if it's a boothId format (VBB + hex) or MongoDB ObjectId
+    if (/^VBB[0-9A-F]{6}$/i.test(boothId)) {
+      // Public boothId format
+      booth = await Booth.findByBoothId(boothId);
+    } else {
+      // Try MongoDB ObjectId format for backward compatibility
+      const mongoose = require("mongoose");
+      if (mongoose.Types.ObjectId.isValid(boothId)) {
+        booth = await Booth.findById(boothId);
+      }
+    }
 
     if (!booth) {
       return res.status(404).json({ error: "Booth not found" });
     }
+
+    // Populate after finding
+    await booth.populate("creator", "name email");
+    await booth.populate("members.user", "name");
 
     const isMember = booth.isMember(userId);
     const isCreator = booth.creator._id.toString() === userId;
@@ -206,6 +222,7 @@ router.get("/:boothId", jwtAuthMiddleware, async (req, res) => {
       data: {
         booth: {
           id: booth._id,
+          boothId: booth.boothId, // Include public boothId in response
           name: booth.name,
           description: booth.description,
           creator: booth.creator,
@@ -234,7 +251,7 @@ router.get("/:boothId", jwtAuthMiddleware, async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Booth details API error:", err);
+    // logging removed
     res.status(500).json({ error: "Failed to load booth details" });
   }
 });
@@ -245,11 +262,22 @@ router.get("/:boothId/results", jwtAuthMiddleware, async (req, res) => {
     const { boothId } = req.params;
     const userId = req.user.id;
 
-    const booth = await Booth.findById(boothId).populate("creator", "name");
+    // Support both boothId and MongoDB _id
+    let booth;
+    if (/^VBB[0-9A-F]{6}$/i.test(boothId)) {
+      booth = await Booth.findByBoothId(boothId);
+    } else {
+      const mongoose = require("mongoose");
+      if (mongoose.Types.ObjectId.isValid(boothId)) {
+        booth = await Booth.findById(boothId);
+      }
+    }
 
     if (!booth) {
       return res.status(404).json({ error: "Booth not found" });
     }
+
+    await booth.populate("creator", "name");
 
     const isCreator = booth.creator._id.toString() === userId;
     const isMember = booth.isMember(userId);
@@ -286,6 +314,7 @@ router.get("/:boothId/results", jwtAuthMiddleware, async (req, res) => {
       data: {
         booth: {
           id: booth._id,
+          boothId: booth.boothId,
           name: booth.name,
           description: booth.description,
           creator: booth.creator,
@@ -301,7 +330,7 @@ router.get("/:boothId/results", jwtAuthMiddleware, async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Results API error:", err);
+    // logging removed
     res.status(500).json({ error: "Failed to load results" });
   }
 });
@@ -312,14 +341,24 @@ router.get("/:boothId/admin", jwtAuthMiddleware, async (req, res) => {
     const { boothId } = req.params;
     const userId = req.user.id;
 
-    const booth = await Booth.findById(boothId)
-      .populate("members.user", "name email")
-      .populate("creator", "name email")
-      .populate("pendingRequests.user", "name email");
+    // Support both boothId and MongoDB _id
+    let booth;
+    if (/^VBB[0-9A-F]{6}$/i.test(boothId)) {
+      booth = await Booth.findByBoothId(boothId);
+    } else {
+      const mongoose = require("mongoose");
+      if (mongoose.Types.ObjectId.isValid(boothId)) {
+        booth = await Booth.findById(boothId);
+      }
+    }
 
     if (!booth) {
       return res.status(404).json({ error: "Booth not found" });
     }
+
+    await booth.populate("members.user", "name email");
+    await booth.populate("creator", "name email");
+    await booth.populate("pendingRequests.user", "name email");
 
     if (booth.creator._id.toString() !== userId) {
       return res.status(403).json({
@@ -332,14 +371,14 @@ router.get("/:boothId/admin", jwtAuthMiddleware, async (req, res) => {
         await booth.closeIfExpired();
       }
     } catch (e) {
-      console.error("Error auto-closing booth (admin):", e);
+      // logging removed
     }
 
-    const voteCount = await Vote.countDocuments({ booth: boothId });
+    const voteCount = await Vote.countDocuments({ booth: booth._id });
     const stats = booth.getStats();
 
     // Get recent votes for audit
-    const recentVotes = await Vote.find({ booth: boothId })
+    const recentVotes = await Vote.find({ booth: booth._id })
       .populate("voter", "name email")
       .sort({ votedAt: -1 })
       .limit(10);
@@ -352,6 +391,7 @@ router.get("/:boothId/admin", jwtAuthMiddleware, async (req, res) => {
         },
         booth: {
           id: booth._id,
+          boothId: booth.boothId,
           name: booth.name,
           description: booth.description,
           creator: booth.creator,
@@ -378,7 +418,7 @@ router.get("/:boothId/admin", jwtAuthMiddleware, async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Admin panel API error:", err);
+    // logging removed
     res.status(500).json({ error: "Failed to load admin panel data" });
   }
 });
@@ -389,13 +429,23 @@ router.get("/:boothId/export", jwtAuthMiddleware, async (req, res) => {
     const { boothId } = req.params;
     const userId = req.user.id;
 
-    const booth = await Booth.findById(boothId)
-      .populate("creator", "name email")
-      .populate("members.user", "name email");
+    // Support both boothId and MongoDB _id
+    let booth;
+    if (/^VBB[0-9A-F]{6}$/i.test(boothId)) {
+      booth = await Booth.findByBoothId(boothId);
+    } else {
+      const mongoose = require("mongoose");
+      if (mongoose.Types.ObjectId.isValid(boothId)) {
+        booth = await Booth.findById(boothId);
+      }
+    }
 
     if (!booth) {
       return res.status(404).json({ error: "Booth not found" });
     }
+
+    await booth.populate("creator", "name email");
+    await booth.populate("members.user", "name email");
 
     if (booth.creator._id.toString() !== userId) {
       return res
@@ -403,13 +453,14 @@ router.get("/:boothId/export", jwtAuthMiddleware, async (req, res) => {
         .json({ error: "Only booth creator can export data" });
     }
 
-    const votes = await Vote.find({ booth: boothId })
+    const votes = await Vote.find({ booth: booth._id })
       .populate("voter", "name email")
       .sort({ votedAt: -1 });
 
     const data = {
       booth: {
         id: booth._id,
+        boothId: booth.boothId,
         name: booth.name,
         description: booth.description,
         createdAt: booth.createdAt,
@@ -447,7 +498,7 @@ router.get("/:boothId/export", jwtAuthMiddleware, async (req, res) => {
       data,
     });
   } catch (err) {
-    console.error("Export API error:", err);
+    // logging removed
     res.status(500).json({ error: "Failed to export booth data" });
   }
 });
@@ -478,7 +529,10 @@ router.delete(
       }
 
       // Find any votes by this member for this booth so we can adjust counts
-      const memberVotes = await Vote.find({ booth: boothId, voter: memberId });
+      const memberVotes = await Vote.find({
+        booth: booth._id,
+        voter: memberId,
+      });
 
       // Remove member from the booth (model method saves and returns updated doc)
       const updatedBooth = await booth.removeMember(memberId);
@@ -517,11 +571,11 @@ router.delete(
       }
 
       // Finally remove member's Vote documents
-      await Vote.deleteMany({ booth: boothId, voter: memberId });
+      await Vote.deleteMany({ booth: booth._id, voter: memberId });
 
       res.json({ success: true, message: "Member removed successfully" });
     } catch (err) {
-      console.error("Remove member API error:", err);
+      // logging removed
       res.status(500).json({ error: "Failed to remove member" });
     }
   },

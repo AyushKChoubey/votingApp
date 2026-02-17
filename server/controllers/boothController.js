@@ -5,6 +5,19 @@ const Vote = require("../models/vote");
 const validator = require("validator");
 const socket = require("../config/socket");
 
+// Helper function to find booth by either boothId or MongoDB _id
+const findBoothByIdOrBoothId = async (identifier) => {
+  // Check if it's a boothId format (VBB + hex)
+  if (/^VBB[0-9A-F]{6}$/i.test(identifier)) {
+    return await Booth.findByBoothId(identifier);
+  }
+  // Otherwise, try MongoDB ObjectId
+  if (validator.isMongoId(identifier)) {
+    return await Booth.findById(identifier);
+  }
+  return null;
+};
+
 // Input validation helpers
 const validateBoothName = (name) => {
   return (
@@ -256,6 +269,7 @@ exports.createBooth = async (req, res) => {
       message: "Booth created successfully",
       booth: {
         id: booth._id,
+        boothId: booth.boothId,
         name: booth.name,
         inviteCode: booth.inviteCode,
         inviteLink: `${req.protocol}://${req.get("host")}/booth/join/${booth.inviteCode}`,
@@ -410,12 +424,10 @@ exports.joinBooth = async (req, res) => {
       const user = await User.findById(userId);
 
       if (!user?.email) {
-        return res
-          .status(400)
-          .json({
-            error:
-              "User account must have a valid email address to join this booth",
-          });
+        return res.status(400).json({
+          error:
+            "User account must have a valid email address to join this booth",
+        });
       }
 
       const userEmailDomain = user.email.split("@")[1];
@@ -432,11 +444,9 @@ exports.joinBooth = async (req, res) => {
         const domainList = booth.settings.allowedEmailDomains
           .map((d) => (d.startsWith("@") ? d : "@" + d))
           .join(", ");
-        return res
-          .status(403)
-          .json({
-            error: `Only users with ${domainList} email addresses can join this booth`,
-          });
+        return res.status(403).json({
+          error: `Only users with ${domainList} email addresses can join this booth`,
+        });
       }
     }
 
