@@ -78,7 +78,7 @@ function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [logout]);
 
   // Initial load — validate token first to avoid showing dashboard for expired sessions
   useEffect(() => {
@@ -582,7 +582,7 @@ function StatsCard({ title, value, icon, color, refreshing }) {
           <p className="theme-muted text-xs sm:text-sm truncate">{title}</p>
           <p className="text-lg sm:text-2xl font-bold theme-text">
             {refreshing ? (
-              <div className="animate-pulse theme-surface h-6 sm:h-8 w-8 sm:w-12 rounded"></div>
+              <span className="inline-block animate-pulse theme-surface h-6 sm:h-8 w-8 sm:w-12 rounded" />
             ) : (
               value
             )}

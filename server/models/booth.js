@@ -291,24 +291,44 @@ boothSchema.methods.addMember = async function (userId) {
 
 // Add a pending join request (used when requireApproval is enabled)
 boothSchema.methods.addPendingRequest = async function (userId) {
-  // Prevent if already a member
-  if (this.isMember(userId)) {
-    throw new Error("User is already a member");
+  // Use atomic update to prevent race conditions
+  const result = await this.constructor.findOneAndUpdate(
+    {
+      _id: this._id,
+      "members.user": { $ne: userId }, // Ensure user is not already a member
+      "pendingRequests.user": { $ne: userId }, // Ensure no duplicate request
+    },
+    {
+      $push: {
+        pendingRequests: {
+          user: userId,
+          requestedAt: new Date(),
+        },
+      },
+    },
+    { new: true }
+  );
+
+  if (!result) {
+    // Check specific reason for failure
+    const currentBooth = await this.constructor.findById(this._id);
+    if (currentBooth.isMember(userId)) {
+      throw new Error("User is already a member");
+    }
+    if (
+      currentBooth.pendingRequests &&
+      currentBooth.pendingRequests.some(
+        (r) => (r.user._id || r.user).toString() === userId.toString(),
+      )
+    ) {
+      throw new Error("Join request already submitted");
+    }
+    throw new Error("Failed to add pending request");
   }
 
-  // Prevent duplicate requests
-  if (
-    this.pendingRequests &&
-    this.pendingRequests.some(
-      (r) => (r.user._id || r.user).toString() === userId.toString(),
-    )
-  ) {
-    throw new Error("Join request already submitted");
-  }
-
-  this.pendingRequests = this.pendingRequests || [];
-  this.pendingRequests.push({ user: userId, requestedAt: new Date() });
-  return this.save();
+  // Update this instance with the new data
+  this.pendingRequests = result.pendingRequests;
+  return this;
 };
 
 // Remove a pending request (used on approve/reject)
@@ -331,22 +351,43 @@ boothSchema.methods.removeMember = async function (userId) {
 
 // Mark user as voted
 boothSchema.methods.markAsVoted = async function (userId) {
-  const member = this.members.find((member) => {
-    // Handle both populated and unpopulated user references
-    const memberId = member.user._id || member.user;
-    return memberId.toString() === userId.toString();
-  });
+  // Use atomic update with arrayFilters to prevent race conditions
+  const result = await this.constructor.findOneAndUpdate(
+    {
+      _id: this._id,
+      members: {
+        $elemMatch: {
+          user: userId,
+          hasVoted: false,
+        },
+      },
+    },
+    {
+      $set: {
+        "members.$[elem].hasVoted": true,
+      },
+    },
+    {
+      new: true,
+      arrayFilters: [{ "elem.user": userId, "elem.hasVoted": false }],
+    }
+  );
 
-  if (!member) {
-    throw new Error("User is not a member of this booth");
+  if (!result) {
+    // Check specific reason for failure
+    const currentBooth = await this.constructor.findById(this._id);
+    if (!currentBooth.isMember(userId)) {
+      throw new Error("User is not a member of this booth");
+    }
+    if (currentBooth.hasUserVoted(userId)) {
+      throw new Error("User has already voted");
+    }
+    throw new Error("Failed to mark user as voted");
   }
 
-  if (member.hasVoted) {
-    throw new Error("User has already voted");
-  }
-
-  member.hasVoted = true;
-  return this.save();
+  // Update this instance with the new data
+  this.members = result.members;
+  return this;
 };
 
 // Increment vote count for a candidate

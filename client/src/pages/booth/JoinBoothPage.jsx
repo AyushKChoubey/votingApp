@@ -19,6 +19,7 @@ const JoinBoothPage = () => {
   const [pendingRequest, setPendingRequest] = useState(false);
   const socketRef = useRef(null);
   const boothRef = useRef(null); // Track current booth to avoid stale closure in socket handler
+  const copyTimeoutRef = useRef(null);
   const { addToast } = useToast();
 
   const navigate = useNavigate();
@@ -144,6 +145,15 @@ const JoinBoothPage = () => {
         if (socketRef.current) {
           socketRef.current.disconnect();
           socketRef.current = null;
+        }
+        // Clear any pending copy-to-clipboard timeout to avoid state updates after unmount
+        try {
+          if (copyTimeoutRef.current) {
+            clearTimeout(copyTimeoutRef.current);
+            copyTimeoutRef.current = null;
+          }
+        } catch (e) {
+          // ignore
         }
       } catch (e) {
         // ignore
@@ -320,7 +330,14 @@ const JoinBoothPage = () => {
     try {
       await navigator.clipboard.writeText(link);
       setSuccess("Invite link copied to clipboard");
-      setTimeout(() => setSuccess(""), 2500);
+      // store timeout id so we can clear it if the component unmounts
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+      copyTimeoutRef.current = setTimeout(() => {
+        setSuccess("");
+        copyTimeoutRef.current = null;
+      }, 2500);
     } catch (err) {
       setError("Failed to copy invite link");
     }

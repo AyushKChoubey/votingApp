@@ -466,18 +466,28 @@ const BoothResultsPage = () => {
     // Compute heading based on error type
     let errorHeading = "Failed to load booth results"; // Default fallback
 
+    // Normalize error shape: support string or { status, message }
+    const errorStatus = error && typeof error === "object" && error.status ? Number(error.status) : null;
+    const errorMsg =
+      error && typeof error === "string"
+        ? error
+        : error && typeof error === "object"
+        ? (error.message || "")
+        : "";
+    const msgLower = (errorMsg || "").toLowerCase();
+
     if (
-      error.status === 404 ||
-      (error &&
-        typeof error === "string" &&
-        error.toLowerCase().includes("not found"))
+      errorStatus === 404 ||
+      msgLower.includes("not found") ||
+      msgLower.includes("404")
     ) {
       errorHeading = "Booth not found";
     } else if (
-      error.status === 403 ||
-      (error &&
-        typeof error === "string" &&
-        error.toLowerCase().includes("not authorized"))
+      errorStatus === 403 ||
+      msgLower.includes("not authorized") ||
+      msgLower.includes("forbidden") ||
+      msgLower.includes("unauthorized") ||
+      msgLower.includes("403")
     ) {
       errorHeading = "Access Denied";
     }
