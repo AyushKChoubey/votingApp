@@ -484,49 +484,26 @@ exports.vote = async (req, res) => {
     const { candidateIndex } = req.body;
     const userId = req.user.id;
 
-    if (!validator.isMongoId(boothId)) {
-      const error = "Invalid booth ID";
-      if (req.accepts("html")) {
-        return res.status(404).render("error", { error });
-      }
-      return res.status(404).json({ error });
-    }
-
-    const booth = await Booth.findById(boothId);
+    const booth = await findBoothByIdOrBoothId(boothId);
 
     if (!booth) {
-      const error = "Booth not found";
-      if (req.accepts("html")) {
-        return res.status(404).render("error", { error });
-      }
-      return res.status(404).json({ error });
+      return res.status(404).json({ error: "Booth not found" });
     }
 
     // Check voting permissions
     const votingStatus = booth.isVotingAllowed();
     if (!votingStatus.allowed) {
-      if (req.accepts("html")) {
-        return res.status(400).render("error", { error: votingStatus.reason });
-      }
       return res.status(400).json({ error: votingStatus.reason });
     }
 
     // Check if user is a member
     if (!booth.isMember(userId)) {
-      const error = "You must be a member to vote";
-      if (req.accepts("html")) {
-        return res.status(403).render("error", { error });
-      }
-      return res.status(403).json({ error });
+      return res.status(403).json({ error: "You must be a member to vote" });
     }
 
     // Check if user has already voted
     if (booth.hasUserVoted(userId)) {
-      const error = "You have already voted in this booth";
-      if (req.accepts("html")) {
-        return res.status(400).render("error", { error });
-      }
-      return res.status(400).json({ error });
+      return res.status(400).json({ error: "You have already voted in this booth" });
     }
 
     // Validate candidate index
@@ -536,11 +513,7 @@ exports.vote = async (req, res) => {
       candidateIdx < 0 ||
       candidateIdx >= booth.candidates.length
     ) {
-      const error = "Invalid candidate selection";
-      if (req.accepts("html")) {
-        return res.status(400).render("error", { error });
-      }
-      return res.status(400).json({ error });
+      return res.status(400).json({ error: "Invalid candidate selection" });
     }
 
     // Note: vote changes are not supported (legacy setting removed);
@@ -552,7 +525,7 @@ exports.vote = async (req, res) => {
 
     // Create vote record for audit trail
     const vote = new Vote({
-      booth: boothId,
+      booth: booth._id,
       voter: userId,
       candidateIndex: candidateIdx,
       candidateName: booth.candidates[candidateIdx].name,
@@ -566,7 +539,7 @@ exports.vote = async (req, res) => {
       const io = socket.getIo && socket.getIo();
       if (io) {
         // Send aggregate counts only (no voter-identifying data)
-        io.to(`booth:${boothId}`).emit("vote:update", {
+        io.to(`booth:${booth._id}`).emit("vote:update", {
           candidateIndex: candidateIdx,
           candidates: booth.candidates.map((c) => ({
             _id: c._id,

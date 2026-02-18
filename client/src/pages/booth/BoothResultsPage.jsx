@@ -334,11 +334,11 @@ const BoothResultsPage = () => {
                 <body>
                     <div class="print-container">
                         <div class="results-header">
-                            <div class="results-title">${booth?.name || "Voting Booth"}</div>
-                            <div class="results-subtitle">Result</div>
-                            <div class="meta-info">
-                                Generated ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })} at ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
-                            </div>
+                          <div class="results-title">${booth?.name || "Voting Booth"}</div>
+                          <div class="results-subtitle">Result</div>
+                          <div class="meta-info">
+                            ID: ${booth?.boothId || ''} · Generated ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })} at ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                          </div>
                         </div>
                         
                         <div class="summary-stats">
@@ -563,6 +563,7 @@ const BoothResultsPage = () => {
             >
               Result
             </p>
+            <p className="text-xs theme-muted mb-2">ID: {booth?.boothId || booth?._id}</p>
           </div>
 
           {/* Action Buttons (Admin only, centered below title) */}
