@@ -93,6 +93,13 @@ const corsOptions = {
   optionsSuccessStatus: 200, // For legacy browser support
 };
 
+// Permissive CORS for health check endpoints (before main CORS)
+app.use(["/health", "/api/health", "/api/health/services"], cors({
+  origin: "*", // Allow health checks from any origin
+  methods: ["GET", "OPTIONS"],
+  optionsSuccessStatus: 200,
+}));
+
 app.use(cors(corsOptions));
 
 // Body parsing middleware
