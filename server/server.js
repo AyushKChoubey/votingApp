@@ -253,18 +253,27 @@ app.use((err, req, res, next) => {
   const status = err.status || err.statusCode || 500;
 
   // Determine safe error message for production
-  // Only expose err.message in production if it's a trusted error type
-  const isSafeError = err.safeMessage || 
-    err.name === 'ValidationError' || 
-    err.name === 'NotFoundError' ||
-    err.name === 'UnauthorizedError' ||
-    (status >= 400 && status < 500 && err.isOperational);
-  
-  const errorMessage = process.env.NODE_ENV === "production"
-    ? (status === 500 
-        ? "Internal server error" 
-        : (isSafeError ? err.message : "An error occurred"))
-    : err.message;
+  let errorMessage;
+  if (process.env.NODE_ENV === "production") {
+    if (status === 500) {
+      // Never expose internal server errors
+      errorMessage = "Internal server error";
+    } else if (status >= 400 && status < 500) {
+      // Client errors (4xx) are safe to expose
+      errorMessage = err.message || "Bad request";
+    } else {
+      // For other statuses, check if error is marked as safe
+      const isSafeError = err.safeMessage || 
+        err.name === 'ValidationError' || 
+        err.name === 'NotFoundError' ||
+        err.name === 'UnauthorizedError' ||
+        err.isOperational;
+      errorMessage = isSafeError ? err.message : "An error occurred";
+    }
+  } else {
+    // Development: always show full error message
+    errorMessage = err.message;
+  }
 
   // Send JSON error response
   res.status(status).json({
@@ -294,12 +303,19 @@ try {
 }
 
 const startServer = async () => {
-  // Handle server errors (e.g., port already in use)
+  // Handle server errors
   server.on('error', (err) => {
-    console.error('❌ Failed to start server:', err);
-    console.error(`   Port ${PORT} on ${HOST} may already be in use`);
-    console.error(`   Error code: ${err.code}`);
-    process.exit(1);
+    // Only exit for bind/startup errors
+    if (err.code === 'EADDRINUSE' || err.code === 'EACCES') {
+      console.error('❌ Failed to start server:', err);
+      console.error(`   Port ${PORT} on ${HOST} may already be in use or permission denied`);
+      console.error(`   Error code: ${err.code}`);
+      process.exit(1);
+    } else {
+      // Log runtime errors but don't exit
+      console.error('⚠️ Server error:', err);
+      console.error(`   Error code: ${err.code}`);
+    }
   });
 
   server.listen(PORT, HOST, () => {
@@ -318,36 +334,42 @@ const closeServerGracefully = async (signal) => {
   
   let exitCode = 0;
   
-  // Stop accepting new connections
-  server.close((err) => {
-    if (err) {
-      console.error("❌ Error closing server:", err);
-      exitCode = 1;
-    } else {
-      console.log("✅ Server closed successfully");
-    }
-  });
-  
   // Set timeout for forced shutdown
   const forceShutdownTimeout = setTimeout(() => {
     console.error("⚠️ Forcing shutdown after timeout");
-    exitCode = 1;
-    process.exit(exitCode);
+    process.exit(1);
   }, 10000); // 10 second timeout
+  
+  try {
+    // Promisify server.close to await it properly
+    await new Promise((resolve, reject) => {
+      server.close((err) => {
+        if (err) {
+          console.error("❌ Error closing server:", err);
+          reject(err);
+        } else {
+          console.log("✅ Server closed successfully");
+          resolve();
+        }
+      });
+    });
+  } catch (err) {
+    console.error("❌ Failed to close server:", err);
+    exitCode = 1;
+  }
   
   try {
     // Close database connection
     await db.close();
     console.log("✅ Database connection closed");
-    
-    clearTimeout(forceShutdownTimeout);
-    console.log("👋 Shutdown complete");
-    process.exit(exitCode);
   } catch (err) {
-    console.error("❌ Error during shutdown:", err);
-    clearTimeout(forceShutdownTimeout);
-    process.exit(1);
+    console.error("❌ Error closing database:", err);
+    exitCode = 1;
   }
+  
+  clearTimeout(forceShutdownTimeout);
+  console.log("👋 Shutdown complete");
+  process.exit(exitCode);
 };
 
 // Handle graceful shutdown
