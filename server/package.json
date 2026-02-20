@@ -1,7 +1,7 @@
 {
   "name": "votingapp",
-  "version": "1.0.0",
-  "description": "",
+  "version": "2.0.0",
+  "description": "Secure voting application with real-time results and admin dashboard",
   "main": "server.js",
   "scripts": {
     "test": "echo \"No tests specified\"",

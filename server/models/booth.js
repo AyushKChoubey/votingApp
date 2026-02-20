@@ -140,6 +140,16 @@ const boothSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+
+  // Soft delete
+  isDeleted: {
+    type: Boolean,
+    default: false,
+  },
+  deletedAt: {
+    type: Date,
+    default: null,
+  },
 });
 
 // Generate unique boothId (VBB prefix + exactly 6 hex chars)
@@ -176,6 +186,16 @@ boothSchema.methods.generateNewInviteCode = async function () {
   this.inviteCode = code;
   return this.save();
 };
+
+// Auto-exclude soft-deleted booths from all find / count queries.
+// Callers wishing to query deleted booths must explicitly pass { isDeleted: true }
+// or { isDeleted: { $in: [true, false] } } in their filter.
+boothSchema.pre(/^find|^count/, function (next) {
+  if (this.getFilter().isDeleted === undefined) {
+    this.where({ isDeleted: { $ne: true } });
+  }
+  next();
+});
 
 // Pre-save middleware to generate boothId and invite code
 boothSchema.pre("save", async function (next) {
@@ -306,7 +326,7 @@ boothSchema.methods.addPendingRequest = async function (userId) {
         },
       },
     },
-    { new: true }
+    { new: true },
   );
 
   if (!result) {
@@ -373,7 +393,7 @@ boothSchema.methods.markAsVoted = async function (userId) {
     {
       new: true,
       arrayFilters: [{ "elem.user": userId, "elem.hasVoted": false }],
-    }
+    },
   );
 
   if (!result) {
@@ -410,7 +430,7 @@ boothSchema.methods.incrementVote = async function (candidateIndex) {
         totalVotes: 1,
       },
     },
-    { new: true }
+    { new: true },
   );
 
   if (!result) {
@@ -470,6 +490,17 @@ boothSchema.methods.closeIfExpired = async function () {
       if (now > end) {
         this.status = "closed";
         await this.save();
+        // Log as a system action (no human actor — userId is null)
+        try {
+          const logActivity = require("../utils/logActivity");
+          await logActivity(
+            this._id,
+            null,
+            "[System] Voting closed automatically (schedule ended)",
+          );
+        } catch (logErr) {
+          // swallow — logging must never block the close
+        }
         return true;
       }
     }
@@ -496,6 +527,7 @@ boothSchema.index({ inviteCode: 1 });
 boothSchema.index({ creator: 1, createdAt: -1 });
 boothSchema.index({ "members.user": 1 });
 boothSchema.index({ status: 1, createdAt: -1 });
+boothSchema.index({ isDeleted: 1, createdAt: -1 });
 
 const Booth = mongoose.model("Booth", boothSchema);
 module.exports = Booth;

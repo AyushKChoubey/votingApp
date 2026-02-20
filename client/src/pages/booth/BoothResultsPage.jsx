@@ -337,7 +337,7 @@ const BoothResultsPage = () => {
                           <div class="results-title">${booth?.name || "Voting Booth"}</div>
                           <div class="results-subtitle">Result</div>
                           <div class="meta-info">
-                            ID: ${booth?.boothId || ''} · Generated ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })} at ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                            ID: ${booth?.boothId || booth?._id || ''} · Generated ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })} at ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
                           </div>
                         </div>
                         

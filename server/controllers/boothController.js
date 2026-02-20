@@ -2,6 +2,8 @@
 const Booth = require("../models/booth");
 const User = require("../models/user");
 const Vote = require("../models/vote");
+const BoothActivity = require("../models/boothActivity");
+const logActivity = require("../utils/logActivity");
 const validator = require("validator");
 const socket = require("../config/socket");
 
@@ -264,6 +266,22 @@ exports.createBooth = async (req, res) => {
     }
     await user.save();
 
+    // Log activity — include admin name and creation time only here
+    const createdAt = booth.createdAt
+      ? new Date(booth.createdAt).toLocaleString("en-IN", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        })
+      : new Date().toLocaleString("en-IN", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        });
+    await logActivity(
+      booth._id,
+      userId,
+      `${user.name} created this booth on ${createdAt}`,
+    );
+
     res.status(201).json({
       success: true,
       message: "Booth created successfully",
@@ -290,17 +308,7 @@ exports.getBoothDetails = async (req, res) => {
     const { boothId } = req.params;
     const userId = req.user.id;
 
-    if (!validator.isMongoId(boothId)) {
-      const error = "Invalid booth ID";
-      if (req.accepts("html")) {
-        return res.status(404).render("error", { error });
-      }
-      return res.status(404).json({ error });
-    }
-
-    const booth = await Booth.findById(boothId)
-      .populate("creator", "name email")
-      .populate("members.user", "name email");
+    const booth = await findBoothByIdOrBoothId(boothId);
 
     if (!booth) {
       const error = "Booth not found";
@@ -309,6 +317,9 @@ exports.getBoothDetails = async (req, res) => {
       }
       return res.status(404).json({ error });
     }
+
+    await booth.populate("creator", "name email");
+    await booth.populate("members.user", "name email");
 
     const isMember = booth.isMember(userId);
     const isCreator = booth.creator._id.toString() === userId;
@@ -406,6 +417,12 @@ exports.joinBooth = async (req, res) => {
       // If already requested, respond accordingly
       try {
         await booth.addPendingRequest(userId);
+        const requestingUser = await User.findById(userId).select("name");
+        await logActivity(
+          booth._id,
+          userId,
+          `${requestingUser?.name || "Someone"} submitted a join request`,
+        );
         return res.json({
           success: true,
           message: "Join request submitted and pending approval",
@@ -462,6 +479,12 @@ exports.joinBooth = async (req, res) => {
         await user.save();
       }
 
+      await logActivity(
+        booth._id,
+        userId,
+        `${user?.name || "Someone"} joined the booth`,
+      );
+
       res.json({
         success: true,
         message: "Successfully joined booth",
@@ -503,7 +526,9 @@ exports.vote = async (req, res) => {
 
     // Check if user has already voted
     if (booth.hasUserVoted(userId)) {
-      return res.status(400).json({ error: "You have already voted in this booth" });
+      return res
+        .status(400)
+        .json({ error: "You have already voted in this booth" });
     }
 
     // Validate candidate index
@@ -522,6 +547,14 @@ exports.vote = async (req, res) => {
     // Mark user as voted and increment vote count
     await booth.markAsVoted(userId);
     await booth.incrementVote(candidateIdx);
+
+    // Log activity (fire-and-forget)
+    const votingUser = await User.findById(userId).select("name");
+    await logActivity(
+      booth._id,
+      userId,
+      `${votingUser?.name || "Someone"} cast a vote`,
+    );
 
     // Create vote record for audit trail
     const vote = new Vote({
@@ -571,19 +604,13 @@ exports.getResults = async (req, res) => {
     const { boothId } = req.params;
     const userId = req.user.id;
 
-    if (!validator.isMongoId(boothId)) {
-      const error = "Invalid booth ID";
-      return res.status(404).json({ error });
-    }
-
-    const booth = await Booth.findById(boothId).populate(
-      "creator",
-      "name email",
-    );
+    const booth = await findBoothByIdOrBoothId(boothId);
 
     if (!booth) {
       return res.status(404).json({ error: "Booth not found" });
     }
+
+    await booth.populate("creator", "name email");
 
     const isCreator = booth.creator._id.toString() === userId;
     const isMember = booth.isMember(userId);
@@ -638,11 +665,7 @@ exports.resetInviteCode = async (req, res) => {
     const { boothId } = req.params;
     const userId = req.user.id;
 
-    if (!validator.isMongoId(boothId)) {
-      return res.status(404).json({ error: "Invalid booth ID" });
-    }
-
-    const booth = await Booth.findById(boothId);
+    const booth = await findBoothByIdOrBoothId(boothId);
 
     if (!booth) {
       return res.status(404).json({ error: "Booth not found" });
@@ -655,6 +678,8 @@ exports.resetInviteCode = async (req, res) => {
     }
 
     await booth.generateNewInviteCode();
+
+    await logActivity(booth._id, userId, "Admin reset the invite code");
 
     const inviteLink = `${req.protocol}://${req.get("host")}/booth/join/${booth.inviteCode}`;
 
@@ -678,11 +703,7 @@ exports.updateBoothSettings = async (req, res) => {
     const userId = req.user.id;
     const settings = req.body;
 
-    if (!validator.isMongoId(boothId)) {
-      return res.status(404).json({ error: "Invalid booth ID" });
-    }
-
-    const booth = await Booth.findById(boothId);
+    const booth = await findBoothByIdOrBoothId(boothId);
 
     if (!booth) {
       return res.status(404).json({ error: "Booth not found" });
@@ -710,6 +731,8 @@ exports.updateBoothSettings = async (req, res) => {
     booth.settings = { ...booth.settings, ...settings };
     await booth.save();
 
+    await logActivity(booth._id, userId, "Admin updated booth settings");
+
     // Return consistent success shape so clients can check `response.success`
     res.json({
       success: true,
@@ -728,11 +751,7 @@ exports.getBoothEditForm = async (req, res) => {
     const { boothId } = req.params;
     const userId = req.user.id;
 
-    if (!validator.isMongoId(boothId)) {
-      return res.status(404).render("error", { error: "Invalid booth ID" });
-    }
-
-    const booth = await Booth.findById(boothId);
+    const booth = await findBoothByIdOrBoothId(boothId);
 
     if (!booth) {
       return res.status(404).render("error", { error: "Booth not found" });
@@ -767,11 +786,7 @@ exports.editBooth = async (req, res) => {
     description = description ? description.trim() : "";
     maxMembers = maxMembers ? parseInt(maxMembers) : null;
 
-    if (!validator.isMongoId(boothId)) {
-      return res.status(404).render("error", { error: "Invalid booth ID" });
-    }
-
-    const booth = await Booth.findById(boothId);
+    const booth = await findBoothByIdOrBoothId(boothId);
 
     if (!booth) {
       return res.status(404).render("error", { error: "Booth not found" });
@@ -876,6 +891,8 @@ exports.editBooth = async (req, res) => {
 
     await booth.save();
 
+    await logActivity(booth._id, userId, "Admin updated booth details");
+
     res.json({
       success: true,
       message: "Booth updated successfully",
@@ -887,21 +904,13 @@ exports.editBooth = async (req, res) => {
   }
 };
 
-// Delete booth
+// Soft-delete booth — marks isDeleted: true, preserves votes and history
 exports.deleteBooth = async (req, res) => {
   try {
     const { boothId } = req.params;
     const userId = req.user.id;
 
-    if (!validator.isMongoId(boothId)) {
-      const error = "Invalid booth ID";
-      if (req.accepts("html")) {
-        return res.status(404).render("error", { error });
-      }
-      return res.status(404).json({ error });
-    }
-
-    const booth = await Booth.findById(boothId);
+    const booth = await findBoothByIdOrBoothId(boothId);
 
     if (!booth) {
       const error = "Booth not found";
@@ -919,22 +928,12 @@ exports.deleteBooth = async (req, res) => {
       return res.status(403).json({ error });
     }
 
-    // Delete related votes
-    await Vote.deleteMany({ booth: boothId });
+    // Soft delete — votes, members, and analytics are preserved
+    booth.isDeleted = true;
+    booth.deletedAt = new Date();
+    await booth.save();
 
-    // Remove booth from users' arrays
-    await User.updateMany(
-      { $or: [{ createdBooths: boothId }, { joinedBooths: boothId }] },
-      {
-        $pull: {
-          createdBooths: boothId,
-          joinedBooths: boothId,
-        },
-      },
-    );
-
-    // Delete the booth
-    await Booth.findByIdAndDelete(boothId);
+    await logActivity(booth._id, userId, "Admin deleted the booth");
 
     res.json({
       success: true,
@@ -950,17 +949,59 @@ exports.deleteBooth = async (req, res) => {
   }
 };
 
+// Restore a soft-deleted booth (creator only)
+exports.restoreBooth = async (req, res) => {
+  try {
+    const { boothId } = req.params;
+    const userId = req.user.id;
+
+    // Need to bypass the auto-exclude middleware for deleted booths
+    let booth = null;
+    if (/^VBB[0-9A-F]{6}$/i.test(boothId)) {
+      booth = await Booth.findOne({
+        boothId: boothId.toUpperCase(),
+        isDeleted: true,
+      });
+    } else if (validator.isMongoId(boothId)) {
+      booth = await Booth.findOne({ _id: boothId, isDeleted: true });
+    }
+
+    if (!booth) {
+      return res.status(404).json({ error: "Deleted booth not found" });
+    }
+
+    if (booth.creator.toString() !== userId) {
+      return res
+        .status(403)
+        .json({ error: "Only booth creator can restore a booth" });
+    }
+
+    booth.isDeleted = false;
+    booth.deletedAt = null;
+    await booth.save();
+
+    res.json({
+      success: true,
+      message: "Booth restored successfully",
+      booth: {
+        id: booth._id,
+        boothId: booth.boothId,
+        name: booth.name,
+      },
+    });
+  } catch (err) {
+    console.error("Restore booth error:", err);
+    res.status(500).json({ error: "Failed to restore booth" });
+  }
+};
+
 // Toggle booth status
 exports.toggleBoothStatus = async (req, res) => {
   try {
     const { boothId } = req.params;
     const userId = req.user.id;
 
-    if (!validator.isMongoId(boothId)) {
-      return res.status(404).json({ error: "Invalid booth ID" });
-    }
-
-    const booth = await Booth.findById(boothId);
+    const booth = await findBoothByIdOrBoothId(boothId);
 
     if (!booth) {
       return res.status(404).json({ error: "Booth not found" });
@@ -996,6 +1037,10 @@ exports.toggleBoothStatus = async (req, res) => {
     booth.status = newStatus;
     await booth.save();
 
+    const statusMsg =
+      newStatus === "active" ? "Admin started voting" : "Admin closed voting";
+    await logActivity(booth._id, userId, statusMsg);
+
     // Return consistent success shape so client handlers can check response.success
     res.json({
       success: true,
@@ -1014,11 +1059,11 @@ exports.approveJoinRequest = async (req, res) => {
     const { boothId, userId } = req.params;
     const actorId = req.user.id;
 
-    if (!validator.isMongoId(boothId) || !validator.isMongoId(userId)) {
-      return res.status(404).json({ error: "Invalid id(s) provided" });
+    if (!validator.isMongoId(userId)) {
+      return res.status(404).json({ error: "Invalid user ID provided" });
     }
 
-    const booth = await Booth.findById(boothId);
+    const booth = await findBoothByIdOrBoothId(boothId);
     if (!booth) return res.status(404).json({ error: "Booth not found" });
 
     if (booth.creator.toString() !== actorId) {
@@ -1049,6 +1094,14 @@ exports.approveJoinRequest = async (req, res) => {
     // Remove pending request
     await booth.removePendingRequest(userId);
 
+    // Log activity — look up the approved user's name
+    const approvedUser = await User.findById(userId).select("name");
+    await logActivity(
+      booth._id,
+      actorId,
+      `Admin approved ${approvedUser?.name || "a member"}`,
+    );
+
     // Notify the requester via socket (if connected)
     try {
       const io = socket.getIo && socket.getIo();
@@ -1077,11 +1130,11 @@ exports.rejectJoinRequest = async (req, res) => {
     const { boothId, userId } = req.params;
     const actorId = req.user.id;
 
-    if (!validator.isMongoId(boothId) || !validator.isMongoId(userId)) {
-      return res.status(404).json({ error: "Invalid id(s) provided" });
+    if (!validator.isMongoId(userId)) {
+      return res.status(404).json({ error: "Invalid user ID provided" });
     }
 
-    const booth = await Booth.findById(boothId);
+    const booth = await findBoothByIdOrBoothId(boothId);
     if (!booth) return res.status(404).json({ error: "Booth not found" });
 
     if (booth.creator.toString() !== actorId) {
@@ -1101,6 +1154,14 @@ exports.rejectJoinRequest = async (req, res) => {
     }
 
     await booth.removePendingRequest(userId);
+
+    // Log activity
+    const rejectedUser = await User.findById(userId).select("name");
+    await logActivity(
+      booth._id,
+      actorId,
+      `Admin rejected ${rejectedUser?.name || "a user"}'s join request`,
+    );
 
     // Notify the requester via socket (if connected)
     try {
@@ -1193,3 +1254,37 @@ exports.getUserBooths = async (req, res) => {
 };
 
 // Legacy direct-invite handler removed — front-end join flow and API are used instead.
+
+// Get booth activity timeline (admin only)
+exports.getBoothActivity = async (req, res) => {
+  try {
+    const { boothId } = req.params;
+    const userId = req.user.id;
+
+    const booth = await findBoothByIdOrBoothId(boothId);
+
+    if (!booth) {
+      return res.status(404).json({ error: "Booth not found" });
+    }
+
+    // Only booth creator (admin) may view the activity log
+    if (booth.creator.toString() !== userId) {
+      return res
+        .status(403)
+        .json({ error: "Only booth admins can view the activity log" });
+    }
+
+    const activities = await BoothActivity.find({ booth: booth._id })
+      .populate("user", "name")
+      .sort({ createdAt: -1 })
+      .limit(100);
+
+    res.json({
+      success: true,
+      data: { activities },
+    });
+  } catch (err) {
+    console.error("Get booth activity error:", err);
+    res.status(500).json({ error: "Failed to fetch activity log" });
+  }
+};

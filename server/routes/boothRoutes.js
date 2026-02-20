@@ -5,6 +5,7 @@ const boothController = require("../controllers/boothController");
 const { jwtAuthMiddleware } = require("../middleware/jwt");
 const Booth = require("../models/booth");
 const Vote = require("../models/vote");
+const logActivity = require("../utils/logActivity");
 const {
   createBoothLimiter,
   voteLimiter,
@@ -512,7 +513,19 @@ router.delete(
       const { boothId, memberId } = req.params;
       const userId = req.user.id;
 
-      const booth = await Booth.findById(boothId);
+      // Helper to find booth by either boothId or MongoDB _id
+      const findBoothByIdOrBoothId = async (identifier) => {
+        if (/^VBB[0-9A-F]{6}$/i.test(identifier)) {
+          return await Booth.findByBoothId(identifier);
+        }
+        const validator = require("validator");
+        if (validator.isMongoId(identifier)) {
+          return await Booth.findById(identifier);
+        }
+        return null;
+      };
+
+      const booth = await findBoothByIdOrBoothId(boothId);
 
       if (!booth) {
         return res.status(404).json({ error: "Booth not found" });
@@ -562,16 +575,22 @@ router.delete(
 
       // Also remove from user's joined booths
       const User = require("../models/user");
-      const user = await User.findById(memberId);
-      if (user) {
-        user.joinedBooths = user.joinedBooths.filter(
-          (id) => id.toString() !== boothId,
+      const removedUser = await User.findById(memberId);
+      if (removedUser) {
+        removedUser.joinedBooths = removedUser.joinedBooths.filter(
+          (id) => id.toString() !== booth._id.toString(),
         );
-        await user.save();
+        await removedUser.save();
       }
 
       // Finally remove member's Vote documents
       await Vote.deleteMany({ booth: booth._id, voter: memberId });
+
+      await logActivity(
+        booth._id,
+        userId,
+        `Admin removed ${removedUser?.name || "a member"}`,
+      );
 
       res.json({ success: true, message: "Member removed successfully" });
     } catch (err) {
@@ -643,8 +662,15 @@ router.post(
   boothController.toggleBoothStatus,
 );
 
-// Delete booth
+// Delete booth (soft delete)
 router.delete("/:boothId", jwtAuthMiddleware, boothController.deleteBooth);
+
+// Restore a soft-deleted booth (creator only)
+router.post(
+  "/:boothId/restore",
+  jwtAuthMiddleware,
+  boothController.restoreBooth,
+);
 
 // Edit booth
 router.put("/:boothId", jwtAuthMiddleware, boothController.editBooth);
@@ -654,5 +680,12 @@ router.post("/:boothId/edit", jwtAuthMiddleware, boothController.editBooth);
 
 // Get user's booths (API)
 router.get("/user/booths", jwtAuthMiddleware, boothController.getUserBooths);
+
+// Booth activity timeline (admin only)
+router.get(
+  "/:boothId/activity",
+  jwtAuthMiddleware,
+  boothController.getBoothActivity,
+);
 
 module.exports = router;

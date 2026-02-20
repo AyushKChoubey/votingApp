@@ -432,16 +432,21 @@ const BoothDetailPage = () => {
       <div className="max-w-6xl mx-auto relative z-10">
         {/* Header */}
         <div className="mb-6 animate-fadeIn">
-          <div className="text-center pt-2 sm:pt-3 mb-6">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold theme-text mb-3 sm:mb-4 break-words">
-              <span className="text-gradient">{booth?.name}</span>
+          <div className="text-center pt-2 sm:pt-3 mb-4">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2 break-words">
+              <span className="text-gradient">Booth Details</span>
             </h1>
-            <p
-              className="text-sm sm:text-base lg:text-lg theme-muted mb-2 sm:mb-3 max-w-2xl mx-auto leading-relaxed animate-fadeIn break-words"
-              style={{ "--stagger-index": 1 }}
-            >
-              {booth?.description}
+            <p className="text-sm sm:text-base theme-muted font-mono font-semibold mb-1">
+              Booth ID: {booth?.boothId}
             </p>
+            <p className="text-base sm:text-lg font-semibold theme-text mb-1 break-words">
+              {booth?.name}
+            </p>
+            {booth?.description && (
+              <p className="text-sm sm:text-base theme-muted max-w-2xl mx-auto leading-relaxed break-words">
+                {booth?.description}
+              </p>
+            )}
           </div>
 
           {/* Status Badges (centered below description) */}

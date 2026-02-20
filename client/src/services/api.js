@@ -94,7 +94,7 @@ api.interceptors.response.use(
 
         // Use replace instead of redirect to prevent back button showing empty page
         window.location.replace("/login?message=session_expired");
-        
+
         // Don't reset the flag - we're navigating away anyway
         return new Promise(() => {}); // Never resolve to prevent further execution
       }
@@ -217,6 +217,14 @@ export const boothService = {
 
   async toggleStatus(boothId) {
     return api.post(`/api/booth/${boothId}/toggle-status`);
+  },
+
+  async restoreBooth(boothId) {
+    return api.post(`/api/booth/${boothId}/restore`);
+  },
+
+  async getActivity(boothId) {
+    return api.get(`/api/booth/${boothId}/activity`);
   },
 
   async exportData(boothId, format) {

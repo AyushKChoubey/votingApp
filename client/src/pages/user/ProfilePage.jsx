@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { LoadingButton, PageLoading } from "../../components/layout/Loading";
 import { useToast } from "../../components/layout/Toast";
-import BackButton from "../../components/layout/BackButton";
 import api from "../../services/api";
 
 const ProfilePage = () => {

@@ -432,19 +432,22 @@ export function CreateBooth() {
 
           {/* Progress Bar */}
           <div
-            className="max-w-xs sm:max-w-md mx-auto mt-6 sm:mt-8 animate-fadeIn"
+            className="max-w-xs sm:max-w-md mx-auto mt-3 sm:mt-4 animate-fadeIn"
             style={{ "--stagger-index": 3 }}
           >
-            <div className="theme-surface rounded-full h-2 sm:h-3">
+            <div
+              className="rounded-full h-2 sm:h-3 overflow-hidden"
+              style={{ backgroundColor: "var(--color-border)" }}
+            >
               <div
-                className="bg-gradient-to-r from-accent to-success h-2 sm:h-3 rounded-full transition-all duration-500"
-                style={{ width: `${(currentBooths / maxBooths) * 100}%` }}
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${Math.max((currentBooths / maxBooths) * 100, currentBooths > 0 ? 4 : 0)}%`,
+                  background:
+                    "linear-gradient(90deg, var(--color-accent), var(--color-success))",
+                }}
               ></div>
             </div>
-            <p className="text-xs theme-muted mt-2 sm:mt-3">
-              {maxBooths - currentBooths}{" "}
-              {maxBooths - currentBooths === 1 ? "booth" : "booths"} remaining
-            </p>
           </div>
         </div>
 

@@ -1,7 +1,86 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import ThemeToggle from './ThemeToggle';
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import ThemeToggle from "./ThemeToggle";
+
+// ── Service health banner ────────────────────────────────────────────────────
+const ServiceBanner = () => {
+  const [degraded, setDegraded] = useState([]);
+  const [dismissed, setDismissed] = useState(false);
+
+  const check = useCallback(async () => {
+    try {
+      const BASE = import.meta.env.VITE_API_URL || "";
+      const res = await fetch(`${BASE}/api/health/services`, {
+        credentials: "include",
+      });
+      const data = await res.json();
+      const down = (data.services || []).filter((s) => !s.ok);
+      setDegraded(down);
+      // If everything recovered, un-dismiss so the banner re-appears if it breaks again
+      if (down.length === 0) setDismissed(false);
+    } catch {
+      // If health endpoint itself is unreachable, don't show banner — app-level spinner handles that
+    }
+  }, []);
+
+  useEffect(() => {
+    check();
+    const id = setInterval(check, 60_000);
+    return () => clearInterval(id);
+  }, [check]);
+
+  if (dismissed || degraded.length === 0) return null;
+
+  const names = degraded.map((s) => s.label).join(", ");
+
+  return (
+    <div
+      role="alert"
+      className="w-full bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-between gap-3 text-sm"
+    >
+      <div className="flex items-center gap-2 text-amber-800">
+        <svg
+          className="w-4 h-4 flex-shrink-0 text-amber-500"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+          />
+        </svg>
+        <span>
+          <strong>Some services are currently unavailable</strong> — {names}.
+          Certain features may not work as expected.
+        </span>
+      </div>
+      <button
+        onClick={() => setDismissed(true)}
+        aria-label="Dismiss warning"
+        className="flex-shrink-0 text-amber-500 hover:text-amber-700 transition-colors"
+      >
+        <svg
+          className="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
+      </button>
+    </div>
+  );
+};
+// ─────────────────────────────────────────────────────────────────────────────
 
 const Navigation = () => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -12,36 +91,40 @@ const Navigation = () => {
   useEffect(() => {
     const handleClickOutside = (e) => {
       // If neither the desktop menu nor the mobile menu contain the click, close menu
-      const clickedInsideDesktop = menuRef.current && menuRef.current.contains(e.target);
-      const clickedInsideMobile = mobileMenuRef.current && mobileMenuRef.current.contains(e.target);
+      const clickedInsideDesktop =
+        menuRef.current && menuRef.current.contains(e.target);
+      const clickedInsideMobile =
+        mobileMenuRef.current && mobileMenuRef.current.contains(e.target);
       if (isMenuOpen && !clickedInsideDesktop && !clickedInsideMobile) {
         setIsMenuOpen(false);
       }
     };
 
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isMenuOpen) {
+      if (e.key === "Escape" && isMenuOpen) {
         setIsMenuOpen(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('touchstart', handleClickOutside);
-    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('touchstart', handleClickOutside);
-      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
     };
   }, [isMenuOpen]);
-  
+
   // Prevent body scroll when mobile menu is open
   useEffect(() => {
     if (isMenuOpen) {
       const prev = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-      return () => { document.body.style.overflow = prev; };
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
     }
     return undefined;
   }, [isMenuOpen]);
@@ -50,26 +133,24 @@ const Navigation = () => {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/?message=logged_out');
+    navigate("/?message=logged_out");
   };
 
   const isActivePath = (path) => location.pathname === path;
 
   const publicNavItems = [
-    { path: '/', label: 'Home' },
-    { path: '/about', label: 'About' },
-    { path: '/features', label: 'Features' },
-    { path: '/contact', label: 'Contact' },
+    { path: "/", label: "Home" },
+    { path: "/about", label: "About" },
+    { path: "/features", label: "Features" },
+    { path: "/contact", label: "Contact" },
   ];
 
-  const userNavItems = [
-    { path: '/dashboard', label: 'Dashboard' },
-  ];
+  const userNavItems = [{ path: "/dashboard", label: "Dashboard" }];
 
   return (
     <nav className="theme-surface shadow-sm border-b border-border sticky top-0 z-40">
-          <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
-            <style>{`
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
+        <style>{`
               /* Hide username and slightly reduce avatar in the narrow mid breakpoint (767px - 840px)
                  This improves UX where space is limited between sm and md Tailwind breakpoints. */
               @media (min-width: 767px) and (max-width: 840px) {
@@ -80,14 +161,26 @@ const Navigation = () => {
             `}</style>
         <div className="flex items-center justify-between h-12 sm:h-16">
           {/* Logo - Mobile Optimized */}
-              <div className="flex-shrink-0">
+          <div className="flex-shrink-0">
             <Link to="/" className="flex items-center space-x-2 sm:space-x-3">
               <div className="w-8 h-8 sm:w-10 sm:h-10 btn-theme rounded-lg sm:rounded-xl flex items-center justify-center transition-all duration-300">
-                <svg className="w-4 h-4 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg
+                  className="w-4 h-4 sm:w-6 sm:h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
               </div>
-              <span className="text-lg sm:text-xl lg:text-2xl font-bold theme-text">VoteBooth</span>
+              <span className="text-lg sm:text-xl lg:text-2xl font-bold theme-text">
+                VoteBooth
+              </span>
             </Link>
           </div>
 
@@ -101,9 +194,9 @@ const Navigation = () => {
                     key={item.path}
                     to={item.path}
                     className={`px-2 lg:px-3 py-2 text-xs lg:text-sm font-medium transition-all duration-300 rounded-md ${
-                      isActivePath(item.path) 
-                        ? 'text-accent bg-accent-50 border-l-4 border-accent' 
-                        : 'theme-text theme-muted hover:text-accent hover:bg-gray-50'
+                      isActivePath(item.path)
+                        ? "text-accent bg-accent-50 border-l-4 border-accent"
+                        : "theme-text theme-muted hover:text-accent hover:bg-gray-50"
                     }`}
                   >
                     {item.label}
@@ -115,19 +208,29 @@ const Navigation = () => {
               <div className="flex items-center space-x-2 lg:space-x-4">
                 {/* Theme Toggle */}
                 <ThemeToggle />
-                
+
                 {/* Dashboard - only when authenticated */}
                 {isAuthenticated && (
                   <Link
                     to="/dashboard"
                     className={`flex items-center px-3 lg:px-4 py-2 text-sm font-semibold rounded-full transition-all duration-300 ${
-                      isActivePath('/dashboard')
-                        ? 'btn-theme shadow-md'
-                        : 'theme-surface theme-text hover:btn-theme'
+                      isActivePath("/dashboard")
+                        ? "btn-theme shadow-md"
+                        : "theme-surface theme-text hover:btn-theme"
                     }`}
                   >
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h7v7H3V3zm0 11h7v7H3v-7zm11-11h7v7h-7V3zm0 11h7v7h-7v-7z" />
+                    <svg
+                      className="w-4 h-4 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 3h7v7H3V3zm0 11h7v7H3v-7zm11-11h7v7h-7V3zm0 11h7v7h-7v-7z"
+                      />
                     </svg>
                     <span className="hidden sm:inline">Dashboard</span>
                   </Link>
@@ -136,14 +239,14 @@ const Navigation = () => {
                 {/* Auth buttons */}
                 {!isAuthenticated ? (
                   <>
-                    <Link 
-                      to="/login" 
+                    <Link
+                      to="/login"
                       className="px-3 lg:px-4 py-1.5 lg:py-2 text-xs lg:text-sm font-medium theme-text hover:text-accent hover:bg-gray-50 rounded-lg transition-all duration-300"
                     >
                       Sign In
                     </Link>
-                    <Link 
-                      to="/register" 
+                    <Link
+                      to="/register"
                       className="px-4 lg:px-6 py-1.5 lg:py-2 text-xs lg:text-sm font-medium btn-theme rounded-lg transition-all duration-300 shadow-md"
                     >
                       Sign Up
@@ -156,13 +259,15 @@ const Navigation = () => {
                       className="flex items-center space-x-2 px-2 py-1.5 theme-text hover:text-accent transition-colors rounded-md hover:bg-gray-50"
                     >
                       <div className="w-7 h-7 lg:w-9 lg:h-9 nav-avatar overflow-hidden rounded-full bg-gray-100 flex items-center justify-center ring-1 ring-gray-200">
-                        {(user?.profile?.avatar || user?.profilePicture) ? (
+                        {user?.profile?.avatar || user?.profilePicture ? (
                           <img
                             src={user?.profile?.avatar || user?.profilePicture}
-                            alt={`Avatar of ${user?.name || 'user'}`}
+                            alt={`Avatar of ${user?.name || "user"}`}
                             className="w-full h-full object-cover"
                             loading="lazy"
-                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none";
+                            }}
                           />
                         ) : (
                           <span className="theme-text font-medium text-xs lg:text-sm">
@@ -174,10 +279,20 @@ const Navigation = () => {
                         className="font-medium text-xs lg:text-sm hidden sm:block max-w-[9rem] truncate hide-at-mid"
                         title={user?.name}
                       >
-                        {user?.name ? user.name.split(' ')[0] : ''}
+                        {user?.name ? user.name.split(" ")[0] : ""}
                       </span>
-                      <svg className="w-3 h-3 lg:w-4 lg:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      <svg
+                        className="w-3 h-3 lg:w-4 lg:h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
                       </svg>
                     </button>
 
@@ -222,23 +337,23 @@ const Navigation = () => {
             </div>
           </div>
 
-
-
           {/* Mobile menu button + Profile icon - Enhanced Design */}
-            <div className="md:hidden flex items-center space-x-2">
+          <div className="md:hidden flex items-center space-x-2">
             {/* Theme Toggle for mobile */}
             <ThemeToggle />
-            
+
             {/* Profile icon - only when authenticated */}
-              {isAuthenticated && (
+            {isAuthenticated && (
               <div className="w-8 h-8 nav-avatar overflow-hidden rounded-full bg-gray-100 flex items-center justify-center ring-1 ring-gray-200">
-                {(user?.profile?.avatar || user?.profilePicture) ? (
+                {user?.profile?.avatar || user?.profilePicture ? (
                   <img
                     src={user?.profile?.avatar || user?.profilePicture}
-                    alt={`Avatar of ${user?.name || 'user'}`}
+                    alt={`Avatar of ${user?.name || "user"}`}
                     className="w-full h-full object-cover"
                     loading="lazy"
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
                   />
                 ) : (
                   <span className="theme-text font-medium text-sm">
@@ -247,17 +362,31 @@ const Navigation = () => {
                 )}
               </div>
             )}
-            
+
             {/* Hamburger menu */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none focus-ring"
             >
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
                 {isMenuOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
                 )}
               </svg>
             </button>
@@ -266,32 +395,57 @@ const Navigation = () => {
 
         {/* Mobile Navigation Popup (full-screen, non-scrollable) */}
         {isMenuOpen && (
-            <div className="md:hidden fixed inset-0 z-50">
+          <div className="md:hidden fixed inset-0 z-50">
             {/* Backdrop */}
-            <div 
+            <div
               className="fixed inset-0 bg-black bg-opacity-40 transition-opacity"
               onClick={() => setIsMenuOpen(false)}
             ></div>
-            
+
             {/* Fullscreen Mobile Menu Panel - covers entire viewport and prevents scrolling */}
-            <div ref={mobileMenuRef} className="fixed inset-0 theme-surface shadow-2xl transform transition-transform duration-300 ease-out overflow-hidden">
-                <div className="flex flex-col h-full">
+            <div
+              ref={mobileMenuRef}
+              className="fixed inset-0 theme-surface shadow-2xl transform transition-transform duration-300 ease-out overflow-hidden"
+            >
+              <div className="flex flex-col h-full">
                 {/* Header - Improved Spacing */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
                   <div className="flex items-center space-x-3">
                     <div className="w-6 h-6 btn-theme rounded-lg flex items-center justify-center shadow-sm">
-                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <svg
+                        className="w-4 h-4 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
                       </svg>
                     </div>
-                    <span className="text-base font-bold text-gray-900">VoteBooth</span>
+                    <span className="text-base font-bold text-gray-900">
+                      VoteBooth
+                    </span>
                   </div>
                   <button
                     onClick={() => setIsMenuOpen(false)}
                     className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                   >
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    <svg
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -305,9 +459,9 @@ const Navigation = () => {
                         key={item.path}
                         to={item.path}
                         className={`flex items-center px-4 py-3 text-base font-medium rounded-xl transition-all duration-200 ${
-                          isActivePath(item.path) 
-                            ? 'text-accent bg-accent-50 border-l-4 border-accent shadow-sm' 
-                            : 'theme-text theme-muted hover:text-accent hover:bg-gray-50'
+                          isActivePath(item.path)
+                            ? "text-accent bg-accent-50 border-l-4 border-accent shadow-sm"
+                            : "theme-text theme-muted hover:text-accent hover:bg-gray-50"
                         }`}
                         onClick={() => setIsMenuOpen(false)}
                       >
@@ -319,23 +473,43 @@ const Navigation = () => {
                     {!isAuthenticated && (
                       <div className="pt-4 mt-4 border-t border-gray-100">
                         <div className="space-y-3">
-                          <Link 
-                            to="/login" 
-                            className="flex items-center justify-center w-full px-4 py-3 text-base font-medium theme-text theme-surface rounded-xl border border-border transition-all duration-200 shadow-sm" 
+                          <Link
+                            to="/login"
+                            className="flex items-center justify-center w-full px-4 py-3 text-base font-medium theme-text theme-surface rounded-xl border border-border transition-all duration-200 shadow-sm"
                             onClick={() => setIsMenuOpen(false)}
                           >
-                            <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                            <svg
+                              className="w-5 h-5 mr-3"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                              />
                             </svg>
                             Sign In
                           </Link>
-                          <Link 
-                            to="/register" 
-                            className="flex items-center justify-center w-full px-4 py-3 text-base font-medium btn-theme rounded-xl shadow-md hover:shadow-lg transition-all duration-200" 
+                          <Link
+                            to="/register"
+                            className="flex items-center justify-center w-full px-4 py-3 text-base font-medium btn-theme rounded-xl shadow-md hover:shadow-lg transition-all duration-200"
                             onClick={() => setIsMenuOpen(false)}
                           >
-                            <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                            <svg
+                              className="w-5 h-5 mr-3"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+                              />
                             </svg>
                             Sign Up
                           </Link>
@@ -351,38 +525,73 @@ const Navigation = () => {
                           <Link
                             to="/dashboard"
                             className={`flex items-center px-4 py-3 text-base font-medium rounded-xl transition-all duration-200 mb-3 ${
-                              isActivePath('/dashboard')
-                                ? 'btn-theme text-on-primary shadow-md border-0'
-                                : 'theme-surface theme-text hover:btn-theme'
+                              isActivePath("/dashboard")
+                                ? "btn-theme text-on-primary shadow-md border-0"
+                                : "theme-surface theme-text hover:btn-theme"
                             }`}
                             onClick={() => setIsMenuOpen(false)}
                           >
-                            <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h7v7H3V3zm0 11h7v7H3v-7zm11-11h7v7h-7V3zm0 11h7v7h-7v-7z" />
+                            <svg
+                              className="w-5 h-5 mr-3"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M3 3h7v7H3V3zm0 11h7v7H3v-7zm11-11h7v7h-7V3zm0 11h7v7h-7v-7z"
+                              />
                             </svg>
                             Dashboard
                           </Link>
                         </div>
-                        
-                        <Link 
-                          to="/user/profile" 
-                          className="flex items-center px-4 py-3 text-base font-medium text-gray-700 hover:text-accent hover:bg-gray-50 rounded-xl transition-all duration-200 mx-0 mb-1" 
+
+                        <Link
+                          to="/user/profile"
+                          className="flex items-center px-4 py-3 text-base font-medium text-gray-700 hover:text-accent hover:bg-gray-50 rounded-xl transition-all duration-200 mx-0 mb-1"
                           onClick={() => setIsMenuOpen(false)}
                         >
-                          <svg className="w-5 h-5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          <svg
+                            className="w-5 h-5 mr-3 text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                            />
                           </svg>
                           Profile
                         </Link>
-                        
-                        <Link 
-                          to="/user/settings" 
-                          className="flex items-center px-4 py-3 text-base font-medium text-gray-700 hover:text-accent hover:bg-gray-50 rounded-xl transition-all duration-200 mx-0 mb-1" 
+
+                        <Link
+                          to="/user/settings"
+                          className="flex items-center px-4 py-3 text-base font-medium text-gray-700 hover:text-accent hover:bg-gray-50 rounded-xl transition-all duration-200 mx-0 mb-1"
                           onClick={() => setIsMenuOpen(false)}
                         >
-                          <svg className="w-5 h-5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.50 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <svg
+                            className="w-5 h-5 mr-3 text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.50 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                            />
                           </svg>
                           Settings
                         </Link>
@@ -394,12 +603,22 @@ const Navigation = () => {
                 {/* Bottom Actions - Enhanced Logout */}
                 {isAuthenticated && (
                   <div className="border-t border-gray-200 p-4 bg-gray-50">
-                    <button 
-                      onClick={handleLogout} 
+                    <button
+                      onClick={handleLogout}
                       className="flex items-center justify-center w-full px-4 py-3 text-base font-medium text-red-600 hover:bg-red-50 rounded-xl border border-red-200 transition-all duration-200 shadow-sm hover:shadow-md"
                     >
-                      <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      <svg
+                        className="w-5 h-5 mr-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                        />
                       </svg>
                       Sign Out
                     </button>
@@ -423,41 +642,97 @@ const Footer = () => {
           <div className="col-span-2 sm:col-span-2 md:col-span-2">
             <div className="flex items-center space-x-2 mb-2 sm:mb-3">
               <div className="w-7 h-7 sm:w-8 sm:h-8 btn-theme rounded-lg flex items-center justify-center">
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-on-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-on-primary"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
               </div>
               <span className="text-lg sm:text-xl font-bold">VoteBooth</span>
             </div>
             <p className="text-gray-400 mb-2 sm:mb-3 max-w-md text-xs sm:text-sm leading-relaxed">
-              Secure, transparent, and easy-to-use online voting platform for organizations, 
-              communities, and teams of all sizes.
+              Secure, transparent, and easy-to-use online voting platform for
+              organizations, communities, and teams of all sizes.
             </p>
           </div>
 
           {/* Links */}
           <div className="mt-2 sm:mt-0">
-            <h3 className="text-xs sm:text-sm font-semibold text-white uppercase tracking-wider mb-2 sm:mb-3">Company</h3>
+            <h3 className="text-xs sm:text-sm font-semibold text-white uppercase tracking-wider mb-2 sm:mb-3">
+              Company
+            </h3>
             <ul className="space-y-0.5 sm:space-y-1">
-              <li><Link to="/about" className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm block py-0.5">About</Link></li>
-              <li><Link to="/features" className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm block py-0.5">Features</Link></li>
-              <li><Link to="/contact" className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm block py-0.5">Contact</Link></li>
+              <li>
+                <Link
+                  to="/about"
+                  className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm block py-0.5"
+                >
+                  About
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/features"
+                  className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm block py-0.5"
+                >
+                  Features
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/contact"
+                  className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm block py-0.5"
+                >
+                  Contact
+                </Link>
+              </li>
             </ul>
           </div>
 
           <div className="mt-2 sm:mt-0">
-            <h3 className="text-xs sm:text-sm font-semibold text-white uppercase tracking-wider mb-2 sm:mb-3">Legal</h3>
+            <h3 className="text-xs sm:text-sm font-semibold text-white uppercase tracking-wider mb-2 sm:mb-3">
+              Legal
+            </h3>
             <ul className="space-y-0.5 sm:space-y-1">
-              <li><Link to="/privacy" className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm block py-0.5">Privacy Policy</Link></li>
-              <li><Link to="/terms" className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm block py-0.5">Terms of Service</Link></li>
-              <li><Link to="/help" className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm block py-0.5">Help Center</Link></li>
+              <li>
+                <Link
+                  to="/privacy"
+                  className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm block py-0.5"
+                >
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/terms"
+                  className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm block py-0.5"
+                >
+                  Terms of Service
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/help"
+                  className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm block py-0.5"
+                >
+                  Help Center
+                </Link>
+              </li>
             </ul>
           </div>
         </div>
-        
+
         <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-gray-800 text-center">
           <p className="text-gray-400 text-xs sm:text-sm">
-            © 2025 VoteBooth. All rights reserved.
+            © 2025 VoteBooth. All rights reserved. • <span className="text-gray-500">v2.0.0</span>
           </p>
         </div>
       </div>
@@ -468,29 +743,24 @@ const Footer = () => {
 const Layout = ({ children, showFooter = true }) => {
   const location = useLocation();
   const isAuthPage = [
-    '/login', 
-    '/register', 
-    '/auth/check-email',
-    '/auth/verify-email',
-    '/auth/verification-error',
-    '/forgot-password',
-    '/reset-password'
+    "/login",
+    "/register",
+    "/auth/check-email",
+    "/auth/verify-email",
+    "/auth/verification-error",
+    "/forgot-password",
+    "/reset-password",
   ].includes(location.pathname);
 
   if (isAuthPage) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        {children}
-      </div>
-    );
+    return <div className="min-h-screen bg-gray-50">{children}</div>;
   }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navigation />
-      <main className="flex-1">
-        {children}
-      </main>
+      <ServiceBanner />
+      <main className="flex-1">{children}</main>
       {showFooter && <Footer />}
     </div>
   );
