@@ -219,10 +219,6 @@ export const boothService = {
     return api.post(`/api/booth/${boothId}/toggle-status`);
   },
 
-  async restoreBooth(boothId) {
-    return api.post(`/api/booth/${boothId}/restore`);
-  },
-
   async getActivity(boothId) {
     return api.get(`/api/booth/${boothId}/activity`);
   },

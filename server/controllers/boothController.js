@@ -6,6 +6,7 @@ const BoothActivity = require("../models/boothActivity");
 const logActivity = require("../utils/logActivity");
 const validator = require("validator");
 const socket = require("../config/socket");
+const mongoose = require("mongoose");
 
 // Helper function to find booth by either boothId or MongoDB _id
 const findBoothByIdOrBoothId = async (identifier) => {
@@ -14,7 +15,7 @@ const findBoothByIdOrBoothId = async (identifier) => {
     return await Booth.findByBoothId(identifier);
   }
   // Otherwise, try MongoDB ObjectId
-  if (validator.isMongoId(identifier)) {
+  if (mongoose.Types.ObjectId.isValid(identifier)) {
     return await Booth.findById(identifier);
   }
   return null;
@@ -268,19 +269,13 @@ exports.createBooth = async (req, res) => {
 
     // Log activity — include admin name and creation time only here
     const createdAt = booth.createdAt
-      ? new Date(booth.createdAt).toLocaleString("en-IN", {
-          dateStyle: "medium",
-          timeStyle: "short",
-        })
-      : new Date().toLocaleString("en-IN", {
-          dateStyle: "medium",
-          timeStyle: "short",
-        });
-    await logActivity(
+      ? new Date(booth.createdAt).toISOString()
+      : new Date().toISOString();
+    logActivity(
       booth._id,
       userId,
       `${user.name} created this booth on ${createdAt}`,
-    );
+    ).catch(err => console.error("Failed to log booth creation activity:", err));
 
     res.status(201).json({
       success: true,
@@ -418,11 +413,11 @@ exports.joinBooth = async (req, res) => {
       try {
         await booth.addPendingRequest(userId);
         const requestingUser = await User.findById(userId).select("name");
-        await logActivity(
+        logActivity(
           booth._id,
           userId,
           `${requestingUser?.name || "Someone"} submitted a join request`,
-        );
+        ).catch(err => console.error("Failed to log join request activity:", err));
         return res.json({
           success: true,
           message: "Join request submitted and pending approval",
@@ -479,11 +474,11 @@ exports.joinBooth = async (req, res) => {
         await user.save();
       }
 
-      await logActivity(
+      logActivity(
         booth._id,
         userId,
         `${user?.name || "Someone"} joined the booth`,
-      );
+      ).catch(err => console.error("Failed to log join booth activity:", err));
 
       res.json({
         success: true,
@@ -550,11 +545,11 @@ exports.vote = async (req, res) => {
 
     // Log activity (fire-and-forget)
     const votingUser = await User.findById(userId).select("name");
-    await logActivity(
+    logActivity(
       booth._id,
       userId,
       `${votingUser?.name || "Someone"} cast a vote`,
-    );
+    ).catch(err => console.error("Failed to log vote activity:", err));
 
     // Create vote record for audit trail
     const vote = new Vote({
@@ -679,7 +674,8 @@ exports.resetInviteCode = async (req, res) => {
 
     await booth.generateNewInviteCode();
 
-    await logActivity(booth._id, userId, "Admin reset the invite code");
+    logActivity(booth._id, userId, "Admin reset the invite code")
+      .catch(err => console.error("Failed to log invite code reset activity:", err));
 
     const inviteLink = `${req.protocol}://${req.get("host")}/booth/join/${booth.inviteCode}`;
 
@@ -731,7 +727,8 @@ exports.updateBoothSettings = async (req, res) => {
     booth.settings = { ...booth.settings, ...settings };
     await booth.save();
 
-    await logActivity(booth._id, userId, "Admin updated booth settings");
+    logActivity(booth._id, userId, "Admin updated booth settings")
+      .catch(err => console.error("Failed to log settings update activity:", err));
 
     // Return consistent success shape so clients can check `response.success`
     res.json({
@@ -891,7 +888,8 @@ exports.editBooth = async (req, res) => {
 
     await booth.save();
 
-    await logActivity(booth._id, userId, "Admin updated booth details");
+    logActivity(booth._id, userId, "Admin updated booth details")
+      .catch(err => console.error("Failed to log booth update activity:", err));
 
     res.json({
       success: true,
@@ -933,7 +931,8 @@ exports.deleteBooth = async (req, res) => {
     booth.deletedAt = new Date();
     await booth.save();
 
-    await logActivity(booth._id, userId, "Admin deleted the booth");
+    logActivity(booth._id, userId, "Admin deleted the booth")
+      .catch(err => console.error("Failed to log booth deletion activity:", err));
 
     res.json({
       success: true,
@@ -946,52 +945,6 @@ exports.deleteBooth = async (req, res) => {
       return res.status(500).render("error", { error });
     }
     res.status(500).json({ error });
-  }
-};
-
-// Restore a soft-deleted booth (creator only)
-exports.restoreBooth = async (req, res) => {
-  try {
-    const { boothId } = req.params;
-    const userId = req.user.id;
-
-    // Need to bypass the auto-exclude middleware for deleted booths
-    let booth = null;
-    if (/^VBB[0-9A-F]{6}$/i.test(boothId)) {
-      booth = await Booth.findOne({
-        boothId: boothId.toUpperCase(),
-        isDeleted: true,
-      });
-    } else if (validator.isMongoId(boothId)) {
-      booth = await Booth.findOne({ _id: boothId, isDeleted: true });
-    }
-
-    if (!booth) {
-      return res.status(404).json({ error: "Deleted booth not found" });
-    }
-
-    if (booth.creator.toString() !== userId) {
-      return res
-        .status(403)
-        .json({ error: "Only booth creator can restore a booth" });
-    }
-
-    booth.isDeleted = false;
-    booth.deletedAt = null;
-    await booth.save();
-
-    res.json({
-      success: true,
-      message: "Booth restored successfully",
-      booth: {
-        id: booth._id,
-        boothId: booth.boothId,
-        name: booth.name,
-      },
-    });
-  } catch (err) {
-    console.error("Restore booth error:", err);
-    res.status(500).json({ error: "Failed to restore booth" });
   }
 };
 
@@ -1039,7 +992,8 @@ exports.toggleBoothStatus = async (req, res) => {
 
     const statusMsg =
       newStatus === "active" ? "Admin started voting" : "Admin closed voting";
-    await logActivity(booth._id, userId, statusMsg);
+    logActivity(booth._id, userId, statusMsg)
+      .catch(err => console.error("Failed to log status toggle activity:", err));
 
     // Return consistent success shape so client handlers can check response.success
     res.json({
@@ -1096,11 +1050,11 @@ exports.approveJoinRequest = async (req, res) => {
 
     // Log activity — look up the approved user's name
     const approvedUser = await User.findById(userId).select("name");
-    await logActivity(
+    logActivity(
       booth._id,
       actorId,
       `Admin approved ${approvedUser?.name || "a member"}`,
-    );
+    ).catch(err => console.error("Failed to log approval activity:", err));
 
     // Notify the requester via socket (if connected)
     try {
@@ -1157,11 +1111,11 @@ exports.rejectJoinRequest = async (req, res) => {
 
     // Log activity
     const rejectedUser = await User.findById(userId).select("name");
-    await logActivity(
+    logActivity(
       booth._id,
       actorId,
       `Admin rejected ${rejectedUser?.name || "a user"}'s join request`,
-    );
+    ).catch(err => console.error("Failed to log rejection activity:", err));
 
     // Notify the requester via socket (if connected)
     try {
@@ -1274,14 +1228,33 @@ exports.getBoothActivity = async (req, res) => {
         .json({ error: "Only booth admins can view the activity log" });
     }
 
+    // Pagination parameters
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
+    const skip = (page - 1) * limit;
+
+    // Get total count for pagination metadata
+    const totalCount = await BoothActivity.countDocuments({ booth: booth._id });
+
     const activities = await BoothActivity.find({ booth: booth._id })
       .populate("user", "name")
       .sort({ createdAt: -1 })
-      .limit(100);
+      .limit(limit)
+      .skip(skip);
 
     res.json({
       success: true,
-      data: { activities },
+      data: { 
+        activities,
+        pagination: {
+          page,
+          limit,
+          total: totalCount,
+          totalPages: Math.ceil(totalCount / limit),
+          hasNext: page * limit < totalCount,
+          hasPrev: page > 1,
+        },
+      },
     });
   } catch (err) {
     console.error("Get booth activity error:", err);

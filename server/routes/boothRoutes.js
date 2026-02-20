@@ -6,12 +6,26 @@ const { jwtAuthMiddleware } = require("../middleware/jwt");
 const Booth = require("../models/booth");
 const Vote = require("../models/vote");
 const logActivity = require("../utils/logActivity");
+const mongoose = require("mongoose");
 const {
   createBoothLimiter,
   voteLimiter,
   joinBoothLimiter,
 } = require("../middleware/rateLimiter");
 const { csrfProtection } = require("../middleware/security");
+
+// Shared helper function to find booth by either boothId or MongoDB _id
+const findBoothByIdOrBoothId = async (identifier) => {
+  // Check if it's a boothId format (VBB + hex)
+  if (/^VBB[0-9A-F]{6}$/i.test(identifier)) {
+    return await Booth.findByBoothId(identifier);
+  }
+  // Otherwise, try MongoDB ObjectId
+  if (mongoose.Types.ObjectId.isValid(identifier)) {
+    return await Booth.findById(identifier);
+  }
+  return null;
+};
 
 // ===== API Routes for React Frontend =====
 
@@ -182,19 +196,7 @@ router.get("/:boothId", jwtAuthMiddleware, async (req, res) => {
     const { boothId } = req.params;
     const userId = req.user.id;
 
-    let booth;
-
-    // Check if it's a boothId format (VBB + hex) or MongoDB ObjectId
-    if (/^VBB[0-9A-F]{6}$/i.test(boothId)) {
-      // Public boothId format
-      booth = await Booth.findByBoothId(boothId);
-    } else {
-      // Try MongoDB ObjectId format for backward compatibility
-      const mongoose = require("mongoose");
-      if (mongoose.Types.ObjectId.isValid(boothId)) {
-        booth = await Booth.findById(boothId);
-      }
-    }
+    const booth = await findBoothByIdOrBoothId(boothId);
 
     if (!booth) {
       return res.status(404).json({ error: "Booth not found" });
@@ -263,16 +265,7 @@ router.get("/:boothId/results", jwtAuthMiddleware, async (req, res) => {
     const { boothId } = req.params;
     const userId = req.user.id;
 
-    // Support both boothId and MongoDB _id
-    let booth;
-    if (/^VBB[0-9A-F]{6}$/i.test(boothId)) {
-      booth = await Booth.findByBoothId(boothId);
-    } else {
-      const mongoose = require("mongoose");
-      if (mongoose.Types.ObjectId.isValid(boothId)) {
-        booth = await Booth.findById(boothId);
-      }
-    }
+    const booth = await findBoothByIdOrBoothId(boothId);
 
     if (!booth) {
       return res.status(404).json({ error: "Booth not found" });
@@ -342,16 +335,7 @@ router.get("/:boothId/admin", jwtAuthMiddleware, async (req, res) => {
     const { boothId } = req.params;
     const userId = req.user.id;
 
-    // Support both boothId and MongoDB _id
-    let booth;
-    if (/^VBB[0-9A-F]{6}$/i.test(boothId)) {
-      booth = await Booth.findByBoothId(boothId);
-    } else {
-      const mongoose = require("mongoose");
-      if (mongoose.Types.ObjectId.isValid(boothId)) {
-        booth = await Booth.findById(boothId);
-      }
-    }
+    const booth = await findBoothByIdOrBoothId(boothId);
 
     if (!booth) {
       return res.status(404).json({ error: "Booth not found" });
@@ -430,16 +414,7 @@ router.get("/:boothId/export", jwtAuthMiddleware, async (req, res) => {
     const { boothId } = req.params;
     const userId = req.user.id;
 
-    // Support both boothId and MongoDB _id
-    let booth;
-    if (/^VBB[0-9A-F]{6}$/i.test(boothId)) {
-      booth = await Booth.findByBoothId(boothId);
-    } else {
-      const mongoose = require("mongoose");
-      if (mongoose.Types.ObjectId.isValid(boothId)) {
-        booth = await Booth.findById(boothId);
-      }
-    }
+    const booth = await findBoothByIdOrBoothId(boothId);
 
     if (!booth) {
       return res.status(404).json({ error: "Booth not found" });
@@ -512,18 +487,6 @@ router.delete(
     try {
       const { boothId, memberId } = req.params;
       const userId = req.user.id;
-
-      // Helper to find booth by either boothId or MongoDB _id
-      const findBoothByIdOrBoothId = async (identifier) => {
-        if (/^VBB[0-9A-F]{6}$/i.test(identifier)) {
-          return await Booth.findByBoothId(identifier);
-        }
-        const validator = require("validator");
-        if (validator.isMongoId(identifier)) {
-          return await Booth.findById(identifier);
-        }
-        return null;
-      };
 
       const booth = await findBoothByIdOrBoothId(boothId);
 
@@ -664,13 +627,6 @@ router.post(
 
 // Delete booth (soft delete)
 router.delete("/:boothId", jwtAuthMiddleware, boothController.deleteBooth);
-
-// Restore a soft-deleted booth (creator only)
-router.post(
-  "/:boothId/restore",
-  jwtAuthMiddleware,
-  boothController.restoreBooth,
-);
 
 // Edit booth
 router.put("/:boothId", jwtAuthMiddleware, boothController.editBooth);

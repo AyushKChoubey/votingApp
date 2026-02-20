@@ -49,7 +49,14 @@ const corsOptions = {
     // Get allowed origins from environment variables or use defaults
     const productionOrigins = process.env.ALLOWED_ORIGINS
       ? process.env.ALLOWED_ORIGINS.split(",").map((url) => url.trim())
-      : ["https://yourdomain.com"]; // fallback
+      : null;
+
+    // In production, require ALLOWED_ORIGINS to be set
+    if (process.env.NODE_ENV === "production" && !productionOrigins) {
+      console.error("FATAL: ALLOWED_ORIGINS environment variable is not set in production");
+      console.error("Please set ALLOWED_ORIGINS to a comma-separated list of allowed origins");
+      process.exit(1);
+    }
 
     const developmentOrigins = [
       "http://localhost:5173",
@@ -88,21 +95,6 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Manual preflight handling for complex requests
-app.options("*", (req, res) => {
-  res.header("Access-Control-Allow-Origin", req.get("Origin"));
-  res.header("Access-Control-Allow-Credentials", "true");
-  res.header(
-    "Access-Control-Allow-Methods",
-    "GET,PUT,POST,DELETE,OPTIONS,PATCH",
-  );
-  res.header(
-    "Access-Control-Allow-Headers",
-    "Content-Type, Authorization, X-Requested-With, Accept, Origin",
-  );
-  res.sendStatus(200);
-});
-
 // Body parsing middleware
 app.use(
   bodyParser.json({
@@ -124,11 +116,23 @@ app.use(validateInput);
 app.use(xssProtection);
 app.use(securityLogger);
 
+// Validate SESSION_SECRET in production
+let sessionSecret = process.env.SESSION_SECRET;
+if (!sessionSecret) {
+  if (process.env.NODE_ENV === "production") {
+    console.error("FATAL: SESSION_SECRET environment variable is not set in production");
+    console.error("Please set SESSION_SECRET to a strong random string");
+    process.exit(1);
+  } else {
+    sessionSecret = "dev-secret-change-in-production";
+    console.warn("WARNING: Using development session secret. Set SESSION_SECRET in production!");
+  }
+}
+
 // Session configuration for OAuth
 app.use(
   session({
-    secret:
-      process.env.SESSION_SECRET || "your-secret-key-change-in-production",
+    secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({
@@ -140,8 +144,7 @@ app.use(
       ttl: 24 * 60 * 60, // = 24 hours. Default session expiration time
       autoRemove: "native", // Default - let MongoDB handle expired sessions
       crypto: {
-        secret:
-          process.env.SESSION_SECRET || "your-secret-key-change-in-production",
+        secret: sessionSecret,
       },
     }),
     cookie: {
@@ -249,14 +252,23 @@ app.use((err, req, res, next) => {
   // Determine error status
   const status = err.status || err.statusCode || 500;
 
+  // Determine safe error message for production
+  // Only expose err.message in production if it's a trusted error type
+  const isSafeError = err.safeMessage || 
+    err.name === 'ValidationError' || 
+    err.name === 'NotFoundError' ||
+    err.name === 'UnauthorizedError' ||
+    (status >= 400 && status < 500 && err.isOperational);
+  
+  const errorMessage = process.env.NODE_ENV === "production"
+    ? (status === 500 
+        ? "Internal server error" 
+        : (isSafeError ? err.message : "An error occurred"))
+    : err.message;
+
   // Send JSON error response
   res.status(status).json({
-    error:
-      process.env.NODE_ENV === "production"
-        ? status === 500
-          ? "Internal server error"
-          : err.message
-        : err.message,
+    error: errorMessage,
     status,
     timestamp: new Date().toISOString(),
     path: req.originalUrl,
@@ -282,31 +294,65 @@ try {
 }
 
 const startServer = async () => {
+  // Handle server errors (e.g., port already in use)
+  server.on('error', (err) => {
+    console.error('❌ Failed to start server:', err);
+    console.error(`   Port ${PORT} on ${HOST} may already be in use`);
+    console.error(`   Error code: ${err.code}`);
+    process.exit(1);
+  });
+
+  server.listen(PORT, HOST, () => {
+    console.log(`🚀 VoteBooth API Server running at http://${HOST}:${PORT}`);
+    console.log(`📊 Environment: ${process.env.NODE_ENV || "development"}`);
+    console.log(`🔗 Health check: http://${HOST}:${PORT}/health`);
+    console.log(
+      `📡 CORS enabled for: ${process.env.NODE_ENV === "production" ? "production domains" : "http://localhost:5173"}`,
+    );
+  });
+};
+
+// Graceful shutdown function
+const closeServerGracefully = async (signal) => {
+  console.log(`🛑 ${signal} received, shutting down gracefully`);
+  
+  let exitCode = 0;
+  
+  // Stop accepting new connections
+  server.close((err) => {
+    if (err) {
+      console.error("❌ Error closing server:", err);
+      exitCode = 1;
+    } else {
+      console.log("✅ Server closed successfully");
+    }
+  });
+  
+  // Set timeout for forced shutdown
+  const forceShutdownTimeout = setTimeout(() => {
+    console.error("⚠️ Forcing shutdown after timeout");
+    exitCode = 1;
+    process.exit(exitCode);
+  }, 10000); // 10 second timeout
+  
   try {
-    server.listen(PORT, HOST, () => {
-      console.log(`🚀 VoteBooth API Server running at http://${HOST}:${PORT}`);
-      console.log(`📊 Environment: ${process.env.NODE_ENV || "development"}`);
-      console.log(`🔗 Health check: http://${HOST}:${PORT}/health`);
-      console.log(
-        `📡 CORS enabled for: ${process.env.NODE_ENV === "production" ? "production domains" : "http://localhost:5173"}`,
-      );
-    });
-  } catch (error) {
-    console.error("❌ Failed to start server:", error);
+    // Close database connection
+    await db.close();
+    console.log("✅ Database connection closed");
+    
+    clearTimeout(forceShutdownTimeout);
+    console.log("👋 Shutdown complete");
+    process.exit(exitCode);
+  } catch (err) {
+    console.error("❌ Error during shutdown:", err);
+    clearTimeout(forceShutdownTimeout);
     process.exit(1);
   }
 };
 
 // Handle graceful shutdown
-process.on("SIGTERM", () => {
-  console.log("🛑 SIGTERM received, shutting down gracefully");
-  process.exit(0);
-});
-
-process.on("SIGINT", () => {
-  console.log("🛑 SIGINT received, shutting down gracefully");
-  process.exit(0);
-});
+process.on("SIGTERM", () => closeServerGracefully("SIGTERM"));
+process.on("SIGINT", () => closeServerGracefully("SIGINT"));
 
 startServer();
 

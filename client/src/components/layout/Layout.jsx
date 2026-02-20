@@ -14,6 +14,13 @@ const ServiceBanner = () => {
       const res = await fetch(`${BASE}/api/health/services`, {
         credentials: "include",
       });
+      
+      // Only process response if status is ok
+      if (!res.ok) {
+        console.warn(`Health check returned ${res.status}`);
+        return;
+      }
+      
       const data = await res.json();
       const down = (data.services || []).filter((s) => !s.ok);
       setDegraded(down);
@@ -584,7 +591,7 @@ const Navigation = () => {
                               strokeLinecap="round"
                               strokeLinejoin="round"
                               strokeWidth={2}
-                              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.50 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
                             />
                             <path
                               strokeLinecap="round"
@@ -732,7 +739,7 @@ const Footer = () => {
 
         <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-gray-800 text-center">
           <p className="text-gray-400 text-xs sm:text-sm">
-            © 2025 VoteBooth. All rights reserved. • <span className="text-gray-500">v2.0.0</span>
+            © 2025 VoteBooth. All rights reserved. • <span className="text-gray-500">v2.1.0</span>
           </p>
         </div>
       </div>

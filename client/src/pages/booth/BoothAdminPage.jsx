@@ -37,9 +37,12 @@ const BoothAdminPage = () => {
   const [activities, setActivities] = useState([]);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
   const [activitiesError, setActivitiesError] = useState("");
+  const [activitiesFetched, setActivitiesFetched] = useState(false);
 
   useEffect(() => {
     fetchBoothDetails();
+    // Reset activities fetch flag when booth changes
+    setActivitiesFetched(false);
   }, [boothId]);
 
   // Countdown timer for scheduled booths (admin view)
@@ -493,12 +496,13 @@ const BoothAdminPage = () => {
       setActivitiesError(err.message || "Failed to load activity");
     } finally {
       setActivitiesLoading(false);
+      setActivitiesFetched(true);
     }
   };
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
-    if (tab === "activity" && activities.length === 0) {
+    if (tab === "activity" && !activitiesFetched) {
       fetchActivity();
     }
   };
@@ -506,11 +510,35 @@ const BoothAdminPage = () => {
   const formatRelativeTime = (dateStr) => {
     const now = new Date();
     const date = new Date(dateStr);
+    
+    // Validate the date
+    if (isNaN(date.getTime())) {
+      return "";
+    }
+    
     const diffMs = now - date;
+    
+    // Handle future dates
+    if (diffMs < 0) {
+      const absDiffMs = Math.abs(diffMs);
+      const diffSec = Math.floor(absDiffMs / 1000);
+      const diffMin = Math.floor(diffSec / 60);
+      const diffHr = Math.floor(diffMin / 60);
+      const diffDay = Math.floor(diffHr / 24);
+      
+      if (diffSec < 60) return "soon";
+      if (diffMin < 60) return `in ${diffMin} minute${diffMin !== 1 ? "s" : ""}`;
+      if (diffHr < 24) return `in ${diffHr} hour${diffHr !== 1 ? "s" : ""}`;
+      if (diffDay < 30) return `in ${diffDay} day${diffDay !== 1 ? "s" : ""}`;
+      return date.toLocaleDateString();
+    }
+    
+    // Handle past dates
     const diffSec = Math.floor(diffMs / 1000);
     const diffMin = Math.floor(diffSec / 60);
     const diffHr = Math.floor(diffMin / 60);
     const diffDay = Math.floor(diffHr / 24);
+    
     if (diffSec < 60) return "just now";
     if (diffMin < 60) return `${diffMin} minute${diffMin !== 1 ? "s" : ""} ago`;
     if (diffHr < 24) return `${diffHr} hour${diffHr !== 1 ? "s" : ""} ago`;
