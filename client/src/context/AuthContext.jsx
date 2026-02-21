@@ -95,11 +95,11 @@ export const AuthProvider = ({ children }) => {
         // Token is invalid or expired - logout immediately
         localStorage.removeItem("token");
         dispatch({ type: "AUTH_LOGOUT" });
-        
+
         // If this is a 401 error (token expired), redirect will be handled by interceptor
         // For other errors, log for debugging
         if (error.status !== 401) {
-          console.error('Auth check failed:', error.message);
+          console.error("Auth check failed:", error.message);
         }
       }
     };
@@ -184,6 +184,20 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const loginWithToken = async (token) => {
+    localStorage.setItem("token", token);
+    try {
+      const resp = await authService.getProfile();
+      const userObj = resp && resp.user ? resp.user : resp;
+      dispatch({ type: "AUTH_SUCCESS", payload: userObj });
+      return { success: true };
+    } catch (error) {
+      localStorage.removeItem("token");
+      dispatch({ type: "AUTH_ERROR", payload: "Failed to verify token" });
+      return { success: false, error: "Failed to verify token" };
+    }
+  };
+
   const logout = async () => {
     try {
       await authService.logout();
@@ -213,6 +227,7 @@ export const AuthProvider = ({ children }) => {
   const value = {
     ...state,
     login,
+    loginWithToken,
     register,
     logout,
     updateProfile,

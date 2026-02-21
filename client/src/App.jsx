@@ -63,7 +63,7 @@ const ProtectedRoute = ({ children }) => {
   }
 
   if (!isAuthenticated) {
-    // Preserve the full path/search so after login we can return the user to where they intended
+    // so after login we can return the user to where they intended
     const returnTo = encodeURIComponent(location.pathname + (location.search || ''));
     return <Navigate to={`/login?redirect=${returnTo}`} replace />;
   }
@@ -290,9 +290,7 @@ function App() {
     };
   }, []);
 
-  if (!appReady) {
-    return <PageLoading message={startupError || 'Spinning up backend service — this may take a few seconds...'} />;
-  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <Router>

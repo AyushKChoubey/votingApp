@@ -32,7 +32,15 @@ const ContactPage = () => {
             setFormData({ name: '', email: '', subject: '', message: '' });
             setTimeout(() => setSuccess(false), 5000);
         } catch (err) {
-            setError(err.message || 'Failed to send message. Please try again.');
+            // Handle validation errors with details
+            if (err.response?.data?.details && Array.isArray(err.response.data.details)) {
+                setError(err.response.data.details.join('. '));
+            } else if (err.response?.status === 503 || err.response?.data?.serviceUnavailable) {
+                // Email service is down
+                setError(err.response?.data?.error || 'Email service is currently unavailable. Please try again later or contact us directly at votebooth1@gmail.com');
+            } else {
+                setError(err.response?.data?.error || err.message || 'Failed to send message. Please try again.');
+            }
         } finally {
             setLoading(false);
         }
@@ -47,7 +55,8 @@ const ContactPage = () => {
             ),
             title: "Email",
             description: "Response within 24 hours",
-            contact: "votebooth1@gmail.com"
+            contact: "votebooth1@gmail.com",
+            contactHref: "mailto:votebooth1@gmail.com"
         },
         {
             icon: (
@@ -57,7 +66,8 @@ const ContactPage = () => {
             ),
             title: "Support",
             description: "Comprehensive documentation",
-            contact: "/help"
+            contact: "help",
+            contactHref: "/help"
         }
     ];
 
@@ -89,7 +99,9 @@ const ContactPage = () => {
                             </div>
                             <h3 className="text-lg font-bold theme-text mb-2">{info.title}</h3>
                             <p className="text-sm theme-muted mb-3">{info.description}</p>
-                            <p className="text-sm font-semibold text-accent break-all">{info.contact}</p>
+                            <p className="text-sm font-semibold text-accent break-all">
+                                <a href={info.contactHref} className="hover:underline">{info.contact}</a>
+                            </p>
                         </div>
                     ))}
                 </div>
@@ -127,10 +139,11 @@ const ContactPage = () => {
                                             id="name"
                                             name="name"
                                             required
+                                            minLength={2}
                                             value={formData.name}
                                             onChange={handleChange}
                                             className="w-full px-4 py-3 theme-surface rounded-xl focus:ring-2 focus:ring-accent transition-all border-0"
-                                            placeholder="Your name"
+                                            placeholder="Your name (min 2 characters)"
                                         />
                                     </div>
                                     <div>
@@ -158,10 +171,11 @@ const ContactPage = () => {
                                         id="subject"
                                         name="subject"
                                         required
+                                        minLength={5}
                                         value={formData.subject}
                                         onChange={handleChange}
                                         className="w-full px-4 py-3 theme-surface rounded-xl focus:ring-2 focus:ring-accent transition-all border-0"
-                                        placeholder="How can we help?"
+                                        placeholder="How can we help? (min 5 characters)"
                                     />
                                 </div>
                                 <div>
@@ -173,10 +187,11 @@ const ContactPage = () => {
                                         name="message"
                                         rows={5}
                                         required
+                                        minLength={10}
                                         value={formData.message}
                                         onChange={handleChange}
                                         className="w-full px-4 py-3 theme-surface rounded-xl focus:ring-2 focus:ring-accent transition-all resize-none border-0"
-                                        placeholder="Tell us more..."
+                                        placeholder="Tell us more... (min 10 characters)"
                                     />
                                 </div>
                                 <button

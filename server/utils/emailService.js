@@ -1,4 +1,5 @@
 const nodemailer = require("nodemailer");
+const serviceHealth = require("./serviceHealth");
 
 /**
  * Email Service for sending verification and notification emails
@@ -77,9 +78,21 @@ class EmailService {
       // Verify transporter
       await this.transporter.verify();
       this.initialized = true;
+      // Mark email service healthy for the global health tracker
+      try {
+        serviceHealth.setStatus("email", true);
+      } catch (e) {
+        // ignore if serviceHealth isn't available for some reason
+      }
       console.log("✅ Email service ready");
     } catch (error) {
       console.error("❌ Email service initialization failed:", error.message);
+      // Mark email service as unhealthy so /api/health/services reflects the issue
+      try {
+        serviceHealth.setStatus("email", false);
+      } catch (e) {
+        // ignore
+      }
       // Don't throw - allow app to run without email in development
     }
   }

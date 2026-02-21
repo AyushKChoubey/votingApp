@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import ThemeToggle from "./ThemeToggle";
+import packageJson from '../../../package.json';
 
 // ── Service health banner ────────────────────────────────────────────────────
 const ServiceBanner = () => {
@@ -15,13 +16,19 @@ const ServiceBanner = () => {
         credentials: "include",
       });
       
-      // Only process response if status is ok
-      if (!res.ok) {
-        console.warn(`Health check returned ${res.status}`);
+      // Try to parse JSON body even if the status is non-2xx (server uses 503 when services degraded)
+      let data = null;
+      try {
+        data = await res.json();
+      } catch (e) {
+        console.warn(`Health check returned ${res.status} with non-JSON response`);
         return;
       }
-      
-      const data = await res.json();
+
+      if (!res.ok) {
+        // Still proceed — server uses non-2xx to indicate degraded overall status
+        console.warn(`Health check returned ${res.status}`);
+      }
       const down = (data.services || []).filter((s) => !s.ok);
       setDegraded(down);
       // If everything recovered, un-dismiss so the banner re-appears if it breaks again
@@ -187,6 +194,9 @@ const Navigation = () => {
               </div>
               <span className="text-lg sm:text-xl lg:text-2xl font-bold theme-text">
                 VoteBooth
+              </span>
+              <span className="hidden sm:inline-block ml-2 px-2 py-0.5 text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full">
+                v{packageJson.version}
               </span>
             </Link>
           </div>
@@ -435,6 +445,9 @@ const Navigation = () => {
                     </div>
                     <span className="text-base font-bold text-gray-900">
                       VoteBooth
+                    </span>
+                    <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-gray-200 text-gray-600 rounded-full">
+                      v{packageJson.version}
                     </span>
                   </div>
                   <button
@@ -739,7 +752,7 @@ const Footer = () => {
 
         <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-gray-800 text-center">
           <p className="text-gray-400 text-xs sm:text-sm">
-            © 2025 VoteBooth. All rights reserved. • <span className="text-gray-500">v2.1.0</span>
+            © 2025 VoteBooth. All rights reserved. • <span className="text-gray-500">v{packageJson.version}</span>
           </p>
         </div>
       </div>

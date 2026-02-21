@@ -7,12 +7,21 @@ const { resendLimiter, verifyEmailLimiter, passwordResetLimiter } = require('../
 const { verifyEmail, resendVerificationEmail, forgotPassword, resetPassword } = require('../controllers/userController');
 
 // Google OAuth Login
-router.get('/google',
-    passport.authenticate('google', {
+router.get('/google', (req, res, next) => {
+    // Allow an optional `redirect` query param which we will pass through
+    // as the OAuth `state` so it round-trips back to our callback.
+    const redirect = req.query.redirect;
+    const options = {
         scope: ['profile', 'email'],
         prompt: 'select_account'
-    })
-);
+    };
+
+    if (redirect) {
+        options.state = redirect;
+    }
+
+    passport.authenticate('google', options)(req, res, next);
+});
 
 // Google OAuth Callback
 router.get('/google/callback',
@@ -29,9 +38,12 @@ router.get('/google/callback',
                 name: req.user.name
             });
 
-            // Redirect to frontend with token
+            // Redirect to frontend with token. If the OAuth `state` was
+            // provided (we used it to carry a `redirect`), forward it so the
+            // client can navigate to the intended destination after auth.
             const clientURL = process.env.CLIENT_URL || 'http://localhost:5173';
-            res.redirect(`${clientURL}/auth/callback?token=${token}`);
+            const statePart = req.query.state ? `&redirect=${req.query.state}` : '';
+            res.redirect(`${clientURL}/auth/callback?token=${token}${statePart}`);
         } catch (err) {
             console.error('OAuth callback error:', err);
             const clientURL = process.env.CLIENT_URL || 'http://localhost:5173';

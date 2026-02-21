@@ -55,6 +55,17 @@ router.post('/contact', csrfProtection, async (req, res) => {
             });
         }
         
+        // Check email service health first
+        const serviceHealth = require('../utils/serviceHealth');
+        const emailStatus = serviceHealth.get('email');
+        
+        if (emailStatus && emailStatus.ok === false) {
+            return res.status(503).json({
+                error: 'Email service is currently unavailable. Please try again later or contact us directly at votebooth1@gmail.com',
+                serviceUnavailable: true
+            });
+        }
+        
         // Send email to support
         await emailService.initialize();
         const result = await emailService.sendContactFormEmail({
@@ -66,7 +77,21 @@ router.post('/contact', csrfProtection, async (req, res) => {
         
         if (!result.success) {
             console.error('Email sending failed:', result.message);
-            // Still return success to user - email failure shouldn't block submission
+            try {
+                serviceHealth.setStatus('email', false, { message: result.message });
+            } catch (e) {
+                // ignore
+            }
+            return res.status(503).json({
+                error: 'Failed to send your message. Please try again later or contact us directly at votebooth1@gmail.com',
+                serviceUnavailable: true
+            });
+        } else {
+            try {
+                serviceHealth.setStatus('email', true);
+            } catch (e) {
+                // ignore
+            }
         }
         
         res.json({

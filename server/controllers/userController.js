@@ -15,6 +15,7 @@ const {
   extractPublicId,
 } = require("../config/cloudinary");
 const streamifier = require("streamifier");
+const serviceHealth = require("../utils/serviceHealth");
 
 // Input validation helpers
 const validateEmail = (email) => {
@@ -103,6 +104,7 @@ exports.signup = async (req, res) => {
     const savedUser = await newUser.save();
 
     // Send verification email (don't block registration if email fails)
+    let emailSent = false;
     try {
       const emailResult = await emailService.sendVerificationEmail({
         to: savedUser.email,
@@ -110,21 +112,40 @@ exports.signup = async (req, res) => {
         token: verificationToken,
       });
 
-      if (!emailResult.success) {
-        console.warn("⚠️  Email sent but with warning:", emailResult.message);
+      if (emailResult && emailResult.success) {
+        emailSent = true;
+        try {
+          serviceHealth.setStatus("email", true);
+        } catch (e) {
+          // ignore
+        }
+      } else {
+        console.warn("⚠️  Email sent but with warning:", emailResult?.message);
+        try {
+          serviceHealth.setStatus("email", false, { message: emailResult?.message });
+        } catch (e) {
+          // ignore
+        }
       }
     } catch (emailError) {
       console.error("❌ Failed to send verification email:", emailError);
+      try {
+        serviceHealth.setStatus("email", false, { message: emailError.message });
+      } catch (e) {
+        // ignore
+      }
       // Continue - user is created, they can request resend later
     }
 
     // DO NOT return auth tokens - user must verify email first
     res.status(201).json({
       success: true,
-      message:
-        "Registration successful! Please check your email to verify your account.",
+      message: emailSent
+        ? "Registration successful! Please check your email to verify your account."
+        : "Registration successful! However, we couldn't send the verification email. Please use the 'Resend Verification' option to try again.",
       email: savedUser.email,
       requiresVerification: true,
+      emailSent,
     });
   } catch (err) {
     console.error("Registration error:", err);
@@ -726,11 +747,22 @@ exports.resendVerificationEmail = async (req, res) => {
       }
     }
 
+    // Check email service health before attempting
+    const emailStatus = serviceHealth.get('email');
+    if (emailStatus && emailStatus.ok === false) {
+      // Email service is down - inform user instead of silently failing
+      return res.status(503).json({
+        error: 'Email service is currently unavailable. Please try again later.',
+        serviceUnavailable: true
+      });
+    }
+
     // Generate new verification token
     const verificationToken = user.createEmailVerificationToken();
     await user.save();
 
     // Send verification email
+    let emailSent = false;
     try {
       const emailResult = await emailService.sendVerificationEmail({
         to: user.email,
@@ -738,12 +770,35 @@ exports.resendVerificationEmail = async (req, res) => {
         token: verificationToken,
       });
 
-      if (!emailResult.success) {
-        console.warn("⚠️  Email sent but with warning:", emailResult.message);
+      if (emailResult && emailResult.success) {
+        emailSent = true;
+        try {
+          serviceHealth.setStatus("email", true);
+        } catch (e) {
+          // ignore
+        }
+      } else {
+        console.warn("⚠️  Email sent but with warning:", emailResult?.message);
+        try {
+          serviceHealth.setStatus("email", false, { message: emailResult?.message });
+        } catch (e) {
+          // ignore
+        }
       }
     } catch (emailError) {
       console.error("❌ Failed to send verification email:", emailError);
-      // Still return success to prevent revealing email existence
+      try {
+        serviceHealth.setStatus("email", false, { message: emailError.message });
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    if (!emailSent) {
+      return res.status(503).json({
+        error: 'Failed to send verification email. Please try again later.',
+        serviceUnavailable: true
+      });
     }
 
     res.status(200).json(successResponse);
@@ -786,6 +841,16 @@ exports.forgotPassword = async (req, res) => {
       return res.status(200).json(successResponse);
     }
 
+    // Check email service health before attempting
+    const emailStatus = serviceHealth.get('email');
+    if (emailStatus && emailStatus.ok === false) {
+      // Email service is down - inform user instead of silently failing
+      return res.status(503).json({
+        error: 'Email service is currently unavailable. Please try again later.',
+        serviceUnavailable: true
+      });
+    }
+
     // Generate reset token (returns unhashed version)
     const resetToken = user.createPasswordResetToken();
 
@@ -793,6 +858,7 @@ exports.forgotPassword = async (req, res) => {
     await user.save({ validateBeforeSave: false });
 
     // Send password reset email
+    let emailSent = false;
     try {
       const emailResult = await emailService.sendPasswordResetEmail({
         to: user.email,
@@ -800,18 +866,42 @@ exports.forgotPassword = async (req, res) => {
         token: resetToken,
       });
 
-      if (!emailResult.success) {
+      if (emailResult && emailResult.success) {
+        emailSent = true;
+        try {
+          serviceHealth.setStatus("email", true);
+        } catch (e) {
+          // ignore
+        }
+      } else {
         console.warn(
           "⚠️  Email service returned failure:",
-          emailResult.message,
+          emailResult?.message,
         );
+        try {
+          serviceHealth.setStatus("email", false, { message: emailResult?.message });
+        } catch (e) {
+          // ignore
+        }
       }
     } catch (emailError) {
       console.error("❌ Failed to send password reset email:", emailError);
+      try {
+        serviceHealth.setStatus("email", false, { message: emailError.message });
+      } catch (e) {
+        // ignore
+      }
       // Clear reset token if email fails
       user.passwordResetToken = undefined;
       user.passwordResetExpires = undefined;
       await user.save({ validateBeforeSave: false });
+    }
+
+    if (!emailSent) {
+      return res.status(503).json({
+        error: 'Failed to send password reset email. Please try again later.',
+        serviceUnavailable: true
+      });
     }
 
     // Always return success (prevent user enumeration)
@@ -895,8 +985,16 @@ exports.uploadAvatar = async (req, res) => {
     });
   } catch (err) {
     console.error("Avatar upload error:", err);
+    // Don't expose raw error messages to clients (may contain provider internals)
+    const cloudStatus = serviceHealth.get("cloudinary");
+    if (cloudStatus && cloudStatus.ok === false) {
+      return res.status(503).json({
+        error: "Image upload service is currently unavailable. Please try again later.",
+      });
+    }
+
     res.status(500).json({
-      error: err.message || "Failed to upload avatar",
+      error: "Failed to upload avatar. Please try again.",
     });
   }
 };

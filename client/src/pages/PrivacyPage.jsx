@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 
 const PrivacyPage = () => {
-  const lastUpdated = "February 8, 2026";
+  const lastUpdated = "February 22, 2026";
 
   return (
     <div className="min-h-screen theme-bg">

@@ -547,7 +547,7 @@ const JoinBoothPage = () => {
                       <LoadingButton
                         onClick={handleJoinBooth}
                         loading={joining}
-                        variant="green"
+                        variant="teal"
                         size="lg"
                         className="w-full py-2.5 text-sm"
                       >

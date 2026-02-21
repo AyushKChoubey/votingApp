@@ -9,16 +9,28 @@ cloudinary.config({
     secure: true
 });
 
+const serviceHealth = require('../utils/serviceHealth');
+
 // Verify configuration on startup
 const verifyCloudinaryConfig = () => {
     const { cloud_name, api_key, api_secret } = cloudinary.config();
-    
+
     if (!cloud_name || !api_key || !api_secret) {
         console.warn('⚠️  Cloudinary configuration incomplete. Avatar uploads will not work.');
+        try {
+            serviceHealth.setStatus('cloudinary', false);
+        } catch (e) {
+            // ignore
+        }
         return false;
     }
-    
+
     console.log('✅ Cloudinary configured successfully');
+    try {
+        serviceHealth.setStatus('cloudinary', true);
+    } catch (e) {
+        // ignore
+    }
     return true;
 };
 
