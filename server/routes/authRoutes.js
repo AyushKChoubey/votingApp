@@ -58,16 +58,9 @@ router.get('/google/callback',
     }),
     async (req, res) => {
         try {
-            // Generate JWT token
-            const token = generateToken({
-                id: req.user._id,
-                email: req.user.email,
-                name: req.user.name
-            });
-
             // Redirect to frontend with token. If the OAuth `state` was
             // provided we encoded JSON with a nonce (and possibly a redirect).
-            // Only forward a validated redirect to the client.
+            // Validate state & nonce BEFORE issuing any token.
             const clientURL = process.env.CLIENT_URL || 'http://localhost:5173';
             let statePart = '';
             if (req.query.state) {
@@ -75,22 +68,28 @@ router.get('/google/callback',
                     const decoded = decodeURIComponent(req.query.state);
                     const parsed = JSON.parse(decoded);
 
-                    // Validate CSRF nonce from session
+                    // Validate CSRF nonce from session. Any error reading session
+                    // or mismatch must be treated as failure.
+                    let nonceValid = false;
                     try {
                         const sessionNonce = req.session && req.session.oauthNonce;
                         const parsedNonce = parsed && parsed.n;
-                        if (!parsedNonce || !sessionNonce || parsedNonce !== sessionNonce) {
-                            console.warn('OAuth state nonce mismatch or missing. Rejecting callback.');
-                            const clientURL = process.env.CLIENT_URL || 'http://localhost:5173';
-                            // Clear any stored nonce
-                            try { if (req.session) req.session.oauthNonce = undefined; } catch (e) {}
-                            return res.redirect(`${clientURL}/login?error=invalid_oauth_state`);
+                        if (parsedNonce && sessionNonce && parsedNonce === sessionNonce) {
+                            nonceValid = true;
                         }
-                        // Clear nonce to prevent replay
-                        try { if (req.session) req.session.oauthNonce = undefined; } catch (e) {}
                     } catch (e) {
-                        // ignore session read/clear errors but fail safe below
+                        // treat as invalid
+                        nonceValid = false;
                     }
+
+                    if (!nonceValid) {
+                        console.warn('OAuth state nonce mismatch or missing. Rejecting callback.');
+                        try { if (req.session) req.session.oauthNonce = undefined; } catch (e) {}
+                        return res.redirect(`${clientURL}/login?error=invalid_oauth_state`);
+                    }
+
+                    // Clear nonce to prevent replay
+                    try { if (req.session) req.session.oauthNonce = undefined; } catch (e) {}
 
                     const r = parsed && parsed.r;
                     // reuse same safe-check used earlier
@@ -109,6 +108,13 @@ router.get('/google/callback',
                     // ignore malformed state
                 }
             }
+
+            // Generate JWT token AFTER validation
+            const token = generateToken({
+                id: req.user._id,
+                email: req.user.email,
+                name: req.user.name
+            });
 
             res.redirect(`${clientURL}/auth/callback?token=${token}${statePart}`);
         } catch (err) {
