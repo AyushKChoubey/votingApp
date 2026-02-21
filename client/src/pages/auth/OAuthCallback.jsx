@@ -40,12 +40,12 @@ const OAuthCallback = () => {
                   if (!p || typeof p !== 'string') return false;
                   if (!p.startsWith('/')) return false;
                   if (p.startsWith('//')) return false;
+                  if (p.includes('\\')) return false;
                   if (p.includes('://')) return false;
                   // disallow CRLF and control chars
                   if (/\r|\n/.test(p)) return false;
                   return true;
                 };
-
                 if (isSafeRedirect(decoded)) {
                   navigate(decoded, { replace: true });
                   return;

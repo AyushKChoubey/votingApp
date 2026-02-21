@@ -74,6 +74,24 @@ router.get('/google/callback',
                 try {
                     const decoded = decodeURIComponent(req.query.state);
                     const parsed = JSON.parse(decoded);
+
+                    // Validate CSRF nonce from session
+                    try {
+                        const sessionNonce = req.session && req.session.oauthNonce;
+                        const parsedNonce = parsed && parsed.n;
+                        if (!parsedNonce || !sessionNonce || parsedNonce !== sessionNonce) {
+                            console.warn('OAuth state nonce mismatch or missing. Rejecting callback.');
+                            const clientURL = process.env.CLIENT_URL || 'http://localhost:5173';
+                            // Clear any stored nonce
+                            try { if (req.session) req.session.oauthNonce = undefined; } catch (e) {}
+                            return res.redirect(`${clientURL}/login?error=invalid_oauth_state`);
+                        }
+                        // Clear nonce to prevent replay
+                        try { if (req.session) req.session.oauthNonce = undefined; } catch (e) {}
+                    } catch (e) {
+                        // ignore session read/clear errors but fail safe below
+                    }
+
                     const r = parsed && parsed.r;
                     // reuse same safe-check used earlier
                     const isSafeRedirect = (p) => {
