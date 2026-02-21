@@ -706,6 +706,16 @@ exports.resendVerificationEmail = async (req, res) => {
       });
     }
 
+    // Check email service health before attempting to reveal anything
+    const emailStatus = serviceHealth.get('email');
+    if (emailStatus && emailStatus.ok === false) {
+      // Email service is down - inform user instead of silently failing
+      return res.status(503).json({
+        error: 'Email service is currently unavailable. Please try again later.',
+        serviceUnavailable: true
+      });
+    }
+
     // Find user (don't reveal if email exists - prevent user enumeration)
     const user = await User.findOne({ email });
 
@@ -747,15 +757,6 @@ exports.resendVerificationEmail = async (req, res) => {
       }
     }
 
-    // Check email service health before attempting
-    const emailStatus = serviceHealth.get('email');
-    if (emailStatus && emailStatus.ok === false) {
-      // Email service is down - inform user instead of silently failing
-      return res.status(503).json({
-        error: 'Email service is currently unavailable. Please try again later.',
-        serviceUnavailable: true
-      });
-    }
 
     // Generate new verification token
     const verificationToken = user.createEmailVerificationToken();
@@ -828,6 +829,15 @@ exports.forgotPassword = async (req, res) => {
         "If an account exists with that email, a password reset link has been sent.",
     };
 
+    // Check email service health before attempting
+    const emailStatus = serviceHealth.get('email');
+    if (emailStatus && emailStatus.ok === false) {
+      return res.status(503).json({
+        error: 'Email service is currently unavailable. Please try again later.',
+        serviceUnavailable: true
+      });
+    }
+
     // Find user by email
     const user = await User.findOne({ email: email.trim().toLowerCase() });
 
@@ -841,15 +851,6 @@ exports.forgotPassword = async (req, res) => {
       return res.status(200).json(successResponse);
     }
 
-    // Check email service health before attempting
-    const emailStatus = serviceHealth.get('email');
-    if (emailStatus && emailStatus.ok === false) {
-      // Email service is down - inform user instead of silently failing
-      return res.status(503).json({
-        error: 'Email service is currently unavailable. Please try again later.',
-        serviceUnavailable: true
-      });
-    }
 
     // Generate reset token (returns unhashed version)
     const resetToken = user.createPasswordResetToken();

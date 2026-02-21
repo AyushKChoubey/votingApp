@@ -24,28 +24,48 @@ const OAuthCallback = () => {
     }
 
     if (token) {
-      // Set auth state in context first, THEN navigate.
-      // This prevents the ProtectedRoute from seeing isAuthenticated=false
-      // and flashing the login page before the checkAuth effect fires.
-      loginWithToken(token).then((result) => {
-        if (result.success) {
-          const redirectParam = params.get('redirect');
-          if (redirectParam) {
-            try {
-              const decoded = decodeURIComponent(redirectParam);
-              navigate(decoded, { replace: true });
-              return;
-            } catch (e) {
-              // fallthrough to dashboard
-            }
-          }
+      (async () => {
+        try {
+          // Set auth state in context first, THEN navigate.
+          // This prevents the ProtectedRoute from seeing isAuthenticated=false
+          // and flashing the login page before the checkAuth effect fires.
+          const result = await loginWithToken(token);
+          if (result.success) {
+            const redirectParam = params.get('redirect');
+            if (redirectParam) {
+              try {
+                const decoded = decodeURIComponent(redirectParam);
+                // Validate decoded redirect to prevent open-redirects
+                const isSafeRedirect = (p) => {
+                  if (!p || typeof p !== 'string') return false;
+                  if (!p.startsWith('/')) return false;
+                  if (p.startsWith('//')) return false;
+                  if (p.includes('://')) return false;
+                  // disallow CRLF and control chars
+                  if (/\r|\n/.test(p)) return false;
+                  return true;
+                };
 
-          navigate('/dashboard', { replace: true });
-        } else {
-          setError(result.error || 'Authentication failed');
+                if (isSafeRedirect(decoded)) {
+                  navigate(decoded, { replace: true });
+                  return;
+                }
+              } catch (e) {
+                // fallthrough to dashboard
+              }
+            }
+
+            navigate('/dashboard', { replace: true });
+          } else {
+            setError(result.error || 'Authentication failed');
+            setTimeout(() => navigate('/login'), 2000);
+          }
+        } catch (e) {
+          // Handle network/runtime errors from loginWithToken
+          setError(e?.message || 'Authentication failed');
           setTimeout(() => navigate('/login'), 2000);
         }
-      });
+      })();
     } else {
       setError("No authentication token received");
       setTimeout(() => {

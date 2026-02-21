@@ -8,16 +8,43 @@ const { verifyEmail, resendVerificationEmail, forgotPassword, resetPassword } = 
 
 // Google OAuth Login
 router.get('/google', (req, res, next) => {
-    // Allow an optional `redirect` query param which we will pass through
-    // as the OAuth `state` so it round-trips back to our callback.
+    // Allow an optional `redirect` query param but validate it before including
+    // it in the OAuth state to avoid open-redirects. Also include a CSRF nonce.
     const redirect = req.query.redirect;
     const options = {
         scope: ['profile', 'email'],
         prompt: 'select_account'
     };
 
-    if (redirect) {
-        options.state = redirect;
+    // helper: safe relative path only
+    const isSafeRedirect = (p) => {
+        if (!p || typeof p !== 'string') return false;
+        if (!p.startsWith('/')) return false;
+        if (p.startsWith('//')) return false;
+        if (p.includes('://')) return false;
+        if (/\r|\n/.test(p)) return false;
+        return true;
+    };
+
+    // create CSRF nonce and store minimally in session
+    const crypto = require('crypto');
+    const nonce = crypto.randomBytes(16).toString('hex');
+    try {
+        if (req.session) req.session.oauthNonce = nonce;
+    } catch (e) {
+        // ignore session write errors
+    }
+
+    let stateObj = { n: nonce };
+    if (isSafeRedirect(redirect)) {
+        stateObj.r = redirect;
+    }
+
+    // Encode state as JSON then URI component to keep it safe for query use
+    try {
+        options.state = encodeURIComponent(JSON.stringify(stateObj));
+    } catch (e) {
+        options.state = encodeURIComponent(JSON.stringify({ n: nonce }));
     }
 
     passport.authenticate('google', options)(req, res, next);
@@ -39,10 +66,32 @@ router.get('/google/callback',
             });
 
             // Redirect to frontend with token. If the OAuth `state` was
-            // provided (we used it to carry a `redirect`), forward it so the
-            // client can navigate to the intended destination after auth.
+            // provided we encoded JSON with a nonce (and possibly a redirect).
+            // Only forward a validated redirect to the client.
             const clientURL = process.env.CLIENT_URL || 'http://localhost:5173';
-            const statePart = req.query.state ? `&redirect=${req.query.state}` : '';
+            let statePart = '';
+            if (req.query.state) {
+                try {
+                    const decoded = decodeURIComponent(req.query.state);
+                    const parsed = JSON.parse(decoded);
+                    const r = parsed && parsed.r;
+                    // reuse same safe-check used earlier
+                    const isSafeRedirect = (p) => {
+                        if (!p || typeof p !== 'string') return false;
+                        if (!p.startsWith('/')) return false;
+                        if (p.startsWith('//')) return false;
+                        if (p.includes('://')) return false;
+                        if (/\r|\n/.test(p)) return false;
+                        return true;
+                    };
+                    if (isSafeRedirect(r)) {
+                        statePart = `&redirect=${encodeURIComponent(r)}`;
+                    }
+                } catch (e) {
+                    // ignore malformed state
+                }
+            }
+
             res.redirect(`${clientURL}/auth/callback?token=${token}${statePart}`);
         } catch (err) {
             console.error('OAuth callback error:', err);
