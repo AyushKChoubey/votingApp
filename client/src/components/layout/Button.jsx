@@ -36,7 +36,7 @@ const Button = ({
   // Variant styles - Fixed for light mode visibility
   const variants = {
     primary: 'btn-theme ripple shadow-xl hover:shadow-2xl [color:var(--color-on-primary)]',
-    secondary: 'theme-surface interactive-scale border-2 border-border hover:border-accent theme-text shadow-sm hover:shadow-lg',
+    secondary: 'theme-surface border-2 border-border hover:btn-theme interactive-scale theme-text shadow-sm hover:shadow-xl transition-colors',
     outline: 'bg-transparent border-2 border-accent text-accent hover:bg-accent [&:hover]:text-white shadow-sm hover:shadow-lg',
     ghost: 'bg-transparent theme-text hover:bg-theme-surface hover:shadow-md',
     success: 'bg-success [color:white] hover:bg-success/90 shadow-lg hover:shadow-xl',

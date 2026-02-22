@@ -186,6 +186,20 @@ exports.createBooth = async (req, res) => {
       if (processedSettings.votingEndTime && typeof processedSettings.votingEndTime === 'string') {
         processedSettings.votingEndTime = new Date(processedSettings.votingEndTime);
       }
+
+      // Validate parsed dates
+      if (processedSettings.votingStartTime) {
+        const s = processedSettings.votingStartTime instanceof Date ? processedSettings.votingStartTime : new Date(processedSettings.votingStartTime);
+        if (isNaN(s.getTime())) {
+          return res.status(400).json({ error: 'Invalid votingStartTime' });
+        }
+      }
+      if (processedSettings.votingEndTime) {
+        const e = processedSettings.votingEndTime instanceof Date ? processedSettings.votingEndTime : new Date(processedSettings.votingEndTime);
+        if (isNaN(e.getTime())) {
+          return res.status(400).json({ error: 'Invalid votingEndTime' });
+        }
+      }
       
       // Ensure booleans are actual booleans
       if (processedSettings.resultsVisibleToVoters !== undefined && typeof processedSettings.resultsVisibleToVoters !== 'boolean') {
@@ -201,9 +215,9 @@ exports.createBooth = async (req, res) => {
 
     // Validate time settings
     if (processedSettings.votingStartTime && processedSettings.votingEndTime) {
-      if (
-        processedSettings.votingStartTime >= processedSettings.votingEndTime
-      ) {
+      const sTime = processedSettings.votingStartTime instanceof Date ? processedSettings.votingStartTime : new Date(processedSettings.votingStartTime);
+      const eTime = processedSettings.votingEndTime instanceof Date ? processedSettings.votingEndTime : new Date(processedSettings.votingEndTime);
+      if (sTime >= eTime) {
         return res.status(400).json({
           error: "Voting end time must be after start time",
           formData: req.body,
@@ -721,6 +735,13 @@ exports.updateBoothSettings = async (req, res) => {
     if (settings.votingStartTime && settings.votingEndTime) {
       const startTime = new Date(settings.votingStartTime);
       const endTime = new Date(settings.votingEndTime);
+
+      if (isNaN(startTime.getTime())) {
+        return res.status(400).json({ error: "Invalid votingStartTime" });
+      }
+      if (isNaN(endTime.getTime())) {
+        return res.status(400).json({ error: "Invalid votingEndTime" });
+      }
 
       if (startTime >= endTime) {
         return res

@@ -484,7 +484,7 @@ const BoothResultsPage = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 flex items-center justify-center px-4">
         <div className="max-w-md w-full text-center">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 border border-gray-100">
+          <div className="theme-surface rounded-2xl shadow-2xl p-8 border border-border">
             <svg
               className="w-16 h-16 text-red-500 mx-auto mb-4"
               fill="none"

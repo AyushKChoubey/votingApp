@@ -12,6 +12,7 @@ const ServiceBanner = () => {
     return localStorage.getItem('health-banner-dismissed') === 'true';
   });
   const lastStatusRef = useRef(null); // Track last status to avoid duplicate logs
+  const prevDegradedRef = useRef([]);
 
   const check = useCallback(async () => {
     try {
@@ -49,13 +50,19 @@ const ServiceBanner = () => {
         lastStatusRef.current = currentStatus;
       }
       
+      // Only update degraded list and clear dismissal when a real recovery occurred
+      const prev = prevDegradedRef.current || [];
       setDegraded(down);
-      
-      // If everything recovered, clear dismissal so banner can show again if issues return
-      if (down.length === 0) {
+
+      // If everything recovered now but there were degraded services before,
+      // clear dismissal so banner can show again on future issues.
+      if (down.length === 0 && prev.length > 0) {
         setDismissed(false);
         localStorage.removeItem('health-banner-dismissed');
       }
+
+      // Save previous degraded list for next comparison
+      prevDegradedRef.current = down;
     } catch (err) {
       // Only log network errors once
       if (lastStatusRef.current !== 'network-error') {
@@ -242,7 +249,7 @@ const Navigation = () => {
                     className={`px-2 lg:px-3 py-2 text-xs lg:text-sm font-medium transition-all duration-300 rounded-md ${
                       isActivePath(item.path)
                         ? "text-accent bg-accent-50 border-l-4 border-accent"
-                        : "theme-text theme-muted hover:text-accent hover:bg-gray-50"
+                        : "theme-text theme-muted hover:text-accent hover:bg-accent-50"
                     }`}
                   >
                     {item.label}
@@ -302,9 +309,9 @@ const Navigation = () => {
                   <div className="relative" ref={menuRef}>
                     <button
                       onClick={() => setIsMenuOpen(!isMenuOpen)}
-                      className="flex items-center space-x-2 px-2 py-1.5 theme-text hover:text-accent transition-colors rounded-md hover:bg-gray-50"
+                      className="flex items-center space-x-2 px-2 py-1.5 theme-text hover:text-accent transition-colors rounded-md hover:bg-accent-50"
                     >
-                      <div className="w-7 h-7 lg:w-9 lg:h-9 nav-avatar overflow-hidden rounded-full bg-gray-100 flex items-center justify-center ring-1 ring-gray-200">
+                      <div className="w-7 h-7 lg:w-9 lg:h-9 nav-avatar overflow-hidden rounded-full theme-surface flex items-center justify-center border border-border">
                         {user?.profile?.avatar || user?.profilePicture ? (
                           <img
                             src={user?.profile?.avatar || user?.profilePicture}
@@ -347,21 +354,21 @@ const Navigation = () => {
                       <div className="absolute right-0 mt-2 w-48 theme-surface rounded-xl shadow-lg border border-border py-1 z-50">
                         <Link
                           to="/user/profile"
-                          className="block px-4 py-2 text-sm transition-all duration-300 rounded-md theme-text theme-muted hover:text-accent hover:bg-gray-50"
+                          className="block px-4 py-2 text-sm transition-all duration-300 rounded-md theme-text theme-muted hover:text-accent hover:bg-accent-50"
                           onClick={() => setIsMenuOpen(false)}
                         >
                           Profile
                         </Link>
                         <Link
                           to="/user/settings"
-                          className="block px-4 py-2 text-sm transition-all duration-300 rounded-md theme-text theme-muted hover:text-accent hover:bg-gray-50"
+                          className="block px-4 py-2 text-sm transition-all duration-300 rounded-md theme-text theme-muted hover:text-accent hover:bg-accent-50"
                           onClick={() => setIsMenuOpen(false)}
                         >
                           Settings
                         </Link>
                         <Link
                           to="/help"
-                          className="block px-4 py-2 text-sm transition-all duration-300 rounded-md theme-text theme-muted hover:text-accent hover:bg-gray-50"
+                          className="block px-4 py-2 text-sm transition-all duration-300 rounded-md theme-text theme-muted hover:text-accent hover:bg-accent-50"
                           onClick={() => setIsMenuOpen(false)}
                         >
                           Help
@@ -371,7 +378,7 @@ const Navigation = () => {
                         </div>
                         <button
                           onClick={handleLogout}
-                          className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-all duration-300 rounded-md"
+                          className="block w-full text-left px-4 py-2 text-sm text-error hover:bg-error-50 transition-all duration-300 rounded-md"
                         >
                           Sign Out
                         </button>
@@ -390,7 +397,7 @@ const Navigation = () => {
 
             {/* Profile icon - only when authenticated */}
             {isAuthenticated && (
-              <div className="w-8 h-8 nav-avatar overflow-hidden rounded-full bg-gray-100 flex items-center justify-center ring-1 ring-gray-200">
+              <div className="w-8 h-8 nav-avatar overflow-hidden rounded-full theme-surface flex items-center justify-center border border-border">
                 {user?.profile?.avatar || user?.profilePicture ? (
                   <img
                     src={user?.profile?.avatar || user?.profilePicture}
@@ -412,7 +419,7 @@ const Navigation = () => {
             {/* Hamburger menu */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none focus-ring"
+              className="p-2 theme-muted hover:text-accent hover:bg-accent-50 rounded-lg transition-colors focus:outline-none focus-ring"
             >
               <svg
                 className="h-6 w-6"
@@ -455,7 +462,7 @@ const Navigation = () => {
             >
               <div className="flex flex-col h-full">
                 {/* Header - Improved Spacing */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border theme-surface">
                   <div className="flex items-center space-x-3">
                     <div className="w-6 h-6 btn-theme rounded-lg flex items-center justify-center shadow-sm">
                       <svg
@@ -472,13 +479,13 @@ const Navigation = () => {
                         />
                       </svg>
                     </div>
-                    <span className="text-base font-bold text-gray-900">
+                    <span className="text-base font-bold theme-text">
                       VoteBooth
                     </span>
                   </div>
                   <button
                     onClick={() => setIsMenuOpen(false)}
-                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="p-2 theme-muted hover:text-accent hover:bg-accent-50 rounded-lg transition-colors"
                   >
                     <svg
                       className="h-5 w-5"
@@ -570,7 +577,7 @@ const Navigation = () => {
                           {/* Dashboard with unique styling */}
                           <Link
                             to="/dashboard"
-                            className={`flex items-center px-4 py-3 text-base font-medium rounded-xl transition-all duration-200 mb-3 ${
+                            className={`flex items-center px-4 py-4 text-base font-medium rounded-xl transition-all duration-200 mb-3 ${
                               isActivePath("/dashboard")
                                 ? "btn-theme text-on-primary shadow-md border-0"
                                 : "theme-surface theme-text hover:btn-theme"
@@ -596,11 +603,11 @@ const Navigation = () => {
 
                         <Link
                           to="/user/profile"
-                          className="flex items-center px-4 py-3 text-base font-medium text-gray-700 hover:text-accent hover:bg-gray-50 rounded-xl transition-all duration-200 mx-0 mb-1"
+                          className="flex items-center px-4 py-4 text-base font-medium theme-text hover:text-accent hover:bg-accent-50 rounded-xl transition-all duration-200 mx-0 mb-1 focus:outline-none focus:ring-accent"
                           onClick={() => setIsMenuOpen(false)}
                         >
                           <svg
-                            className="w-5 h-5 mr-3 text-gray-400"
+                            className="w-5 h-5 mr-3 theme-muted"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -617,11 +624,11 @@ const Navigation = () => {
 
                         <Link
                           to="/user/settings"
-                          className="flex items-center px-4 py-3 text-base font-medium text-gray-700 hover:text-accent hover:bg-gray-50 rounded-xl transition-all duration-200 mx-0 mb-1"
+                          className="flex items-center px-4 py-4 text-base font-medium theme-text hover:text-accent hover:bg-accent-50 rounded-xl transition-all duration-200 mx-0 mb-1 focus:outline-none focus:ring-accent"
                           onClick={() => setIsMenuOpen(false)}
                         >
                           <svg
-                            className="w-5 h-5 mr-3 text-gray-400"
+                            className="w-5 h-5 mr-3 theme-muted"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -648,10 +655,10 @@ const Navigation = () => {
 
                 {/* Bottom Actions - Enhanced Logout */}
                 {isAuthenticated && (
-                  <div className="border-t border-gray-200 p-4 bg-gray-50">
+                  <div className="border-t border-border p-4 theme-surface">
                     <button
                       onClick={handleLogout}
-                      className="flex items-center justify-center w-full px-4 py-3 text-base font-medium text-red-600 hover:bg-red-50 rounded-xl border border-red-200 transition-all duration-200 shadow-sm hover:shadow-md"
+                      className="flex items-center justify-center w-full px-4 py-3 text-base font-medium text-error hover:bg-error-50 rounded-xl border border-error transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-accent"
                     >
                       <svg
                         className="w-5 h-5 mr-3"
@@ -681,7 +688,7 @@ const Navigation = () => {
 
 const Footer = () => {
   return (
-    <footer className="bg-gray-900 text-white">
+    <footer className="theme-surface border-t border-border">
       <div className="max-w-7xl mx-auto py-4 sm:py-6 lg:py-8 px-3 sm:px-4 lg:px-8">
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
           {/* Brand */}
@@ -702,9 +709,9 @@ const Footer = () => {
                   />
                 </svg>
               </div>
-              <span className="text-lg sm:text-xl font-bold">VoteBooth</span>
+              <span className="text-lg sm:text-xl font-bold theme-text">VoteBooth</span>
             </div>
-            <p className="text-gray-400 mb-2 sm:mb-3 max-w-md text-xs sm:text-sm leading-relaxed">
+            <p className="theme-muted mb-2 sm:mb-3 max-w-md text-xs sm:text-sm leading-relaxed">
               Secure, transparent, and easy-to-use online voting platform for
               organizations, communities, and teams of all sizes.
             </p>
@@ -712,14 +719,14 @@ const Footer = () => {
 
           {/* Links */}
           <div className="mt-2 sm:mt-0">
-            <h3 className="text-xs sm:text-sm font-semibold text-white uppercase tracking-wider mb-2 sm:mb-3">
+            <h3 className="text-xs sm:text-sm font-semibold theme-text uppercase tracking-wider mb-2 sm:mb-3">
               Company
             </h3>
             <ul className="space-y-0.5 sm:space-y-1">
               <li>
                 <Link
                   to="/about"
-                  className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm block py-0.5"
+                  className="theme-muted hover:text-accent transition-colors text-xs sm:text-sm block py-0.5"
                 >
                   About
                 </Link>
@@ -727,7 +734,7 @@ const Footer = () => {
               <li>
                 <Link
                   to="/features"
-                  className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm block py-0.5"
+                  className="theme-muted hover:text-accent transition-colors text-xs sm:text-sm block py-0.5"
                 >
                   Features
                 </Link>
@@ -735,7 +742,7 @@ const Footer = () => {
               <li>
                 <Link
                   to="/contact"
-                  className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm block py-0.5"
+                  className="theme-muted hover:text-accent transition-colors text-xs sm:text-sm block py-0.5"
                 >
                   Contact
                 </Link>
@@ -744,14 +751,14 @@ const Footer = () => {
           </div>
 
           <div className="mt-2 sm:mt-0">
-            <h3 className="text-xs sm:text-sm font-semibold text-white uppercase tracking-wider mb-2 sm:mb-3">
+            <h3 className="text-xs sm:text-sm font-semibold theme-text uppercase tracking-wider mb-2 sm:mb-3">
               Legal
             </h3>
             <ul className="space-y-0.5 sm:space-y-1">
               <li>
                 <Link
                   to="/privacy"
-                  className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm block py-0.5"
+                  className="theme-muted hover:text-accent transition-colors text-xs sm:text-sm block py-0.5"
                 >
                   Privacy Policy
                 </Link>
@@ -759,7 +766,7 @@ const Footer = () => {
               <li>
                 <Link
                   to="/terms"
-                  className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm block py-0.5"
+                  className="theme-muted hover:text-accent transition-colors text-xs sm:text-sm block py-0.5"
                 >
                   Terms of Service
                 </Link>
@@ -767,7 +774,7 @@ const Footer = () => {
               <li>
                 <Link
                   to="/help"
-                  className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm block py-0.5"
+                  className="theme-muted hover:text-accent transition-colors text-xs sm:text-sm block py-0.5"
                 >
                   Help Center
                 </Link>
@@ -776,9 +783,9 @@ const Footer = () => {
           </div>
         </div>
 
-        <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-gray-800 text-center">
-          <p className="text-gray-400 text-xs sm:text-sm">
-            © 2025 VoteBooth. All rights reserved. • <span className="inline-block ml-1 px-2 py-0.5 text-xs font-medium bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-400 rounded-full">v{packageJson.version}</span>
+        <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-border text-center">
+          <p className="theme-muted text-xs sm:text-sm">
+            © 2025 VoteBooth. All rights reserved. • <span className="inline-block ml-1 px-2 py-0.5 text-xs font-medium bg-accent-50 text-accent rounded-full">v{packageJson.version}</span>
           </p>
         </div>
       </div>

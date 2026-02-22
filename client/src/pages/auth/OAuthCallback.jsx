@@ -76,14 +76,14 @@ const OAuthCallback = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full text-center">
+      <div className="min-h-screen flex items-center justify-center theme-bg">
+        <div className="theme-surface p-8 rounded-lg shadow-md max-w-md w-full text-center border border-border">
           <div className="text-red-500 text-5xl mb-4">⚠️</div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">
+          <h2 className="text-2xl font-bold theme-text mb-2">
             Authentication Error
           </h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <p className="text-sm text-gray-500">Redirecting to login...</p>
+          <p className="theme-muted mb-4">{error}</p>
+          <p className="text-sm theme-muted">Redirecting to login...</p>
         </div>
       </div>
     );

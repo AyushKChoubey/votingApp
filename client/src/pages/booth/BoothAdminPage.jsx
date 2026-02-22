@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api, { boothService } from "../../services/api";
 import { Alert } from "../../components/layout/Alert";
@@ -12,6 +12,7 @@ import { QRCodeModal } from "../../components/booth/QRCodeModal";
 const toDatetimeLocal = (isoString) => {
   if (!isoString) return "";
   const date = new Date(isoString);
+  if (isNaN(date.getTime())) return "";
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
@@ -43,6 +44,7 @@ const BoothAdminPage = () => {
   const [candidatesOpen, setCandidatesOpen] = useState(true);
   const [qrModalData, setQrModalData] = useState(null);
   const [countdownText, setCountdownText] = useState(null);
+  const lastStatusRef = useRef(null);
 
   // Activity tab state
   const [activeTab, setActiveTab] = useState("overview");
@@ -60,7 +62,6 @@ const BoothAdminPage = () => {
   // Countdown timer for scheduled booths (admin view)
   useEffect(() => {
     let timer = null;
-    let lastStatus = null; // Track countdown status to detect transitions
 
     const compute = () => {
       const settingsObj = settings || {};
@@ -83,6 +84,7 @@ const BoothAdminPage = () => {
         const ms = start - now;
         setCountdownText(`Starts in ${formatDuration(ms)}`);
         currentStatus = "waiting";
+        lastStatusRef.current = currentStatus;
         return;
       }
 
@@ -92,10 +94,10 @@ const BoothAdminPage = () => {
         currentStatus = "active";
         
         // Transition from waiting to active - refetch booth to update toggle
-        if (lastStatus === "waiting") {
+        if (lastStatusRef.current === "waiting") {
           fetchBoothDetails();
         }
-        lastStatus = currentStatus;
+        lastStatusRef.current = currentStatus;
         return;
       }
 
@@ -104,10 +106,10 @@ const BoothAdminPage = () => {
         currentStatus = "ended";
         
         // Transition to ended - refetch booth to update toggle
-        if (lastStatus === "active") {
+        if (lastStatusRef.current === "active") {
           fetchBoothDetails();
         }
-        lastStatus = currentStatus;
+        lastStatusRef.current = currentStatus;
         return;
       }
 
@@ -649,7 +651,7 @@ const BoothAdminPage = () => {
         <div className="mb-1 animate-fadeIn">
           {/* Title and Status Toggle Row */}
           <div className="flex items-start justify-center pt-1 sm:pt-2 mb-2 relative">
-            <div className="text-center max-w-4xl mx-auto px-12">
+            <div className="text-center max-w-4xl mx-auto px-4 sm:px-12">
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2 break-words">
                 <span className="text-gradient">Admin Dashboard</span>
               </h1>

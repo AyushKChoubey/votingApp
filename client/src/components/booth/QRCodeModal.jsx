@@ -118,30 +118,32 @@ export function QRCodeModal({ data, onClose, onDownload }) {
                     {/* QR Code Container - Compact */}
                     <div className="flex justify-center mb-4">
                         <div className="relative">
-                            <div className="relative p-3 bg-white rounded-xl shadow-lg ring-1 ring-black/5">
+                            <div className="relative p-4 theme-surface rounded-xl shadow-md border border-border">
                                 {isGenerating && (
-                                    <div className="absolute inset-0 flex items-center justify-center bg-white rounded-xl">
+                                    <div className="absolute inset-0 flex items-center justify-center theme-surface rounded-xl">
                                         <div className="w-6 h-6 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
                                     </div>
                                 )}
-                                <canvas 
-                                    ref={canvasRef} 
-                                    id="qr-code-canvas"
-                                    className="max-w-full h-auto rounded"
-                                />
+                                <div className="p-2 bg-white/0 dark:bg-transparent rounded">
+                                    <canvas 
+                                        ref={canvasRef} 
+                                        id="qr-code-canvas"
+                                        className="w-48 h-48 sm:w-56 sm:h-56 rounded bg-transparent"
+                                    />
+                                </div>
                             </div>
-                            {/* Corner decorations */}
-                            <div className="absolute -top-0.5 -left-0.5 w-4 h-4 border-t-2 border-l-2 border-accent rounded-tl-lg" />
-                            <div className="absolute -top-0.5 -right-0.5 w-4 h-4 border-t-2 border-r-2 border-accent rounded-tr-lg" />
-                            <div className="absolute -bottom-0.5 -left-0.5 w-4 h-4 border-b-2 border-l-2 border-accent rounded-bl-lg" />
-                            <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 border-b-2 border-r-2 border-accent rounded-br-lg" />
+                            {/* Corner decorations - subtle in light mode */}
+                            <div className="absolute -top-0.5 -left-0.5 w-4 h-4 border-t-2 border-l-2 border-accent/40 rounded-tl-lg" />
+                            <div className="absolute -top-0.5 -right-0.5 w-4 h-4 border-t-2 border-r-2 border-accent/40 rounded-tr-lg" />
+                            <div className="absolute -bottom-0.5 -left-0.5 w-4 h-4 border-b-2 border-l-2 border-accent/40 rounded-bl-lg" />
+                            <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 border-b-2 border-r-2 border-accent/40 rounded-br-lg" />
                         </div>
                     </div>
 
                     {/* Invite Code Section - Compact */}
                     <button
                         onClick={() => copyToClipboard(data?.inviteCode, 'code')}
-                        className="w-full group flex items-center justify-between gap-2 px-4 py-3 rounded-xl theme-surface border border-border hover:border-accent/50 transition-all duration-200 mb-3"
+                        className="w-full group flex items-center justify-between gap-2 px-4 py-3 rounded-xl theme-surface border border-border hover:border-accent/40 transition-all duration-200 mb-3"
                     >
                         <div className="text-left">
                             <div className="text-[10px] theme-muted font-semibold uppercase tracking-wider mb-0.5">
@@ -153,7 +155,7 @@ export function QRCodeModal({ data, onClose, onDownload }) {
                         </div>
                         <div className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
                             copied === 'code' 
-                                ? 'bg-green-500/20 text-green-600 dark:text-green-400' 
+                                ? 'bg-green-50 text-green-700 dark:text-green-300 border border-green-100'
                                 : 'bg-accent/10 text-accent group-hover:bg-accent/20'
                         }`}>
                             {copied === 'code' ? (
@@ -177,7 +179,7 @@ export function QRCodeModal({ data, onClose, onDownload }) {
                     {/* Invite Link - Compact */}
                     <button
                         onClick={() => copyToClipboard(data?.inviteLink, 'link')}
-                        className="w-full group flex items-center gap-2 px-3 py-2.5 rounded-lg theme-surface/50 border border-border/50 hover:border-accent/30 transition-all mb-4"
+                        className="w-full group flex items-center gap-2 px-3 py-2.5 rounded-lg theme-surface border border-border hover:border-accent/40 transition-all mb-4"
                     >
                         <svg className="w-4 h-4 text-accent flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
@@ -187,7 +189,7 @@ export function QRCodeModal({ data, onClose, onDownload }) {
                         </span>
                         <span className={`text-[10px] font-medium px-2 py-1 rounded transition-colors flex-shrink-0 ${
                             copied === 'link'
-                                ? 'bg-green-500/20 text-green-600 dark:text-green-400'
+                                ? 'bg-green-50 text-green-700 dark:text-green-300 border border-green-100'
                                 : 'text-accent group-hover:bg-accent/10'
                         }`}>
                             {copied === 'link' ? 'Copied!' : 'Copy'}
@@ -200,8 +202,8 @@ export function QRCodeModal({ data, onClose, onDownload }) {
                             onClick={handleDownload}
                             className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 ${
                                 downloadSuccess
-                                    ? 'bg-green-500 text-white'
-                                    : 'bg-gradient-to-r from-accent to-accent/80 hover:from-accent/90 hover:to-accent/70 text-white shadow-md hover:shadow-lg'
+                                    ? 'bg-green-600 text-white'
+                                    : 'bg-accent text-white shadow-md hover:brightness-95'
                             }`}
                         >
                             {downloadSuccess ? (

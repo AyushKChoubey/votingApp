@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
@@ -43,16 +43,19 @@ function Dashboard() {
     }
   };
 
+  const fetchInFlightRef = useRef(false);
+  const lastFetchAtRef = useRef(0);
+
   const fetchDashboardData = useCallback(async () => {
     // Prevent duplicate concurrent fetches or very-quick repeated calls
     try {
-      if (fetchDashboardData._inFlight) return;
+      if (fetchInFlightRef.current) return;
       const now = Date.now();
       // If last fetch was within the last 1500ms, skip to avoid duplicate calls
-      if (fetchDashboardData._lastFetchAt && now - fetchDashboardData._lastFetchAt < 1500) return;
+      if (lastFetchAtRef.current && now - lastFetchAtRef.current < 1500) return;
 
-      fetchDashboardData._inFlight = true;
-      fetchDashboardData._lastFetchAt = now;
+      fetchInFlightRef.current = true;
+      lastFetchAtRef.current = now;
 
       setLoading(true);
 
@@ -85,7 +88,7 @@ function Dashboard() {
       }
       setError(err.message || "Failed to load dashboard data");
     } finally {
-      fetchDashboardData._inFlight = false;
+      fetchInFlightRef.current = false;
       setLoading(false);
     }
   }, [logout]);

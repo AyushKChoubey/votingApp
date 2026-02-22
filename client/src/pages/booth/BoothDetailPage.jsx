@@ -26,6 +26,7 @@ const BoothDetailPage = () => {
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [error, setError] = useState("");
   const socketRef = useRef(null);
+  const lastStatusRef = useRef(null);
   const { addToast } = useToast();
   const [qrModalData, setQrModalData] = useState(null);
   const [countdownText, setCountdownText] = useState(null);
@@ -118,7 +119,6 @@ const BoothDetailPage = () => {
   // Countdown timer for scheduled booths (shows to members)
   useEffect(() => {
     let timer = null;
-    let lastStatus = null; // Track countdown status to detect transitions
 
     const compute = () => {
       const settings = (booth && booth.settings) || {};
@@ -143,7 +143,7 @@ const BoothDetailPage = () => {
         const ms = start - now;
         setCountdownText(`Starts in ${formatDuration(ms)}`);
         currentStatus = "waiting";
-        lastStatus = currentStatus;
+        lastStatusRef.current = currentStatus;
         return;
       }
 
@@ -154,10 +154,10 @@ const BoothDetailPage = () => {
         currentStatus = "active";
         
         // Transition from waiting to active - refetch to update booth status
-        if (lastStatus === "waiting") {
-          fetchBoothDetails();
+        if (lastStatusRef.current === "waiting") {
+          fetchBoothDetails(true);
         }
-        lastStatus = currentStatus;
+        lastStatusRef.current = currentStatus;
         return;
       }
 
@@ -167,10 +167,10 @@ const BoothDetailPage = () => {
         currentStatus = "ended";
         
         // Transition to ended - refetch to update booth status
-        if (lastStatus === "active") {
-          fetchBoothDetails();
+        if (lastStatusRef.current === "active") {
+          fetchBoothDetails(true);
         }
-        lastStatus = currentStatus;
+        lastStatusRef.current = currentStatus;
         return;
       }
 
@@ -205,9 +205,9 @@ const BoothDetailPage = () => {
     return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
   }
 
-  const fetchBoothDetails = async () => {
+  const fetchBoothDetails = async (silentRefresh = false) => {
     try {
-      setLoading(true);
+      if (!silentRefresh) setLoading(true);
       const response = await boothService.getBooth(boothId);
 
       if (response.success && response.data) {
@@ -232,7 +232,7 @@ const BoothDetailPage = () => {
         setError("Failed to load booth details");
       }
     } finally {
-      setLoading(false);
+      if (!silentRefresh) setLoading(false);
     }
   };
 

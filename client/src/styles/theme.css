@@ -5,35 +5,35 @@
 
 :root {
   /* Brand */
-  --color-primary: #475569; /* slate-500 */
-  --color-on-primary: #ffffff;
-  --color-secondary: #7c3aed; /* violet-600 */
-  --color-accent: #06b6d4; /* sky-500 */
-  --color-on-accent: #0f172a; /* dark text on light accent bg */
+  --color-primary: #64748b; /* softer slate-500 */
+  --color-on-primary: #f8f9fa;
+  --color-secondary: #8b5cf6; /* softer violet */
+  --color-accent: #0ea5e9; /* softer sky-500 */
+  --color-on-accent: #1e293b; /* softer dark text */
 
-  /* Surfaces */
-  --color-bg: #f8fafc; /* slate-50 */
-  --color-surface: #ffffff; /* card background */
-  --color-border: #cbd5e1; /* slate-300 - more visible border */
+  /* Surfaces - warm, easy on eyes */
+  --color-bg: #f5f5f0; /* warm beige-tinted background */
+  --color-surface: #fafaf8; /* very soft warm off-white */
+  --color-border: #d4d4d0; /* softer warm border */
 
-  /* Text */
-  --color-text: #0f172a; /* slate-900 */
-  --color-text-muted: #475569; /* slate-600 */
+  /* Text - reduced contrast for comfort */
+  --color-text: #2d3748; /* softer dark gray */
+  --color-text-muted: #64748b; /* softer muted text */
   --color-muted: #94a3b8; /* slate-400 */
 
-  /* Feedback */
-  --color-success: #16a34a; /* green-600 */
-  --color-error: #ef4444; /* red-500 */
-  --color-info: #0284c7; /* sky-600 */
-  --color-warning: #f59e0b; /* amber-500 */
+  /* Feedback - softer, less aggressive */
+  --color-success: #10b981; /* softer green */
+  --color-error: #f87171; /* softer red */
+  --color-info: #38bdf8; /* softer blue */
+  --color-warning: #fbbf24; /* softer amber */
 
   /* Progress */
-  --color-progress-start: #14b8a6; /* teal-500 */
-  --color-progress-end: #06b6d4; /* cyan-500 */
+  --color-progress-start: #2dd4bf; /* softer teal */
+  --color-progress-end: #38bdf8; /* softer cyan */
 
-  /* Elevation / shadows */
-  --elevation-1: 0 6px 18px rgba(16, 24, 40, 0.06);
-  --elevation-2: 0 10px 30px rgba(2, 6, 23, 0.12);
+  /* Elevation / shadows - very subtle */
+  --elevation-1: 0 4px 12px rgba(16, 24, 40, 0.04);
+  --elevation-2: 0 8px 24px rgba(2, 6, 23, 0.08);
 
   /* Motion */
   --motion-fast: 160ms;
@@ -41,37 +41,42 @@
   --motion-damping: cubic-bezier(0.2, 0.9, 0.2, 1);
 
   /* Glass / backdrop */
-  --glass: rgba(255, 255, 255, 0.7);
+  --glass: rgba(250, 250, 248, 0.65); /* soft warm glass */
 }
 
 /* Dark theme overrides */
 [data-theme="dark"] {
-  --color-primary: #06b6d4; /* sky-500 */
-  --color-on-primary: #022c40;
-  --color-secondary: #8b5cf6;
-  --color-accent: #22d3ee;
-  --color-on-accent: #ffffff; /* white text on dark accent bg */
+  --color-primary: #94a3b8; /* softer slate */
+  --color-on-primary: #0f172a;
+  --color-secondary: #a78bfa; /* softer violet */
+  --color-accent: #38bdf8; /* softer sky */
+  --color-on-accent: #0f172a;
 
-  --color-bg: #071026; /* very dark slate */
-  --color-surface: rgba(9, 10, 14, 0.8); /* semi-opaque card */
-  --color-border: #334155; /* slate-700 - visible in dark mode */
+  /* Warm dark surfaces - less harsh on eyes */
+  --color-bg: #151820; /* warmer dark background */
+  --color-surface: #1c2028; /* warmer dark surface, not pure black */
+  --color-border: #2d3441; /* softer, warmer border */
 
-  --color-text: #e6eef5;
-  --color-text-muted: #94a3b9;
-  --color-muted: #6b7280;
+  /* Softer text - reduced contrast for night viewing */
+  --color-text: #e2e8f0; /* softer white */
+  --color-text-muted: #94a3b8; /* softer muted */
+  --color-muted: #64748b;
 
-  --color-success: #22c55e;
-  --color-error: #fb7185;
-  --color-info: #38bdf8;
-  --color-warning: #fbbf24;
+  /* Softer feedback colors */
+  --color-success: #34d399; /* softer green */
+  --color-error: #fca5a5; /* softer red */
+  --color-info: #60a5fa; /* softer blue */
+  --color-warning: #fcd34d; /* softer yellow */
 
-  --color-progress-start: #3f0b6c; /* teal-400 */
-  --color-progress-end: #cf3827; /* cyan-400 */
+  --color-progress-start: #2dd4bf; /* softer teal */
+  --color-progress-end: #38bdf8; /* softer cyan */
 
-  --elevation-1: 0 10px 30px rgba(2, 6, 23, 0.45);
-  --elevation-2: 0 18px 50px rgba(2, 6, 23, 0.6);
+  /* Very subtle shadows */
+  --elevation-1: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --elevation-2: 0 8px 24px rgba(0, 0, 0, 0.25);
 
-  --glass: rgba(12, 15, 20, 0.55);
+  /* Warm glass effect */
+  --glass: rgba(28, 32, 40, 0.65);
 }
 
 /* Helper utilities that use variables (small, centralized helpers)
@@ -116,33 +121,44 @@
   transform: scale(0.98);
 }
 
-/* Accessible focus ring */
+/* Accessible focus ring - uses theme accent */
 .focus-ring {
   outline: 2px solid transparent;
   outline-offset: 2px;
-  box-shadow: 0 0 0 4px rgba(14, 165, 164, 0.12);
+}
+.focus-ring:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 15%, transparent);
 }
 
 /* Accent borders */
 .border-accent {
   border-color: var(--color-accent);
 }
+.border-border {
+  border-color: var(--color-border);
+}
 
-/* Accent text/background helpers (small, opt-in helpers for legacy Tailwind usages) */
+/* Accent text/background helpers */
 .text-accent {
   color: var(--color-accent);
 }
+.bg-accent {
+  background-color: var(--color-accent);
+}
 .bg-accent-50 {
-  background-color: rgba(6, 182, 212, 0.06);
+  background-color: color-mix(in srgb, var(--color-accent) 8%, transparent);
 }
 .bg-accent-100 {
-  background-color: rgba(6, 182, 212, 0.1);
+  background-color: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+.hover\:bg-accent-50:hover {
+  background-color: color-mix(in srgb, var(--color-accent) 8%, transparent);
 }
 .hover\:text-accent:hover {
   color: var(--color-accent);
 }
 .focus\:ring-accent:focus {
-  box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.12);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 15%, transparent);
 }
 
 /* Additional color utilities for icons and text */
@@ -163,32 +179,79 @@
 }
 
 /* Semantic helpers for feedback colors */
+.bg-success {
+  background-color: var(--color-success);
+}
 .text-success {
   color: var(--color-success);
 }
 .bg-success-50 {
-  background-color: rgba(22, 163, 74, 0.06);
+  background-color: color-mix(in srgb, var(--color-success) 10%, transparent);
+}
+.bg-success-100 {
+  background-color: color-mix(in srgb, var(--color-success) 15%, transparent);
 }
 .border-success {
-  border-color: rgba(22, 163, 74, 0.12);
+  border-color: color-mix(in srgb, var(--color-success) 25%, transparent);
+}
+
+.bg-error {
+  background-color: var(--color-error);
 }
 .text-error {
   color: var(--color-error);
 }
 .bg-error-50 {
-  background-color: rgba(239, 68, 68, 0.06);
+  background-color: color-mix(in srgb, var(--color-error) 10%, transparent);
+}
+.bg-error-100 {
+  background-color: color-mix(in srgb, var(--color-error) 15%, transparent);
 }
 .border-error {
-  border-color: rgba(239, 68, 68, 0.12);
+  border-color: color-mix(in srgb, var(--color-error) 25%, transparent);
+}
+
+.bg-warning {
+  background-color: var(--color-warning);
 }
 .text-warning {
   color: var(--color-warning);
 }
 .bg-warning-50 {
-  background-color: rgba(245, 158, 11, 0.06);
+  background-color: color-mix(in srgb, var(--color-warning) 10%, transparent);
+}
+.bg-warning-100 {
+  background-color: color-mix(in srgb, var(--color-warning) 15%, transparent);
 }
 .border-warning {
-  border-color: rgba(245, 158, 11, 0.12);
+  border-color: color-mix(in srgb, var(--color-warning) 25%, transparent);
+}
+
+.bg-info {
+  background-color: var(--color-info);
+}
+.text-info {
+  color: var(--color-info);
+}
+.bg-info-50 {
+  background-color: color-mix(in srgb, var(--color-info) 10%, transparent);
+}
+
+/* Hover states for semantic colors */
+.hover\:bg-success:hover {
+  background-color: color-mix(in srgb, var(--color-success) 90%, #000);
+}
+.hover\:bg-error:hover {
+  background-color: color-mix(in srgb, var(--color-error) 90%, #000);
+}
+.hover\:bg-warning:hover {
+  background-color: color-mix(in srgb, var(--color-warning) 90%, #000);
+}
+.hover\:bg-error-50:hover {
+  background-color: color-mix(in srgb, var(--color-error) 15%, transparent);
+}
+.hover\:bg-success-50:hover {
+  background-color: color-mix(in srgb, var(--color-success) 15%, transparent);
 }
 
 /* Small badge helpers */
