@@ -800,13 +800,13 @@ const BoothAdminPage = () => {
               onClick={() => handleTabChange("overview")}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
                 activeTab === "overview"
-                  ? "bg-gradient-to-r from-primary to-accent text-on-accent shadow-md"
+                  ? "bg-accent/20 text-accent border border-accent/30 shadow-sm"
                   : "theme-muted hover:text-accent hover:bg-accent/10"
               }`}
             >
               <svg
                 className={`w-4 h-4 ${
-                  activeTab === "overview" ? "text-on-accent" : "text-accent/60"
+                  activeTab === "overview" ? "text-accent" : "text-accent/60"
                 }`}
                 fill="none"
                 stroke="currentColor"
@@ -825,13 +825,13 @@ const BoothAdminPage = () => {
               onClick={() => handleTabChange("activity")}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
                 activeTab === "activity"
-                  ? "bg-gradient-to-r from-primary to-accent text-on-accent shadow-md"
+                  ? "bg-accent/20 text-accent border border-accent/30 shadow-sm"
                   : "theme-muted hover:text-accent hover:bg-accent/10"
               }`}
             >
               <svg
                 className={`w-4 h-4 ${
-                  activeTab === "activity" ? "text-on-accent" : "text-accent/60"
+                  activeTab === "activity" ? "text-accent" : "text-accent/60"
                 }`}
                 fill="none"
                 stroke="currentColor"
@@ -862,7 +862,7 @@ const BoothAdminPage = () => {
             <div className="glass-card p-5 sm:p-6">
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-gradient-to-r from-primary to-accent rounded-lg flex items-center justify-center">
+                  <div className="w-8 h-8 bg-gradient-to-r from-primary to-accent dark:from-primary/80 dark:to-accent/80 rounded-lg flex items-center justify-center shadow-md">
                     <svg
                       className="w-4 h-4 text-white"
                       fill="none"
@@ -1059,9 +1059,9 @@ const BoothAdminPage = () => {
                 <div className="glass-card p-4 sm:p-6 hover:shadow-2xl transition-all duration-300 relative z-10">
                   <div className="flex items-center justify-between mb-4 sm:mb-6">
                     <div className="flex items-center">
-                      <div className="w-8 h-8 bg-gradient-to-r from-accent to-primary rounded-lg flex items-center justify-center mr-3">
+                      <div className="w-8 h-8 bg-accent/20 rounded-lg flex items-center justify-center mr-3">
                         <svg
-                          className="w-4 h-4 text-on-accent"
+                          className="w-4 h-4 text-accent"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -1240,9 +1240,9 @@ const BoothAdminPage = () => {
                 <div className="glass-card p-4 sm:p-6 hover:shadow-2xl transition-all duration-300">
                   <div className="flex items-center justify-between mb-4 sm:mb-6">
                     <div className="flex items-center">
-                      <div className="w-8 h-8 bg-gradient-to-r from-secondary to-primary rounded-lg flex items-center justify-center mr-3">
+                      <div className="w-8 h-8 bg-accent/20 rounded-lg flex items-center justify-center mr-3">
                         <svg
-                          className="w-4 h-4 text-on-accent"
+                          className="w-4 h-4 text-accent"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -1503,7 +1503,7 @@ const BoothAdminPage = () => {
                         <LoadingButton
                           onClick={handleUpdateSettings}
                           loading={updating}
-                          className="flex-1 bg-gradient-to-r from-accent to-primary hover:from-accent/90 hover:to-primary/90 disabled:opacity-50 text-white py-3 px-4 rounded-lg text-sm font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:transform-none"
+                          className="flex-1 bg-gradient-to-r from-accent to-primary hover:from-accent/90 hover:to-primary/90 dark:from-accent/90 dark:to-primary/90 dark:hover:from-accent/80 dark:hover:to-primary/80 disabled:opacity-50 text-white py-3 px-4 rounded-lg text-sm font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:transform-none"
                         >
                           Save Changes
                         </LoadingButton>
@@ -1523,7 +1523,7 @@ const BoothAdminPage = () => {
                             });
                             setEditingSettings(false);
                           }}
-                          className="px-4 py-3 bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 rounded-lg text-sm font-semibold transition-all duration-300 border border-gray-300"
+                          className="px-4 py-3 bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 dark:from-gray-800 dark:to-gray-700 dark:hover:from-gray-700 dark:hover:to-gray-600 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-semibold transition-all duration-300 border border-gray-300 dark:border-gray-600"
                         >
                           Cancel
                         </button>
@@ -1583,9 +1583,9 @@ const BoothAdminPage = () => {
                       aria-expanded={candidatesOpen}
                       className="flex items-center gap-3 focus:outline-none"
                     >
-                      <div className="w-8 h-8 bg-gradient-to-r from-secondary to-primary rounded-lg flex items-center justify-center mr-3">
+                      <div className="w-8 h-8 bg-accent/20 rounded-lg flex items-center justify-center mr-3">
                         <svg
-                          className="w-4 h-4 text-on-accent"
+                          className="w-4 h-4 text-accent"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -1777,9 +1777,9 @@ const BoothAdminPage = () => {
                 <div className="glass-card p-4 sm:p-6 h-[400px] sm:h-[500px] lg:h-[600px] flex flex-col hover:shadow-2xl transition-all duration-300">
                   <div className="flex items-center justify-between mb-4 sm:mb-6 flex-shrink-0">
                     <div className="flex items-center">
-                      <div className="w-8 h-8 bg-gradient-to-r from-secondary to-primary rounded-lg flex items-center justify-center mr-3">
+                      <div className="w-8 h-8 bg-accent/20 rounded-lg flex items-center justify-center mr-3">
                         <svg
-                          className="w-4 h-4 text-on-accent"
+                          className="w-4 h-4 text-accent"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -1796,7 +1796,7 @@ const BoothAdminPage = () => {
                         Members
                       </h3>
                     </div>
-                    <span className="bg-gradient-to-r from-primary/20 to-secondary/20 text-primary text-xs sm:text-sm font-bold px-3 py-1.5 rounded-full border border-primary/30 shadow-sm">
+                    <span className="bg-gradient-to-r from-primary/20 to-secondary/20 dark:from-primary/30 dark:to-secondary/30 text-primary dark:text-primary/90 text-xs sm:text-sm font-bold px-3 py-1.5 rounded-full border border-primary/30 dark:border-primary/40 shadow-sm">
                       {booth?.members?.length || 0}{" "}
                       {booth?.members?.length === 1 ? "member" : "members"}
                     </span>
@@ -2124,7 +2124,7 @@ const BoothAdminPage = () => {
                         id="delete-booth-btn"
                         onClick={handleDeleteBooth}
                         disabled={updating}
-                        className="shrink-0 flex items-center gap-1.5 bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white py-2 px-4 rounded-lg font-semibold text-sm transition-all duration-200 shadow-sm hover:shadow-md"
+                        className="shrink-0 flex items-center gap-1.5 bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 dark:from-rose-600 dark:to-red-600 dark:hover:from-rose-700 dark:hover:to-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-2 px-4 rounded-lg font-semibold text-sm transition-all duration-200 shadow-sm hover:shadow-md"
                       >
                         <svg
                           className="w-3.5 h-3.5"

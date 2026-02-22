@@ -168,9 +168,6 @@
 .text-secondary {
   color: var(--color-secondary);
 }
-.text-warning {
-  color: var(--color-warning);
-}
 .text-info {
   color: var(--color-info);
 }

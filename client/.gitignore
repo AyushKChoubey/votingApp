@@ -75,3 +75,6 @@ eslint-report.html
 # IDE
 *.code-workspace
 .history/
+
+
+assets/

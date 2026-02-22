@@ -674,11 +674,11 @@ const BoothDetailPage = () => {
           <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             {/* Voting Status */}
             {getVotingStatusMessage() && (
-              <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg sm:rounded-xl p-4 sm:p-6 shadow-lg">
+              <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/30 border border-amber-200 dark:border-amber-800 rounded-lg sm:rounded-xl p-4 sm:p-6 shadow-lg">
                 <div className="flex items-center">
-                  <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
+                  <div className="w-8 h-8 bg-amber-100 dark:bg-amber-800/50 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
                     <svg
-                      className="w-4 h-4 text-amber-600"
+                      className="w-4 h-4 text-amber-600 dark:text-amber-400"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -691,7 +691,7 @@ const BoothDetailPage = () => {
                       />
                     </svg>
                   </div>
-                  <span className="text-amber-800 font-medium text-sm sm:text-base">
+                  <span className="text-amber-800 dark:text-amber-300 font-medium text-sm sm:text-base">
                     {getVotingStatusMessage()}
                   </span>
                 </div>
