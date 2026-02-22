@@ -7,7 +7,11 @@ import packageJson from "../../../package.json";
 // ── Service health banner ────────────────────────────────────────────────────
 const ServiceBanner = () => {
   const [degraded, setDegraded] = useState([]);
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(() => {
+    // Persist dismissal across refreshes
+    return localStorage.getItem('health-banner-dismissed') === 'true';
+  });
+  const lastStatusRef = useRef(null); // Track last status to avoid duplicate logs
 
   const check = useCallback(async () => {
     try {
@@ -21,20 +25,43 @@ const ServiceBanner = () => {
       try {
         data = await res.json();
       } catch (e) {
-        console.warn(`Health check returned ${res.status} with non-JSON response`);
+        // Only log if this is a new error state
+        if (lastStatusRef.current !== 'parse-error') {
+          console.warn(`Health check returned ${res.status} with non-JSON response`);
+          lastStatusRef.current = 'parse-error';
+        }
         return;
       }
 
-      if (!res.ok) {
-        // Still proceed — server uses non-2xx to indicate degraded overall status
-        console.warn(`Health check returned ${res.status}`);
-      }
       const down = (data.services || []).filter((s) => !s.ok);
+      const currentStatus = down.length > 0 ? down.map(s => s.key).sort().join(',') : 'healthy';
+      
+      // Only log when status changes. Use generic messages to avoid
+      // exposing service identifiers or labels in production logs.
+      if (lastStatusRef.current !== currentStatus) {
+        if (down.length > 0) {
+          // Generic warning — do not include service names/labels
+          console.warn('⚠️ Service health degraded: one or more services are unavailable');
+        } else if (lastStatusRef.current !== null) {
+          // Use info level for recovery to reduce severity in logs
+          console.info('✅ All services recovered');
+        }
+        lastStatusRef.current = currentStatus;
+      }
+      
       setDegraded(down);
-      // If everything recovered, un-dismiss so the banner re-appears if it breaks again
-      if (down.length === 0) setDismissed(false);
-    } catch {
-      // If health endpoint itself is unreachable, don't show banner — app-level spinner handles that
+      
+      // If everything recovered, clear dismissal so banner can show again if issues return
+      if (down.length === 0) {
+        setDismissed(false);
+        localStorage.removeItem('health-banner-dismissed');
+      }
+    } catch (err) {
+      // Only log network errors once
+      if (lastStatusRef.current !== 'network-error') {
+        console.warn('Health check endpoint unreachable');
+        lastStatusRef.current = 'network-error';
+      }
     }
   }, []);
 
@@ -43,6 +70,11 @@ const ServiceBanner = () => {
     const id = setInterval(check, 60_000);
     return () => clearInterval(id);
   }, [check]);
+
+  const handleDismiss = () => {
+    setDismissed(true);
+    localStorage.setItem('health-banner-dismissed', 'true');
+  };
 
   if (dismissed || degraded.length === 0) return null;
 
@@ -73,7 +105,7 @@ const ServiceBanner = () => {
         </span>
       </div>
       <button
-        onClick={() => setDismissed(true)}
+        onClick={handleDismiss}
         aria-label="Dismiss warning"
         className="flex-shrink-0 text-amber-500 hover:text-amber-700 transition-colors"
       >

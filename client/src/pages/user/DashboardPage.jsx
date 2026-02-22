@@ -44,7 +44,16 @@ function Dashboard() {
   };
 
   const fetchDashboardData = useCallback(async () => {
+    // Prevent duplicate concurrent fetches or very-quick repeated calls
     try {
+      if (fetchDashboardData._inFlight) return;
+      const now = Date.now();
+      // If last fetch was within the last 1500ms, skip to avoid duplicate calls
+      if (fetchDashboardData._lastFetchAt && now - fetchDashboardData._lastFetchAt < 1500) return;
+
+      fetchDashboardData._inFlight = true;
+      fetchDashboardData._lastFetchAt = now;
+
       setLoading(true);
 
       const response = await api.get("/api/booth/dashboard");
@@ -76,6 +85,7 @@ function Dashboard() {
       }
       setError(err.message || "Failed to load dashboard data");
     } finally {
+      fetchDashboardData._inFlight = false;
       setLoading(false);
     }
   }, [logout]);

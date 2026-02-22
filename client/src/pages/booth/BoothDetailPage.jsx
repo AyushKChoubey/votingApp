@@ -118,6 +118,7 @@ const BoothDetailPage = () => {
   // Countdown timer for scheduled booths (shows to members)
   useEffect(() => {
     let timer = null;
+    let lastStatus = null; // Track countdown status to detect transitions
 
     const compute = () => {
       const settings = (booth && booth.settings) || {};
@@ -129,6 +130,8 @@ const BoothDetailPage = () => {
         : null;
       const now = new Date();
 
+      let currentStatus = null;
+
       // No schedule
       if (!start && !end) {
         setCountdownText(null);
@@ -139,6 +142,8 @@ const BoothDetailPage = () => {
       if (start && now < start) {
         const ms = start - now;
         setCountdownText(`Starts in ${formatDuration(ms)}`);
+        currentStatus = "waiting";
+        lastStatus = currentStatus;
         return;
       }
 
@@ -146,12 +151,26 @@ const BoothDetailPage = () => {
       if (end && (!start || now >= start) && now < end) {
         const ms = end - now;
         setCountdownText(`Time remaining ${formatDuration(ms)}`);
+        currentStatus = "active";
+        
+        // Transition from waiting to active - refetch to update booth status
+        if (lastStatus === "waiting") {
+          fetchBoothDetails();
+        }
+        lastStatus = currentStatus;
         return;
       }
 
       // After end
       if (end && now >= end) {
         setCountdownText(`Voting ended`);
+        currentStatus = "ended";
+        
+        // Transition to ended - refetch to update booth status
+        if (lastStatus === "active") {
+          fetchBoothDetails();
+        }
+        lastStatus = currentStatus;
         return;
       }
 
@@ -478,7 +497,14 @@ const BoothDetailPage = () => {
             {/* Countdown visible to members */}
             {countdownText &&
               (permissions.isMember || permissions.isCreator) && (
-                <span className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-700/30">
+                <span
+                  style={{
+                    background: "#fee2e2",
+                    color: "#b91c1c",
+                    border: "1px solid #fecaca",
+                  }}
+                  className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold"
+                >
                   {countdownText}
                 </span>
               )}

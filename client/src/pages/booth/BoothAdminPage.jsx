@@ -8,6 +8,18 @@ import ConfirmModal from "../../components/layout/ConfirmModal";
 import Button from "../../components/layout/Button";
 import { QRCodeModal } from "../../components/booth/QRCodeModal";
 
+// Helper function to convert ISO datetime to datetime-local format
+const toDatetimeLocal = (isoString) => {
+  if (!isoString) return "";
+  const date = new Date(isoString);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
 const BoothAdminPage = () => {
   const { boothId } = useParams();
   const navigate = useNavigate();
@@ -48,6 +60,7 @@ const BoothAdminPage = () => {
   // Countdown timer for scheduled booths (admin view)
   useEffect(() => {
     let timer = null;
+    let lastStatus = null; // Track countdown status to detect transitions
 
     const compute = () => {
       const settingsObj = settings || {};
@@ -59,6 +72,8 @@ const BoothAdminPage = () => {
         : null;
       const now = new Date();
 
+      let currentStatus = null;
+
       if (!start && !end) {
         setCountdownText(null);
         return;
@@ -67,17 +82,32 @@ const BoothAdminPage = () => {
       if (start && now < start) {
         const ms = start - now;
         setCountdownText(`Starts in ${formatDuration(ms)}`);
+        currentStatus = "waiting";
         return;
       }
 
       if (end && (!start || now >= start) && now < end) {
         const ms = end - now;
         setCountdownText(`Time remaining ${formatDuration(ms)}`);
+        currentStatus = "active";
+        
+        // Transition from waiting to active - refetch booth to update toggle
+        if (lastStatus === "waiting") {
+          fetchBoothDetails();
+        }
+        lastStatus = currentStatus;
         return;
       }
 
       if (end && now >= end) {
         setCountdownText(`Voting ended`);
+        currentStatus = "ended";
+        
+        // Transition to ended - refetch booth to update toggle
+        if (lastStatus === "active") {
+          fetchBoothDetails();
+        }
+        lastStatus = currentStatus;
         return;
       }
 
@@ -148,9 +178,12 @@ const BoothAdminPage = () => {
       if (response.success && response.data) {
         setBooth(response.data.booth);
         const srvSettings = response.data.booth.settings || {};
+        
         // Ensure UI flags reflect existing settings
         setSettings({
           ...srvSettings,
+          votingStartTime: toDatetimeLocal(srvSettings.votingStartTime),
+          votingEndTime: toDatetimeLocal(srvSettings.votingEndTime),
           restrictByEmailDomain:
             Array.isArray(srvSettings.allowedEmailDomains) &&
             srvSettings.allowedEmailDomains.length > 0,
@@ -1233,7 +1266,18 @@ const BoothAdminPage = () => {
                     <button
                       onClick={() => {
                         if (editingSettings) {
-                          setSettings(booth.settings || {});
+                          const srvSettings = booth.settings || {};
+                          setSettings({
+                            ...srvSettings,
+                            votingStartTime: toDatetimeLocal(srvSettings.votingStartTime),
+                            votingEndTime: toDatetimeLocal(srvSettings.votingEndTime),
+                            restrictByEmailDomain:
+                              Array.isArray(srvSettings.allowedEmailDomains) &&
+                              srvSettings.allowedEmailDomains.length > 0,
+                            scheduled: !!(
+                              srvSettings.votingStartTime || srvSettings.votingEndTime
+                            ),
+                          });
                         }
                         setEditingSettings(!editingSettings);
                       }}
@@ -1463,7 +1507,18 @@ const BoothAdminPage = () => {
                         </LoadingButton>
                         <button
                           onClick={() => {
-                            setSettings(booth.settings || {});
+                            const srvSettings = booth.settings || {};
+                            setSettings({
+                              ...srvSettings,
+                              votingStartTime: toDatetimeLocal(srvSettings.votingStartTime),
+                              votingEndTime: toDatetimeLocal(srvSettings.votingEndTime),
+                              restrictByEmailDomain:
+                                Array.isArray(srvSettings.allowedEmailDomains) &&
+                                srvSettings.allowedEmailDomains.length > 0,
+                              scheduled: !!(
+                                srvSettings.votingStartTime || srvSettings.votingEndTime
+                              ),
+                            });
                             setEditingSettings(false);
                           }}
                           className="px-4 py-3 bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 rounded-lg text-sm font-semibold transition-all duration-300 border border-gray-300"

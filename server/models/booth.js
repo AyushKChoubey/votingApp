@@ -510,6 +510,67 @@ boothSchema.methods.closeIfExpired = async function () {
   return false;
 };
 
+// Open booth if votingStartTime has arrived and within votingEndTime
+boothSchema.methods.openIfScheduled = async function () {
+  try {
+    if (
+      this.status === "closed" &&
+      this.settings &&
+      this.settings.votingStartTime
+    ) {
+      const start = new Date(this.settings.votingStartTime);
+      const now = new Date();
+      
+      // Check if voting should start
+      if (now >= start) {
+        // If there's an end time, make sure we haven't passed it
+        if (this.settings.votingEndTime) {
+          const end = new Date(this.settings.votingEndTime);
+          if (now >= end) {
+            // Already past end time, don't open
+            return false;
+          }
+        }
+        
+        // Open the booth
+        this.status = "active";
+        await this.save();
+        
+        // Log as a system action
+        try {
+          const logActivity = require("../utils/logActivity");
+          await logActivity(
+            this._id,
+            null,
+            "[System] Voting opened automatically (schedule started)",
+          );
+        } catch (logErr) {
+          // swallow — logging must never block the open
+        }
+        return true;
+      }
+    }
+  } catch (err) {
+    // swallow errors here; callers may log if needed
+  }
+  return false;
+};
+
+// Update booth status based on schedule (checks both open and close)
+boothSchema.methods.updateScheduledStatus = async function () {
+  let changed = false;
+  
+  // First check if it should open
+  const opened = await this.openIfScheduled();
+  if (opened) changed = true;
+  
+  // Then check if it should close
+  const closed = await this.closeIfExpired();
+  if (closed) changed = true;
+  
+  return changed;
+};
+
 boothSchema.statics.findByInviteCode = function (code) {
   if (!code) return Promise.resolve(null);
   return this.findOne({ inviteCode: code.toUpperCase() });

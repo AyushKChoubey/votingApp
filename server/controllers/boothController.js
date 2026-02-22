@@ -164,7 +164,7 @@ exports.createBooth = async (req, res) => {
       });
     }
 
-    // Process settings
+    // Process settings from JSON only
     let processedSettings = {};
 
     if (settings && typeof settings === "string") {
@@ -177,43 +177,27 @@ exports.createBooth = async (req, res) => {
       processedSettings = settings;
     }
 
-    // Always process form data to ensure proper boolean conversion
-    // Handle form data - this ensures checkboxes are properly converted to booleans
-    const formSettings = {
-      // Voting Rules
-      resultsVisibleToVoters:
-        req.body["settings[resultsVisibleToVoters]"] === "on" ||
-        req.body["settings[resultsVisibleToVoters]"] === "true",
-      showLiveResults:
-        req.body["settings[showLiveResults]"] === "on" ||
-        req.body["settings[showLiveResults]"] === "true",
-
-      // Access Control
-      // note: requireEmailVerification removed
-      requireApproval:
-        req.body["settings[requireApproval]"] === "on" ||
-        req.body["settings[requireApproval]"] === "true",
-      // sendNotifications removed
-
-      // Time Settings
-      votingStartTime: req.body["settings[votingStartTime]"]
-        ? new Date(req.body["settings[votingStartTime]"])
-        : null,
-      votingEndTime: req.body["settings[votingEndTime]"]
-        ? new Date(req.body["settings[votingEndTime]"])
-        : null,
-
-      // Email Domain Restrictions
-      allowedEmailDomains: req.body["settings[allowedEmailDomains]"]
-        ? req.body["settings[allowedEmailDomains]"]
-            .split(",")
-            .map((d) => d.trim())
-            .filter((d) => d.length > 0)
-        : [],
-    };
-
-    // Merge processed settings with form settings, giving priority to form settings
-    processedSettings = { ...processedSettings, ...formSettings };
+    // Ensure proper types for settings from JSON
+    if (processedSettings && Object.keys(processedSettings).length > 0) {
+      // Convert date strings to Date objects if needed
+      if (processedSettings.votingStartTime && typeof processedSettings.votingStartTime === 'string') {
+        processedSettings.votingStartTime = new Date(processedSettings.votingStartTime);
+      }
+      if (processedSettings.votingEndTime && typeof processedSettings.votingEndTime === 'string') {
+        processedSettings.votingEndTime = new Date(processedSettings.votingEndTime);
+      }
+      
+      // Ensure booleans are actual booleans
+      if (processedSettings.resultsVisibleToVoters !== undefined && typeof processedSettings.resultsVisibleToVoters !== 'boolean') {
+        processedSettings.resultsVisibleToVoters = processedSettings.resultsVisibleToVoters === 'true' || processedSettings.resultsVisibleToVoters === true;
+      }
+      if (processedSettings.showLiveResults !== undefined && typeof processedSettings.showLiveResults !== 'boolean') {
+        processedSettings.showLiveResults = processedSettings.showLiveResults === 'true' || processedSettings.showLiveResults === true;
+      }
+      if (processedSettings.requireApproval !== undefined && typeof processedSettings.requireApproval !== 'boolean') {
+        processedSettings.requireApproval = processedSettings.requireApproval === 'true' || processedSettings.requireApproval === true;
+      }
+    }
 
     // Validate time settings
     if (processedSettings.votingStartTime && processedSettings.votingEndTime) {
@@ -247,6 +231,27 @@ exports.createBooth = async (req, res) => {
       }
     }
 
+    // Determine initial status based on schedule
+    let initialStatus = "active"; // Default to active
+    
+    if (processedSettings.votingStartTime) {
+      const now = new Date();
+      const startTime = new Date(processedSettings.votingStartTime);
+      
+      // If voting hasn't started yet, booth should be closed
+      if (now < startTime) {
+        initialStatus = "closed";
+      }
+      
+      // If there's an end time and it's already passed, booth should be closed
+      if (processedSettings.votingEndTime) {
+        const endTime = new Date(processedSettings.votingEndTime);
+        if (now >= endTime) {
+          initialStatus = "closed";
+        }
+      }
+    }
+
     // Create booth
     const booth = new Booth({
       name,
@@ -254,6 +259,7 @@ exports.createBooth = async (req, res) => {
       creator: userId,
       candidates: formattedCandidates,
       maxMembers,
+      status: initialStatus,
       settings: processedSettings,
       members: [{ user: userId, hasVoted: false }],
     });

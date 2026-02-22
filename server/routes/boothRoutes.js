@@ -45,6 +45,19 @@ router.get("/dashboard", jwtAuthMiddleware, async (req, res) => {
       createdAt: -1,
     });
 
+    // Auto-update scheduled status for all created booths
+    await Promise.all(
+      createdBooths.map(async (booth) => {
+        try {
+          if (typeof booth.updateScheduledStatus === "function") {
+            await booth.updateScheduledStatus();
+          }
+        } catch (e) {
+          // swallow errors
+        }
+      })
+    );
+
     // logging removed
 
     // Get booths where user is a member
@@ -54,6 +67,19 @@ router.get("/dashboard", jwtAuthMiddleware, async (req, res) => {
     })
       .populate("creator", "name")
       .sort({ createdAt: -1 });
+
+    // Auto-update scheduled status for all joined booths
+    await Promise.all(
+      joinedBooths.map(async (booth) => {
+        try {
+          if (typeof booth.updateScheduledStatus === "function") {
+            await booth.updateScheduledStatus();
+          }
+        } catch (e) {
+          // swallow errors
+        }
+      })
+    );
 
     // Calculate stats
     const stats = {
@@ -154,10 +180,10 @@ router.get("/join/:code", jwtAuthMiddleware, async (req, res) => {
 
     const userId = req.user.id;
     const isMember = booth.isMember(userId);
-    // Auto-close booth if voting end time has passed
+    // Auto-update booth status based on schedule (open/close)
     try {
-      if (typeof booth.closeIfExpired === "function") {
-        await booth.closeIfExpired();
+      if (typeof booth.updateScheduledStatus === "function") {
+        await booth.updateScheduledStatus();
       }
     } catch (e) {
       // logging removed
@@ -205,6 +231,15 @@ router.get("/:boothId", jwtAuthMiddleware, async (req, res) => {
     // Populate after finding
     await booth.populate("creator", "name email");
     await booth.populate("members.user", "name");
+
+    // Auto-update booth status based on schedule
+    try {
+      if (typeof booth.updateScheduledStatus === "function") {
+        await booth.updateScheduledStatus();
+      }
+    } catch (e) {
+      // logging removed
+    }
 
     const isMember = booth.isMember(userId);
     const isCreator = booth.creator._id.toString() === userId;
@@ -350,10 +385,10 @@ router.get("/:boothId/admin", jwtAuthMiddleware, async (req, res) => {
         error: "Only booth creator can access admin panel",
       });
     }
-    // Auto-close booth if voting end time has passed (admin view should reflect current status)
+    // Auto-update booth status based on schedule (admin view should reflect current status)
     try {
-      if (typeof booth.closeIfExpired === "function") {
-        await booth.closeIfExpired();
+      if (typeof booth.updateScheduledStatus === "function") {
+        await booth.updateScheduledStatus();
       }
     } catch (e) {
       // logging removed
