@@ -24,6 +24,16 @@ const boothActivitySchema = new mongoose.Schema({
   },
 });
 
+// Strip internal fields from JSON output
+boothActivitySchema.set("toJSON", {
+  transform: (doc, ret) => {
+    ret.id = ret._id;
+    delete ret._id;
+    delete ret.__v;
+    return ret;
+  },
+});
+
 // Compound index for efficient per-booth queries sorted by time
 boothActivitySchema.index({ booth: 1, createdAt: -1 });
 

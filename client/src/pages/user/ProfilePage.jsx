@@ -125,7 +125,6 @@ const ProfilePage = () => {
     return errors;
   };
 
-
   const validateOrganization = (organization) => {
     const errors = [];
     if (organization && organization.length > 100) {
@@ -187,10 +186,10 @@ const ProfilePage = () => {
       const response = await api.put("/api/user/profile", updateData);
       // API interceptor returns response.data directly
       const userData = response.user || response;
-      
+
       // Update profile data with full user object
       setProfileData(userData);
-      
+
       // Update form data to match saved values
       setFormData({
         name: userData.name || "",
@@ -200,7 +199,7 @@ const ProfilePage = () => {
           organization: userData.profile?.organization || "",
         },
       });
-      
+
       addToast("Profile updated successfully!", "success");
       setEditing(false);
     } catch (err) {
@@ -279,14 +278,21 @@ const ProfilePage = () => {
 
         <div className="space-y-6 animate-fadeIn stagger-children">
           {/* Profile Overview Card */}
-          <div className="glass-card rounded-2xl border border-border p-4 sm:p-6 hover:shadow-xl transition-all duration-300 card-hover" style={{"--stagger-index": 0}}>
+          <div
+            className="glass-card rounded-2xl border border-border p-4 sm:p-6 hover:shadow-xl transition-all duration-300 card-hover"
+            style={{ "--stagger-index": 0 }}
+          >
             <div className="flex items-center gap-4 mb-4">
               {/* Avatar with Upload Controls */}
               <div className="flex flex-col items-center gap-2 flex-shrink-0">
                 <div className="relative">
-                  {(profileData?.profile?.avatar || profileData?.profilePicture) ? (
+                  {profileData?.profile?.avatar ||
+                  profileData?.profilePicture ? (
                     <img
-                      src={profileData?.profile?.avatar || profileData?.profilePicture}
+                      src={
+                        profileData?.profile?.avatar ||
+                        profileData?.profilePicture
+                      }
                       alt="Profile"
                       className="h-16 w-16 rounded-full object-cover ring-2 ring-gray-100"
                     />
@@ -303,51 +309,73 @@ const ProfilePage = () => {
                 <div className="flex gap-2 ">
                   <button
                     type="button"
-                    onClick={() => document.getElementById('avatar-upload-input').click()}
+                    onClick={() =>
+                      document.getElementById("avatar-upload-input").click()
+                    }
                     className="w-8 h-8 rounded-lg bg-accent text-on-accent flex items-center justify-center shadow-sm hover:bg-accent/90 transition-all duration-200 hover:scale-105"
                     title="Upload avatar"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
                     </svg>
                   </button>
-                  
+
                   <button
                     type="button"
                     disabled={!profileData?.profile?.avatar}
                     onClick={async () => {
                       const hasUploadedAvatar = profileData?.profile?.avatar;
-                      
+
                       if (!hasUploadedAvatar) {
-                        addToast('No uploaded avatar to remove', 'info');
+                        addToast("No uploaded avatar to remove", "info");
                         return;
                       }
-                      
+
                       try {
-                        const response = await api.delete('/api/user/avatar');
+                        const response = await api.delete("/api/user/avatar");
                         if (response.success) {
-                          addToast('Avatar removed', 'success');
+                          addToast("Avatar removed", "success");
                           // Update with full user object from response
                           const userData = response.user || response;
                           setProfileData(userData);
                         }
                       } catch (err) {
-                        addToast('Failed to remove avatar', 'error');
+                        addToast("Failed to remove avatar", "error");
                       }
                     }}
                     className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-sm transition-all duration-200 ${
                       profileData?.profile?.avatar
-                        ? 'bg-red-500 text-white hover:bg-red-600 hover:scale-105 cursor-pointer'
-                        : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-50'
+                        ? "bg-red-500 text-white hover:bg-red-600 hover:scale-105 cursor-pointer"
+                        : "bg-gray-300 text-gray-500 cursor-not-allowed opacity-50"
                     }`}
                     title={
                       profileData?.profile?.avatar
-                        ? 'Remove uploaded avatar'
-                        : 'No uploaded avatar'
+                        ? "Remove uploaded avatar"
+                        : "No uploaded avatar"
                     }
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -361,34 +389,47 @@ const ProfilePage = () => {
                   onChange={async (e) => {
                     const file = e.target.files[0];
                     if (!file) return;
-                    
-                    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+
+                    const validTypes = [
+                      "image/jpeg",
+                      "image/jpg",
+                      "image/png",
+                      "image/gif",
+                      "image/webp",
+                    ];
                     if (!validTypes.includes(file.type)) {
-                      addToast('Please select a valid image file', 'error');
+                      addToast("Please select a valid image file", "error");
                       return;
                     }
-                    
+
                     if (file.size > 5 * 1024 * 1024) {
-                      addToast('Image must be less than 5MB', 'error');
+                      addToast("Image must be less than 5MB", "error");
                       return;
                     }
-                    
+
                     try {
                       const formData = new FormData();
-                      formData.append('avatar', file);
-                      const response = await api.post('/api/user/avatar', formData, {
-                        headers: { 'Content-Type': 'multipart/form-data' },
-                      });
+                      formData.append("avatar", file);
+                      const response = await api.post(
+                        "/api/user/avatar",
+                        formData,
+                        {
+                          headers: { "Content-Type": "multipart/form-data" },
+                        },
+                      );
                       if (response.success) {
-                        addToast('Avatar updated!', 'success');
+                        addToast("Avatar updated!", "success");
                         // Update with full user object from response
                         const userData = response.user || response;
                         setProfileData(userData);
                       }
                     } catch (err) {
-                      addToast(err.message || 'Failed to upload avatar', 'error');
+                      addToast(
+                        err.message || "Failed to upload avatar",
+                        "error",
+                      );
                     }
-                    e.target.value = '';
+                    e.target.value = "";
                   }}
                 />
               </div>
@@ -403,12 +444,14 @@ const ProfilePage = () => {
                 <div className="flex flex-wrap items-center gap-2 mt-2">
                   <span
                     className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      profileData?.isEmailVerified || profileData?.authProvider === "google"
+                      profileData?.isEmailVerified ||
+                      profileData?.authProvider === "google"
                         ? "bg-green-100 text-green-800"
                         : "bg-yellow-100 text-yellow-800"
                     }`}
                   >
-                    {profileData?.isEmailVerified || profileData?.authProvider === "google"
+                    {profileData?.isEmailVerified ||
+                    profileData?.authProvider === "google"
                       ? "✓ Verified"
                       : "⚠ Unverified"}
                   </span>
@@ -429,7 +472,10 @@ const ProfilePage = () => {
           </div>
 
           {/* Profile Information Card */}
-          <div className="glass-card rounded-2xl border border-border p-4 sm:p-6 hover:shadow-xl transition-all duration-300 card-hover" style={{"--stagger-index": 1}}>
+          <div
+            className="glass-card rounded-2xl border border-border p-4 sm:p-6 hover:shadow-xl transition-all duration-300 card-hover"
+            style={{ "--stagger-index": 1 }}
+          >
             <div className="flex items-center justify-between mb-4">
               <button
                 onClick={() => setProfileOpen((prev) => !prev)}
@@ -527,7 +573,7 @@ const ProfilePage = () => {
                           support if you need to update your email.
                         </p>
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm font-medium theme-muted mb-2">
                           Organization
@@ -604,17 +650,22 @@ const ProfilePage = () => {
                   </form>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      
-                      <div className="p-3 glass-card rounded-lg border border-border">
-                        <div className="font-medium theme-muted">Organization</div>
-                        <div className="theme-text">{profileData?.profile?.organization || "Not provided"}</div>
+                    <div className="p-3 glass-card rounded-lg border border-border">
+                      <div className="font-medium theme-muted">
+                        Organization
                       </div>
-                      {profileData?.profile?.bio && (
-                        <div className="p-3 glass-card rounded-lg border border-border md:col-span-2">
-                          <div className="font-medium theme-muted">Bio</div>
-                          <div className="theme-text">{profileData.profile.bio}</div>
+                      <div className="theme-text">
+                        {profileData?.profile?.organization || "Not provided"}
+                      </div>
+                    </div>
+                    {profileData?.profile?.bio && (
+                      <div className="p-3 glass-card rounded-lg border border-border md:col-span-2">
+                        <div className="font-medium theme-muted">Bio</div>
+                        <div className="theme-text">
+                          {profileData.profile.bio}
                         </div>
-                      )}
+                      </div>
+                    )}
                   </div>
                 )}
               </>
@@ -623,7 +674,10 @@ const ProfilePage = () => {
 
           {/* Statistics Card */}
           {userStats && (
-            <div className="glass-card rounded-2xl border border-border p-4 sm:p-6 hover:shadow-xl transition-all duration-300 card-hover" style={{"--stagger-index": 2}}>
+            <div
+              className="glass-card rounded-2xl border border-border p-4 sm:p-6 hover:shadow-xl transition-all duration-300 card-hover"
+              style={{ "--stagger-index": 2 }}
+            >
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-8 h-8 bg-gradient-to-r from-success to-accent rounded-lg flex items-center justify-center">
                   <svg
@@ -675,7 +729,10 @@ const ProfilePage = () => {
           )}
 
           {/* Account Details Card */}
-          <div className="glass-card rounded-2xl border border-border p-4 sm:p-6 hover:shadow-xl transition-all duration-300 card-hover" style={{"--stagger-index": 3}}>
+          <div
+            className="glass-card rounded-2xl border border-border p-4 sm:p-6 hover:shadow-xl transition-all duration-300 card-hover"
+            style={{ "--stagger-index": 3 }}
+          >
             <div className="flex items-center gap-3 mb-4">
               <div className="w-8 h-8 bg-gradient-to-r from-accent to-secondary rounded-lg flex items-center justify-center">
                 <svg
@@ -725,7 +782,10 @@ const ProfilePage = () => {
           </div>
 
           {/* Recent Activity Card */}
-          <div className="glass-card rounded-2xl border border-border p-4 sm:p-6 hover:shadow-xl transition-all duration-300 card-hover" style={{"--stagger-index": 4}}>
+          <div
+            className="glass-card rounded-2xl border border-border p-4 sm:p-6 hover:shadow-xl transition-all duration-300 card-hover"
+            style={{ "--stagger-index": 4 }}
+          >
             <div className="flex items-center gap-3 mb-4">
               <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
                 <svg
@@ -752,7 +812,9 @@ const ProfilePage = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-success"></div>
-                    <span className="text-sm theme-text">Last password change</span>
+                    <span className="text-sm theme-text">
+                      Last password change
+                    </span>
                   </div>
                   <span className="text-xs theme-muted">
                     {profileData?.passwordChangedAt
@@ -765,9 +827,13 @@ const ProfilePage = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-accent"></div>
-                    <span className="text-sm theme-text">Total login count</span>
+                    <span className="text-sm theme-text">
+                      Total login count
+                    </span>
                   </div>
-                  <span className="text-xs theme-muted">{profileData?.loginCount || 0}</span>
+                  <span className="text-xs theme-muted">
+                    {profileData?.loginCount || 0}
+                  </span>
                 </div>
               </div>
               <div className="p-3 glass-card rounded-lg border border-border">
@@ -776,7 +842,9 @@ const ProfilePage = () => {
                     <div className="w-2 h-2 rounded-full bg-secondary"></div>
                     <span className="text-sm theme-text">Account status</span>
                   </div>
-                  <span className="text-xs font-medium text-success">Active</span>
+                  <span className="text-xs font-medium text-success">
+                    Active
+                  </span>
                 </div>
               </div>
             </div>

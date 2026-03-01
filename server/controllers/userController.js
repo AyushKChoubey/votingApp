@@ -94,7 +94,7 @@ exports.signup = async (req, res) => {
       name: name.trim(),
       email,
       password,
-      role: role === "admin" ? "admin" : "voter", // Prevent unauthorized admin creation
+      role: "voter", // Admin promotion must be done manually via database
       isEmailVerified: false, // Explicitly set to false
     });
 
@@ -122,7 +122,9 @@ exports.signup = async (req, res) => {
       } else {
         console.warn("⚠️  Email sent but with warning:", emailResult?.message);
         try {
-          serviceHealth.setStatus("email", false, { message: emailResult?.message });
+          serviceHealth.setStatus("email", false, {
+            message: emailResult?.message,
+          });
         } catch (e) {
           // ignore
         }
@@ -130,7 +132,9 @@ exports.signup = async (req, res) => {
     } catch (emailError) {
       console.error("❌ Failed to send verification email:", emailError);
       try {
-        serviceHealth.setStatus("email", false, { message: emailError.message });
+        serviceHealth.setStatus("email", false, {
+          message: emailError.message,
+        });
       } catch (e) {
         // ignore
       }
@@ -162,7 +166,7 @@ exports.signup = async (req, res) => {
 
     res.status(500).json({
       error: errorMessage,
-      formData: req.body,
+      formData: { name: req.body.name, email: req.body.email },
     });
   }
 };
@@ -282,7 +286,6 @@ exports.login = async (req, res) => {
       success: true,
       message: "Login successful",
       token,
-      refreshToken,
       user: userData,
     });
   } catch (err) {
@@ -495,6 +498,9 @@ exports.refreshToken = async (req, res) => {
       return res.status(401).json({ error: "Refresh token required" });
     }
 
+    // Check if refresh token has been blacklisted (already used/rotated)
+    const { blacklistRefreshToken } = require("../middleware/jwt");
+
     const decoded = jwt.verify(
       refreshToken,
       process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
@@ -509,9 +515,16 @@ exports.refreshToken = async (req, res) => {
       return res.status(401).json({ error: "User not found" });
     }
 
+    // Blacklist the old refresh token (rotation — prevents reuse)
+    blacklistRefreshToken(refreshToken);
+
     // Generate new access token
     const newToken = generateToken(user);
 
+    // Generate new refresh token (rotation)
+    const newRefreshToken = generateRefreshToken(user);
+
+    // Set new access token cookie
     res.cookie("token", newToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -519,7 +532,15 @@ exports.refreshToken = async (req, res) => {
       maxAge: 24 * 60 * 60 * 1000,
     });
 
-    res.json({ message: "Token refreshed successfully" });
+    // Set new refresh token cookie (rotated)
+    res.cookie("refreshToken", newRefreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.json({ success: true, message: "Token refreshed successfully" });
   } catch (err) {
     console.error("Refresh token error:", err);
     res.status(401).json({ error: "Invalid refresh token" });
@@ -707,12 +728,13 @@ exports.resendVerificationEmail = async (req, res) => {
     }
 
     // Check email service health before attempting to reveal anything
-    const emailStatus = serviceHealth.get('email');
+    const emailStatus = serviceHealth.get("email");
     if (emailStatus && emailStatus.ok === false) {
       // Email service is down - inform user instead of silently failing
       return res.status(503).json({
-        error: 'Email service is currently unavailable. Please try again later.',
-        serviceUnavailable: true
+        error:
+          "Email service is currently unavailable. Please try again later.",
+        serviceUnavailable: true,
       });
     }
 
@@ -757,7 +779,6 @@ exports.resendVerificationEmail = async (req, res) => {
       }
     }
 
-
     // Generate new verification token
     const verificationToken = user.createEmailVerificationToken();
     await user.save();
@@ -781,7 +802,9 @@ exports.resendVerificationEmail = async (req, res) => {
       } else {
         console.warn("⚠️  Email sent but with warning:", emailResult?.message);
         try {
-          serviceHealth.setStatus("email", false, { message: emailResult?.message });
+          serviceHealth.setStatus("email", false, {
+            message: emailResult?.message,
+          });
         } catch (e) {
           // ignore
         }
@@ -789,7 +812,9 @@ exports.resendVerificationEmail = async (req, res) => {
     } catch (emailError) {
       console.error("❌ Failed to send verification email:", emailError);
       try {
-        serviceHealth.setStatus("email", false, { message: emailError.message });
+        serviceHealth.setStatus("email", false, {
+          message: emailError.message,
+        });
       } catch (e) {
         // ignore
       }
@@ -797,8 +822,8 @@ exports.resendVerificationEmail = async (req, res) => {
 
     if (!emailSent) {
       return res.status(503).json({
-        error: 'Failed to send verification email. Please try again later.',
-        serviceUnavailable: true
+        error: "Failed to send verification email. Please try again later.",
+        serviceUnavailable: true,
       });
     }
 
@@ -830,11 +855,12 @@ exports.forgotPassword = async (req, res) => {
     };
 
     // Check email service health before attempting
-    const emailStatus = serviceHealth.get('email');
+    const emailStatus = serviceHealth.get("email");
     if (emailStatus && emailStatus.ok === false) {
       return res.status(503).json({
-        error: 'Email service is currently unavailable. Please try again later.',
-        serviceUnavailable: true
+        error:
+          "Email service is currently unavailable. Please try again later.",
+        serviceUnavailable: true,
       });
     }
 
@@ -850,7 +876,6 @@ exports.forgotPassword = async (req, res) => {
     if (user.authProvider !== "local") {
       return res.status(200).json(successResponse);
     }
-
 
     // Generate reset token (returns unhashed version)
     const resetToken = user.createPasswordResetToken();
@@ -880,7 +905,9 @@ exports.forgotPassword = async (req, res) => {
           emailResult?.message,
         );
         try {
-          serviceHealth.setStatus("email", false, { message: emailResult?.message });
+          serviceHealth.setStatus("email", false, {
+            message: emailResult?.message,
+          });
         } catch (e) {
           // ignore
         }
@@ -888,7 +915,9 @@ exports.forgotPassword = async (req, res) => {
     } catch (emailError) {
       console.error("❌ Failed to send password reset email:", emailError);
       try {
-        serviceHealth.setStatus("email", false, { message: emailError.message });
+        serviceHealth.setStatus("email", false, {
+          message: emailError.message,
+        });
       } catch (e) {
         // ignore
       }
@@ -900,8 +929,8 @@ exports.forgotPassword = async (req, res) => {
 
     if (!emailSent) {
       return res.status(503).json({
-        error: 'Failed to send password reset email. Please try again later.',
-        serviceUnavailable: true
+        error: "Failed to send password reset email. Please try again later.",
+        serviceUnavailable: true,
       });
     }
 
@@ -990,7 +1019,8 @@ exports.uploadAvatar = async (req, res) => {
     const cloudStatus = serviceHealth.get("cloudinary");
     if (cloudStatus && cloudStatus.ok === false) {
       return res.status(503).json({
-        error: "Image upload service is currently unavailable. Please try again later.",
+        error:
+          "Image upload service is currently unavailable. Please try again later.",
       });
     }
 

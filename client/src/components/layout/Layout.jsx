@@ -9,7 +9,7 @@ const ServiceBanner = () => {
   const [degraded, setDegraded] = useState([]);
   const [dismissed, setDismissed] = useState(() => {
     // Persist dismissal across refreshes
-    return localStorage.getItem('health-banner-dismissed') === 'true';
+    return localStorage.getItem("health-banner-dismissed") === "true";
   });
   const lastStatusRef = useRef(null); // Track last status to avoid duplicate logs
   const prevDegradedRef = useRef([]);
@@ -20,36 +20,48 @@ const ServiceBanner = () => {
       const res = await fetch(`${BASE}/api/health/services`, {
         credentials: "include",
       });
-      
+
       // Try to parse JSON body even if the status is non-2xx (server uses 503 when services degraded)
       let data = null;
       try {
         data = await res.json();
       } catch (e) {
         // Only log if this is a new error state
-        if (lastStatusRef.current !== 'parse-error') {
-          console.warn(`Health check returned ${res.status} with non-JSON response`);
-          lastStatusRef.current = 'parse-error';
+        if (lastStatusRef.current !== "parse-error") {
+          console.warn(
+            `Health check returned ${res.status} with non-JSON response`,
+          );
+          lastStatusRef.current = "parse-error";
         }
         return;
       }
 
-      const down = (data.services || []).filter((s) => !s.ok);
-      const currentStatus = down.length > 0 ? down.map(s => s.key).sort().join(',') : 'healthy';
-      
+      const down = (data.services || []).filter(
+        (s) => !s.ok && s.key !== "server",
+      );
+      const currentStatus =
+        down.length > 0
+          ? down
+              .map((s) => s.key)
+              .sort()
+              .join(",")
+          : "healthy";
+
       // Only log when status changes. Use generic messages to avoid
       // exposing service identifiers or labels in production logs.
       if (lastStatusRef.current !== currentStatus) {
         if (down.length > 0) {
           // Generic warning — do not include service names/labels
-          console.warn('⚠️ Service health degraded: one or more services are unavailable');
+          console.warn(
+            "⚠️ Service health degraded: one or more services are unavailable",
+          );
         } else if (lastStatusRef.current !== null) {
           // Use info level for recovery to reduce severity in logs
-          console.info('✅ All services recovered');
+          console.info("✅ All services recovered");
         }
         lastStatusRef.current = currentStatus;
       }
-      
+
       // Only update degraded list and clear dismissal when a real recovery occurred
       const prev = prevDegradedRef.current || [];
       setDegraded(down);
@@ -58,16 +70,16 @@ const ServiceBanner = () => {
       // clear dismissal so banner can show again on future issues.
       if (down.length === 0 && prev.length > 0) {
         setDismissed(false);
-        localStorage.removeItem('health-banner-dismissed');
+        localStorage.removeItem("health-banner-dismissed");
       }
 
       // Save previous degraded list for next comparison
       prevDegradedRef.current = down;
     } catch (err) {
       // Only log network errors once
-      if (lastStatusRef.current !== 'network-error') {
-        console.warn('Health check endpoint unreachable');
-        lastStatusRef.current = 'network-error';
+      if (lastStatusRef.current !== "network-error") {
+        console.warn("Health check endpoint unreachable");
+        lastStatusRef.current = "network-error";
       }
     }
   }, []);
@@ -80,7 +92,7 @@ const ServiceBanner = () => {
 
   const handleDismiss = () => {
     setDismissed(true);
-    localStorage.setItem('health-banner-dismissed', 'true');
+    localStorage.setItem("health-banner-dismissed", "true");
   };
 
   if (dismissed || degraded.length === 0) return null;
@@ -90,11 +102,11 @@ const ServiceBanner = () => {
   return (
     <div
       role="alert"
-      className="w-full bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-between gap-3 text-sm"
+      className="w-full bg-info-50 dark:bg-info border-b border-border px-4 py-2 flex items-center justify-between gap-3 text-sm text-on-info"
     >
-      <div className="flex items-center gap-2 text-amber-800">
+      <div className="flex items-center gap-2">
         <svg
-          className="w-4 h-4 flex-shrink-0 text-amber-500"
+          className="w-4 h-4 flex-shrink-0 text-on-info"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -106,7 +118,7 @@ const ServiceBanner = () => {
             d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
           />
         </svg>
-        <span>
+        <span className="text-on-info">
           <strong>Some services are currently unavailable</strong> — {names}.
           Certain features may not work as expected.
         </span>
@@ -114,10 +126,10 @@ const ServiceBanner = () => {
       <button
         onClick={handleDismiss}
         aria-label="Dismiss warning"
-        className="flex-shrink-0 text-amber-500 hover:text-amber-700 transition-colors"
+        className="flex-shrink-0 theme-muted hover:text-on-info transition-colors"
       >
         <svg
-          className="w-4 h-4"
+          className="w-4 h-4 text-on-info"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -709,7 +721,9 @@ const Footer = () => {
                   />
                 </svg>
               </div>
-              <span className="text-lg sm:text-xl font-bold theme-text">VoteBooth</span>
+              <span className="text-lg sm:text-xl font-bold theme-text">
+                VoteBooth
+              </span>
             </div>
             <p className="theme-muted mb-2 sm:mb-3 max-w-md text-xs sm:text-sm leading-relaxed">
               Secure, transparent, and easy-to-use online voting platform for
@@ -785,7 +799,10 @@ const Footer = () => {
 
         <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-border text-center">
           <p className="theme-muted text-xs sm:text-sm">
-            © 2025 VoteBooth. All rights reserved. • <span className="inline-block ml-1 px-2 py-0.5 text-xs font-medium bg-accent-50 text-accent rounded-full">v{packageJson.version}</span>
+            © 2025 VoteBooth. All rights reserved. •{" "}
+            <span className="inline-block ml-1 px-2 py-0.5 text-xs font-medium bg-accent-50 text-accent rounded-full">
+              v{packageJson.version}
+            </span>
           </p>
         </div>
       </div>

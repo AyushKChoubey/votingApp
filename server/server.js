@@ -326,6 +326,9 @@ const startServer = async () => {
     console.log(
       `📡 CORS enabled for: ${process.env.NODE_ENV === "production" ? "production domains" : "http://localhost:5173"}`,
     );
+    
+    // Mark server as ready
+    serviceHealth.setStatus('server', true, { message: 'Server listening successfully' });
   });
 };
 

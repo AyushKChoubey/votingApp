@@ -6,12 +6,13 @@
 
 // Default services start as unknown/unhealthy to avoid false-positives
 const services = {
+  server: { ok: false, label: "Server", message: null, updatedAt: null },
   email: { ok: false, label: "Email service", message: null, updatedAt: null },
   cloudinary: { ok: false, label: "Avatar & image uploads", message: null, updatedAt: null },
 };
 
 /**
- * @param {'email'|'cloudinary'} name
+ * @param {'server'|'email'|'cloudinary'} name
  * @param {boolean} ok
  */
 /**

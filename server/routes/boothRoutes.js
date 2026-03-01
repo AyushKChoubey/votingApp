@@ -55,7 +55,7 @@ router.get("/dashboard", jwtAuthMiddleware, async (req, res) => {
         } catch (e) {
           // swallow errors
         }
-      })
+      }),
     );
 
     // logging removed
@@ -78,7 +78,7 @@ router.get("/dashboard", jwtAuthMiddleware, async (req, res) => {
         } catch (e) {
           // swallow errors
         }
-      })
+      }),
     );
 
     // Calculate stats

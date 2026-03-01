@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect } from "react";
-import { authService } from "../services/api";
+import { authService, apiService } from "../services/api";
 
 // Auth state management
 const getInitialState = () => {
@@ -7,7 +7,7 @@ const getInitialState = () => {
   return {
     user: null,
     isAuthenticated: false,
-    isLoading: !!token, // Only show loading if there's a token to verify
+    isLoading: true, // Always start with loading true for health check
     error: null,
   };
 };
@@ -75,6 +75,11 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
+
+  // Silent background ping to wake the server — fire-and-forget, no UI
+  useEffect(() => {
+    apiService.healthCheck().catch(() => {});
+  }, []);
 
   // Check for existing session on app load
   useEffect(() => {

@@ -1,0 +1,28 @@
+# Allow all crawlers to index all content
+User-agent: *
+Allow: /
+
+# Public pages - explicitly allowed
+Allow: /
+Allow: /about
+Allow: /features
+Allow: /contact
+Allow: /help
+Allow: /privacy
+Allow: /terms
+
+# Disallow private/authenticated pages
+Disallow: /dashboard
+Disallow: /booth/
+Disallow: /profile
+Disallow: /admin
+Disallow: /auth/
+
+# Disallow API endpoints
+Disallow: /api/
+
+# Sitemap location
+Sitemap: https://voting-app-rose.vercel.app/sitemap.xml
+
+# Crawl-delay (optional, adjust if needed)
+Crawl-delay: 1

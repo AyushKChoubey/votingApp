@@ -1,4 +1,4 @@
-const nodemailer = require("nodemailer");
+const mailjet = require("node-mailjet");
 const serviceHealth = require("./serviceHealth");
 
 /**
@@ -6,7 +6,7 @@ const serviceHealth = require("./serviceHealth");
  */
 class EmailService {
   constructor() {
-    this.transporter = null;
+    this.mailjetClient = null;
     this.initialized = false;
   }
 
@@ -27,7 +27,7 @@ class EmailService {
   }
 
   /**
-   * Initialize email transporter
+   * Initialize email service with Mailjet SDK
    */
   async initialize() {
     if (this.initialized) return;
@@ -39,52 +39,39 @@ class EmailService {
         process.env.MAILJET_SECRET_KEY &&
         process.env.EMAIL_USER;
 
-      // Create transporter based on credentials availability
       if (hasMailjetCredentials) {
-        // Use Mailjet SMTP service
-        this.transporter = nodemailer.createTransport({
-          host: "in-v3.mailjet.com",
-          port: 587,
-          secure: false, // true for 465, false for other ports
-          auth: {
-            user: process.env.MAILJET_API_KEY,
-            pass: process.env.MAILJET_SECRET_KEY,
-          },
-        });
-
-        console.log(`✅ Email service initialized with Mailjet`);
-        console.log(`   Sending from: ${process.env.EMAIL_USER}`);
-      } else {
-        // Development: Use Ethereal (fake SMTP service for testing)
-        const testAccount = await nodemailer.createTestAccount();
-
-        this.transporter = nodemailer.createTransport({
-          host: "smtp.ethereal.email",
-          port: 587,
-          secure: false,
-          auth: {
-            user: testAccount.user,
-            pass: testAccount.pass,
-          },
-        });
-
-        console.log("📧 Email service initialized with Ethereal (test mode)");
-        console.log(
-          "   💡 Configure MAILJET_API_KEY, MAILJET_SECRET_KEY, and EMAIL_USER in .env to send real emails",
+        // Initialize Mailjet client using SDK
+        this.mailjetClient = mailjet.apiConnect(
+          process.env.MAILJET_API_KEY,
+          process.env.MAILJET_SECRET_KEY
         );
-        console.log("   Preview emails at: https://ethereal.email");
-      }
 
-      // Verify transporter
-      await this.transporter.verify();
-      this.initialized = true;
-      // Mark email service healthy for the global health tracker
-      try {
-        serviceHealth.setStatus("email", true);
-      } catch (e) {
-        // ignore if serviceHealth isn't available for some reason
+        console.log(`✅ Email service initialized with Mailjet SDK`);
+        console.log(`   Sending from: ${process.env.EMAIL_USER}`);
+        
+        this.initialized = true;
+        
+        // Mark email service healthy for the global health tracker
+        try {
+          serviceHealth.setStatus("email", true);
+        } catch (e) {
+          // ignore if serviceHealth isn't available for some reason
+        }
+        
+        console.log("✅ Email service ready");
+      } else {
+        console.warn("⚠️  Mailjet credentials not configured");
+        console.log(
+          "   💡 Configure MAILJET_API_KEY, MAILJET_SECRET_KEY, and EMAIL_USER in .env to send emails",
+        );
+        
+        // Mark email service as unhealthy
+        try {
+          serviceHealth.setStatus("email", false);
+        } catch (e) {
+          // ignore
+        }
       }
-      console.log("✅ Email service ready");
     } catch (error) {
       console.error("❌ Email service initialization failed:", error.message);
       // Mark email service as unhealthy so /api/health/services reflects the issue
@@ -105,7 +92,7 @@ class EmailService {
    * @param {string} options.token - Verification token (unhashed)
    */
   async sendVerificationEmail({ to, name, token }) {
-    if (!this.initialized || !this.transporter) {
+    if (!this.initialized || !this.mailjetClient) {
       console.warn("⚠️  Email service not initialized. Skipping email.");
       return { success: false, message: "Email service unavailable" };
     }
@@ -113,26 +100,33 @@ class EmailService {
     try {
       const verificationUrl = `${process.env.CLIENT_URL}/auth/verify-email?token=${token}`;
 
-      const mailOptions = {
-        from: `"VoteBooth" <${process.env.EMAIL_USER || "noreply@votebooth.com"}>`,
-        to,
-        subject: "Verify Your Email - VoteBooth",
-        html: this.getVerificationEmailTemplate(name, verificationUrl),
-        text: `Hello ${name},\n\nPlease verify your email by clicking this link:\n${verificationUrl}\n\nThis link expires in 24 hours.\n\nIf you didn't create an account, please ignore this email.`,
-      };
+      const request = await this.mailjetClient
+        .post("send", { version: "v3.1" })
+        .request({
+          Messages: [
+            {
+              From: {
+                Email: process.env.EMAIL_USER || "noreply@votebooth.com",
+                Name: "VoteBooth",
+              },
+              To: [
+                {
+                  Email: to,
+                  Name: name,
+                },
+              ],
+              Subject: "Verify Your Email - VoteBooth",
+              TextPart: `Hello ${name},\n\nPlease verify your email by clicking this link:\n${verificationUrl}\n\nThis link expires in 24 hours.\n\nIf you didn't create an account, please ignore this email.`,
+              HTMLPart: this.getVerificationEmailTemplate(name, verificationUrl),
+            },
+          ],
+        });
 
-      const info = await this.transporter.sendMail(mailOptions);
-
-      // In development, log preview URL (only works with Ethereal test accounts)
-      const previewUrl = nodemailer.getTestMessageUrl(info);
-      if (process.env.NODE_ENV !== "production" && previewUrl) {
-        console.log("📨 Preview email at:", previewUrl);
-      }
+      console.log(`✅ Verification email sent to ${to}`);
 
       return {
         success: true,
-        messageId: info.messageId,
-        previewUrl: previewUrl || null,
+        messageId: request.body.Messages[0].To[0].MessageID,
       };
     } catch (error) {
       console.error("❌ Failed to send verification email:", error.message);
@@ -148,7 +142,7 @@ class EmailService {
    * @param {string} options.token - Reset token
    */
   async sendPasswordResetEmail({ to, name, token }) {
-    if (!this.initialized || !this.transporter) {
+    if (!this.initialized || !this.mailjetClient) {
       console.warn("⚠️  Email service not initialized. Skipping email.");
       return { success: false, message: "Email service unavailable" };
     }
@@ -156,30 +150,33 @@ class EmailService {
     try {
       const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
 
-      const mailOptions = {
-        from: `"VoteBooth" <${process.env.EMAIL_USER || "noreply@votebooth.com"}>`,
-        to,
-        subject: "Password Reset Request - VoteBooth",
-        html: this.getPasswordResetTemplate(name, resetUrl),
-        text: `Hello ${name},\n\nYou requested a password reset. Click this link to reset:\n${resetUrl}\n\nThis link expires in 10 minutes.\n\nIf you didn't request this, please ignore this email.`,
-      };
+      const request = await this.mailjetClient
+        .post("send", { version: "v3.1" })
+        .request({
+          Messages: [
+            {
+              From: {
+                Email: process.env.EMAIL_USER || "noreply@votebooth.com",
+                Name: "VoteBooth",
+              },
+              To: [
+                {
+                  Email: to,
+                  Name: name,
+                },
+              ],
+              Subject: "Password Reset Request - VoteBooth",
+              TextPart: `Hello ${name},\n\nYou requested a password reset. Click this link to reset:\n${resetUrl}\n\nThis link expires in 10 minutes.\n\nIf you didn't request this, please ignore this email.`,
+              HTMLPart: this.getPasswordResetTemplate(name, resetUrl),
+            },
+          ],
+        });
 
-      const info = await this.transporter.sendMail(mailOptions);
-
-      if (process.env.NODE_ENV !== "production") {
-        const previewUrl = nodemailer.getTestMessageUrl(info);
-        if (previewUrl) {
-          console.log("📨 Password reset email preview:", previewUrl);
-        }
-      }
+      console.log(`✅ Password reset email sent to ${to}`);
 
       return {
         success: true,
-        messageId: info.messageId,
-        previewUrl:
-          process.env.NODE_ENV !== "production"
-            ? nodemailer.getTestMessageUrl(info)
-            : null,
+        messageId: request.body.Messages[0].To[0].MessageID,
       };
     } catch (error) {
       console.error("❌ Failed to send password reset email:", error.message);
@@ -196,7 +193,7 @@ class EmailService {
    * @param {string} options.message - Message content
    */
   async sendContactFormEmail({ name, email, subject, message }) {
-    if (!this.initialized || !this.transporter) {
+    if (!this.initialized || !this.mailjetClient) {
       console.warn("⚠️  Email service not initialized. Skipping email.");
       return { success: false, message: "Email service unavailable" };
     }
@@ -211,36 +208,42 @@ class EmailService {
       // Use environment variable for support email with fallback
       const supportEmail = process.env.SUPPORT_EMAIL || "votebooth1@gmail.com";
 
-      const mailOptions = {
-        from: `"VoteBooth Contact Form" <${process.env.EMAIL_USER || "noreply@votebooth.com"}>`,
-        replyTo: email, // Keep original email for reply-to
-        to: supportEmail,
-        subject: `Contact Form: ${sanitizedSubject}`,
-        html: this.getContactFormTemplate(
-          sanitizedName,
-          sanitizedEmail,
-          sanitizedSubject,
-          sanitizedMessage,
-        ),
-        text: `New contact form message from ${name} (${email})\n\nSubject: ${subject}\n\nMessage:\n${message}`,
-      };
+      const request = await this.mailjetClient
+        .post("send", { version: "v3.1" })
+        .request({
+          Messages: [
+            {
+              From: {
+                Email: process.env.EMAIL_USER || "noreply@votebooth.com",
+                Name: "VoteBooth Contact Form",
+              },
+              To: [
+                {
+                  Email: supportEmail,
+                  Name: "VoteBooth Support",
+                },
+              ],
+              ReplyTo: {
+                Email: email,
+                Name: name,
+              },
+              Subject: `Contact Form: ${sanitizedSubject}`,
+              TextPart: `New contact form message from ${name} (${email})\n\nSubject: ${subject}\n\nMessage:\n${message}`,
+              HTMLPart: this.getContactFormTemplate(
+                sanitizedName,
+                sanitizedEmail,
+                sanitizedSubject,
+                sanitizedMessage,
+              ),
+            },
+          ],
+        });
 
-      const info = await this.transporter.sendMail(mailOptions);
-
-      if (process.env.NODE_ENV !== "production") {
-        const previewUrl = nodemailer.getTestMessageUrl(info);
-        if (previewUrl) {
-          console.log("📨 Contact form email preview:", previewUrl);
-        }
-      }
+      console.log(`✅ Contact form email sent from ${email}`);
 
       return {
         success: true,
-        messageId: info.messageId,
-        previewUrl:
-          process.env.NODE_ENV !== "production"
-            ? nodemailer.getTestMessageUrl(info)
-            : null,
+        messageId: request.body.Messages[0].To[0].MessageID,
       };
     } catch (error) {
       console.error("❌ Failed to send contact form email:", error.message);
@@ -259,12 +262,15 @@ class EmailService {
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <style>
-                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333333; background-color: #f5f5f5; margin: 0; padding: 0; }
                     .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-                    .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-                    .button { display: inline-block; padding: 15px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-                    .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
+                    .header { background-color: #1e40af; color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+                    .header h1 { margin: 0; font-size: 24px; font-weight: 600; }
+                    .content { background: #ffffff; padding: 30px; border-radius: 0 0 8px 8px; border: 1px solid #e5e7eb; border-top: none; }
+                    .button { display: inline-block; padding: 14px 28px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: 500; }
+                    .button:hover { background-color: #1d4ed8; }
+                    .link-text { word-break: break-all; color: #2563eb; font-size: 14px; }
+                    .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #6b7280; }
                 </style>
             </head>
             <body>
@@ -279,7 +285,7 @@ class EmailService {
                             <a href="${verificationUrl}" class="button">Verify Email Address</a>
                         </p>
                         <p>Or copy and paste this link into your browser:</p>
-                        <p style="word-break: break-all; color: #667eea;">${verificationUrl}</p>
+                        <p class="link-text">${verificationUrl}</p>
                         <p><strong>This link expires in 24 hours.</strong></p>
                         <p>If you didn't create an account with VoteBooth, please ignore this email.</p>
                     </div>
@@ -303,12 +309,15 @@ class EmailService {
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <style>
-                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333333; background-color: #f5f5f5; margin: 0; padding: 0; }
                     .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                    .header { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-                    .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-                    .button { display: inline-block; padding: 15px 30px; background: #f5576c; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-                    .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
+                    .header { background-color: #dc2626; color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+                    .header h1 { margin: 0; font-size: 24px; font-weight: 600; }
+                    .content { background: #ffffff; padding: 30px; border-radius: 0 0 8px 8px; border: 1px solid #e5e7eb; border-top: none; }
+                    .button { display: inline-block; padding: 14px 28px; background-color: #dc2626; color: white; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: 500; }
+                    .button:hover { background-color: #b91c1c; }
+                    .link-text { word-break: break-all; color: #dc2626; font-size: 14px; }
+                    .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #6b7280; }
                 </style>
             </head>
             <body>
@@ -323,7 +332,7 @@ class EmailService {
                             <a href="${resetUrl}" class="button">Reset Password</a>
                         </p>
                         <p>Or copy and paste this link into your browser:</p>
-                        <p style="word-break: break-all; color: #f5576c;">${resetUrl}</p>
+                        <p class="link-text">${resetUrl}</p>
                         <p><strong>This link expires in 10 minutes.</strong></p>
                         <p>If you didn't request a password reset, please ignore this email. Your password will remain unchanged.</p>
                     </div>
@@ -347,14 +356,16 @@ class EmailService {
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <style>
-                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333333; background-color: #f5f5f5; margin: 0; padding: 0; }
                     .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-                    .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-                    .info-row { margin: 10px 0; padding: 10px; background: white; border-left: 4px solid #667eea; }
-                    .label { font-weight: bold; color: #667eea; }
-                    .message-box { background: white; padding: 20px; margin: 20px 0; border-radius: 5px; border: 1px solid #ddd; }
-                    .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
+                    .header { background-color: #059669; color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+                    .header h1 { margin: 0; font-size: 24px; font-weight: 600; }
+                    .content { background: #ffffff; padding: 30px; border-radius: 0 0 8px 8px; border: 1px solid #e5e7eb; border-top: none; }
+                    .info-row { margin: 10px 0; padding: 12px; background: #f9fafb; border-left: 4px solid #059669; border-radius: 4px; }
+                    .label { font-weight: 600; color: #047857; display: inline-block; min-width: 70px; }
+                    .message-box { background: #f9fafb; padding: 20px; margin: 20px 0; border-radius: 6px; border: 1px solid #e5e7eb; }
+                    .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #6b7280; }
+                    a { color: #2563eb; text-decoration: none; }
                 </style>
             </head>
             <body>
@@ -374,7 +385,7 @@ class EmailService {
                         </div>
                         <div class="message-box">
                             <p class="label">Message:</p>
-                            <p style="white-space: pre-wrap;">${message}</p>
+                            <p style="white-space: pre-wrap; margin: 10px 0 0 0;">${message}</p>
                         </div>
                     </div>
                     <div class="footer">

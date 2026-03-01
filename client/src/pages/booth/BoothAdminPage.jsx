@@ -14,10 +14,10 @@ const toDatetimeLocal = (isoString) => {
   const date = new Date(isoString);
   if (isNaN(date.getTime())) return "";
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
@@ -92,7 +92,7 @@ const BoothAdminPage = () => {
         const ms = end - now;
         setCountdownText(`Time remaining ${formatDuration(ms)}`);
         currentStatus = "active";
-        
+
         // Transition from waiting to active - refetch booth to update toggle
         if (lastStatusRef.current === "waiting") {
           fetchBoothDetails();
@@ -104,7 +104,7 @@ const BoothAdminPage = () => {
       if (end && now >= end) {
         setCountdownText(`Voting ended`);
         currentStatus = "ended";
-        
+
         // Transition to ended - refetch booth to update toggle
         if (lastStatusRef.current === "active") {
           fetchBoothDetails();
@@ -180,7 +180,7 @@ const BoothAdminPage = () => {
       if (response.success && response.data) {
         setBooth(response.data.booth);
         const srvSettings = response.data.booth.settings || {};
-        
+
         // Ensure UI flags reflect existing settings
         setSettings({
           ...srvSettings,
@@ -545,14 +545,14 @@ const BoothAdminPage = () => {
   const formatRelativeTime = (dateStr) => {
     const now = new Date();
     const date = new Date(dateStr);
-    
+
     // Validate the date
     if (isNaN(date.getTime())) {
       return "";
     }
-    
+
     const diffMs = now - date;
-    
+
     // Handle future dates
     if (diffMs < 0) {
       const absDiffMs = Math.abs(diffMs);
@@ -560,20 +560,21 @@ const BoothAdminPage = () => {
       const diffMin = Math.floor(diffSec / 60);
       const diffHr = Math.floor(diffMin / 60);
       const diffDay = Math.floor(diffHr / 24);
-      
+
       if (diffSec < 60) return "soon";
-      if (diffMin < 60) return `in ${diffMin} minute${diffMin !== 1 ? "s" : ""}`;
+      if (diffMin < 60)
+        return `in ${diffMin} minute${diffMin !== 1 ? "s" : ""}`;
       if (diffHr < 24) return `in ${diffHr} hour${diffHr !== 1 ? "s" : ""}`;
       if (diffDay < 30) return `in ${diffDay} day${diffDay !== 1 ? "s" : ""}`;
       return date.toLocaleDateString();
     }
-    
+
     // Handle past dates
     const diffSec = Math.floor(diffMs / 1000);
     const diffMin = Math.floor(diffSec / 60);
     const diffHr = Math.floor(diffMin / 60);
     const diffDay = Math.floor(diffHr / 24);
-    
+
     if (diffSec < 60) return "just now";
     if (diffMin < 60) return `${diffMin} minute${diffMin !== 1 ? "s" : ""} ago`;
     if (diffHr < 24) return `${diffHr} hour${diffHr !== 1 ? "s" : ""} ago`;
@@ -954,7 +955,7 @@ const BoothAdminPage = () => {
                 activities.length > 0 && (
                   <ol className="relative border-l-2 border-primary/20 ml-2 space-y-0">
                     {activities.map((activity, idx) => (
-                      <li key={activity._id || idx} className="mb-6 ml-5">
+                      <li key={activity.id || idx} className="mb-6 ml-5">
                         <span className="absolute -left-[9px] flex items-center justify-center w-4 h-4 rounded-full bg-primary/20 border-2 border-primary/40" />
                         <p className="text-sm font-medium theme-text leading-snug mb-0.5">
                           {activity.message}
@@ -1271,13 +1272,18 @@ const BoothAdminPage = () => {
                           const srvSettings = booth.settings || {};
                           setSettings({
                             ...srvSettings,
-                            votingStartTime: toDatetimeLocal(srvSettings.votingStartTime),
-                            votingEndTime: toDatetimeLocal(srvSettings.votingEndTime),
+                            votingStartTime: toDatetimeLocal(
+                              srvSettings.votingStartTime,
+                            ),
+                            votingEndTime: toDatetimeLocal(
+                              srvSettings.votingEndTime,
+                            ),
                             restrictByEmailDomain:
                               Array.isArray(srvSettings.allowedEmailDomains) &&
                               srvSettings.allowedEmailDomains.length > 0,
                             scheduled: !!(
-                              srvSettings.votingStartTime || srvSettings.votingEndTime
+                              srvSettings.votingStartTime ||
+                              srvSettings.votingEndTime
                             ),
                           });
                         }
@@ -1512,13 +1518,19 @@ const BoothAdminPage = () => {
                             const srvSettings = booth.settings || {};
                             setSettings({
                               ...srvSettings,
-                              votingStartTime: toDatetimeLocal(srvSettings.votingStartTime),
-                              votingEndTime: toDatetimeLocal(srvSettings.votingEndTime),
+                              votingStartTime: toDatetimeLocal(
+                                srvSettings.votingStartTime,
+                              ),
+                              votingEndTime: toDatetimeLocal(
+                                srvSettings.votingEndTime,
+                              ),
                               restrictByEmailDomain:
-                                Array.isArray(srvSettings.allowedEmailDomains) &&
-                                srvSettings.allowedEmailDomains.length > 0,
+                                Array.isArray(
+                                  srvSettings.allowedEmailDomains,
+                                ) && srvSettings.allowedEmailDomains.length > 0,
                               scheduled: !!(
-                                srvSettings.votingStartTime || srvSettings.votingEndTime
+                                srvSettings.votingStartTime ||
+                                srvSettings.votingEndTime
                               ),
                             });
                             setEditingSettings(false);
@@ -1656,7 +1668,7 @@ const BoothAdminPage = () => {
                         <div className="flex flex-col gap-2 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
                           {booth?.candidates?.map((candidate, idx) => (
                             <div
-                              key={candidate._id || candidate.name + idx}
+                              key={candidate.id || candidate.name + idx}
                               className="flex items-center justify-between p-2 theme-surface rounded-lg border border-border hover:bg-accent/5 transition-all text-sm"
                             >
                               <div className="min-w-0">
@@ -1842,7 +1854,7 @@ const BoothAdminPage = () => {
                             {booth.pendingRequests.map((req) => (
                               <div
                                 key={
-                                  (req.user && (req.user._id || req.user)) ||
+                                  (req.user && (req.user.id || req.user)) ||
                                   JSON.stringify(req)
                                 }
                                 className="flex items-center justify-between p-2 theme-surface hover:bg-accent/5 rounded-lg border border-border hover:shadow-md transition-all"
@@ -1865,11 +1877,11 @@ const BoothAdminPage = () => {
                                   <button
                                     onClick={() =>
                                       handleApproveRequest(
-                                        req.user._id || req.user,
+                                        req.user.id || req.user,
                                       )
                                     }
                                     disabled={pendingActionLoading.has(
-                                      req.user._id || req.user,
+                                      req.user.id || req.user,
                                     )}
                                     className="p-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50 transition-all hover:scale-105 active:scale-95 shadow-sm"
                                     title="Approve"
@@ -1891,11 +1903,11 @@ const BoothAdminPage = () => {
                                   <button
                                     onClick={() =>
                                       handleRejectRequest(
-                                        req.user._id || req.user,
+                                        req.user.id || req.user,
                                       )
                                     }
                                     disabled={pendingActionLoading.has(
-                                      req.user._id || req.user,
+                                      req.user.id || req.user,
                                     )}
                                     className="p-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg disabled:opacity-50 transition-all hover:scale-105 active:scale-95 shadow-sm"
                                     title="Reject"
@@ -1922,7 +1934,7 @@ const BoothAdminPage = () => {
                       )}
                     {booth?.members?.map((member, index) => (
                       <div
-                        key={member._id}
+                        key={member.id}
                         className="group flex items-center justify-between p-2 theme-surface hover:bg-accent/5 rounded-lg transition-all duration-300 border border-border hover:shadow-md"
                       >
                         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -1999,14 +2011,14 @@ const BoothAdminPage = () => {
                           </div>
                         </div>
 
-                        {member.user?._id !== booth.creator?._id ? (
+                        {member.user?.id !== booth.creator?.id ? (
                           <button
-                            onClick={() => handleRemoveMember(member.user._id)}
-                            disabled={removingMembers.has(member.user._id)}
+                            onClick={() => handleRemoveMember(member.user.id)}
+                            disabled={removingMembers.has(member.user.id)}
                             className="text-error hover:text-error/90 hover:bg-error/10 disabled:opacity-50 transition-all duration-300 p-1.5 rounded-lg ml-2 flex-shrink-0 border border-transparent hover:border-error/30"
                             title="Remove member"
                           >
-                            {removingMembers.has(member.user._id) ? (
+                            {removingMembers.has(member.user.id) ? (
                               <PageLoading size="sm" color="red" />
                             ) : (
                               <svg

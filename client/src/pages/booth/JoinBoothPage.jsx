@@ -212,11 +212,7 @@ const JoinBoothPage = () => {
                     const payloadBoothId = (payload.boothId || "").toString();
                     // Use ref to get current booth value (avoid stale closure)
                     const currentBooth = boothRef.current;
-                    const currentBoothId = (
-                      currentBooth?.id ||
-                      currentBooth?._id ||
-                      ""
-                    ).toString();
+                    const currentBoothId = (currentBooth?.id || "").toString();
                     if (!payloadBoothId || payloadBoothId !== currentBoothId)
                       return;
 

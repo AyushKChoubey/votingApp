@@ -337,7 +337,7 @@ const BoothResultsPage = () => {
                           <div class="results-title">${booth?.name || "Voting Booth"}</div>
                           <div class="results-subtitle">Result</div>
                           <div class="meta-info">
-                            ID: ${booth?.boothId || booth?._id || ''} · Generated ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })} at ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                            ID: ${booth?.boothId || booth?.id || ""} · Generated ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })} at ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
                           </div>
                         </div>
                         
@@ -384,8 +384,7 @@ const BoothResultsPage = () => {
                                     candidate.voteCount,
                                     booth.totalVotes,
                                   );
-                                  const isWinner =
-                                    candidate._id === winner?._id;
+                                  const isWinner = candidate.id === winner?.id;
                                   return `
                                 <div class="candidate-item${isWinner ? " winner" : ""}">
                                     <div class="candidate-header">
@@ -482,7 +481,7 @@ const BoothResultsPage = () => {
     }
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 flex items-center justify-center px-4">
+      <div className="min-h-screen theme-bg flex items-center justify-center px-4">
         <div className="max-w-md w-full text-center">
           <div className="theme-surface rounded-2xl shadow-2xl p-8 border border-border">
             <svg
@@ -498,20 +497,20 @@ const BoothResultsPage = () => {
                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L5.082 16.5c-.77.833.192 2.5 1.732 2.5z"
               />
             </svg>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            <h2 className="text-2xl font-bold theme-text mb-4">
               {errorHeading}
             </h2>
-            <p className="text-gray-600 mb-6">{error}</p>
+            <p className="theme-muted mb-6">{error}</p>
             <div className="space-y-3">
               <button
                 onClick={() => navigate(`/booth/${boothId}`)}
-                className="w-full bg-teal-600 hover:bg-teal-700 text-white py-3 px-6 rounded-xl font-semibold transition-all duration-300"
+                className="w-full btn-theme py-3 px-6 rounded-xl font-semibold transition-all duration-300"
               >
                 Back to Booth
               </button>
               <button
                 onClick={() => navigate("/dashboard")}
-                className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-xl font-semibold transition-all duration-300"
+                className="w-full theme-surface hover:bg-accent-50 theme-text py-3 px-6 rounded-xl font-semibold transition-all duration-300 border border-border"
               >
                 Back to Dashboard
               </button>
@@ -563,7 +562,9 @@ const BoothResultsPage = () => {
             >
               Result
             </p>
-            <p className="text-xs theme-muted mb-2">ID: {booth?.boothId || booth?._id}</p>
+            <p className="text-xs theme-muted mb-2">
+              ID: {booth?.boothId || booth?.id}
+            </p>
           </div>
 
           {/* Action Buttons (Admin only, centered below title) */}
@@ -796,11 +797,11 @@ const BoothResultsPage = () => {
                         candidate.voteCount,
                         booth.totalVotes,
                       );
-                      const isWinner = candidate._id === winner?._id;
+                      const isWinner = candidate.id === winner?.id;
 
                       return (
                         <div
-                          key={candidate._id}
+                          key={candidate.id}
                           className={`border-2 rounded-xl p-4 sm:p-6 transition-all ${
                             isWinner
                               ? "border-yellow-400 bg-yellow-50 dark:border-yellow-500 dark:bg-yellow-900/20"

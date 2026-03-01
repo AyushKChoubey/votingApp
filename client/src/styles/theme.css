@@ -12,7 +12,7 @@
   --color-on-accent: #1e293b; /* softer dark text */
 
   /* Surfaces - warm, easy on eyes */
-  --color-bg: #f5f5f0; /* warm beige-tinted background */
+  --color-bg: #f5f5f1; /* warm beige-tinted background */
   --color-surface: #fafaf8; /* very soft warm off-white */
   --color-border: #d4d4d0; /* softer warm border */
 
@@ -25,6 +25,7 @@
   --color-success: #10b981; /* softer green */
   --color-error: #f87171; /* softer red */
   --color-info: #38bdf8; /* softer blue */
+  --color-on-info: #0f172a; /* text color to use on info backgrounds */
   --color-warning: #fbbf24; /* softer amber */
 
   /* Progress */
@@ -66,6 +67,7 @@
   --color-success: #34d399; /* softer green */
   --color-error: #fca5a5; /* softer red */
   --color-info: #60a5fa; /* softer blue */
+  --color-on-info: #0f172a; /* ensure readable text on info in dark theme */
   --color-warning: #fcd34d; /* softer yellow */
 
   --color-progress-start: #2dd4bf; /* softer teal */
@@ -173,6 +175,11 @@
 }
 .text-on-accent {
   color: var(--color-on-accent);
+}
+
+/* Text color designed to sit on top of info-colored backgrounds */
+.text-on-info {
+  color: var(--color-on-info);
 }
 
 /* Semantic helpers for feedback colors */

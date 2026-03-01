@@ -180,43 +180,80 @@ exports.createBooth = async (req, res) => {
     // Ensure proper types for settings from JSON
     if (processedSettings && Object.keys(processedSettings).length > 0) {
       // Convert date strings to Date objects if needed
-      if (processedSettings.votingStartTime && typeof processedSettings.votingStartTime === 'string') {
-        processedSettings.votingStartTime = new Date(processedSettings.votingStartTime);
+      if (
+        processedSettings.votingStartTime &&
+        typeof processedSettings.votingStartTime === "string"
+      ) {
+        processedSettings.votingStartTime = new Date(
+          processedSettings.votingStartTime,
+        );
       }
-      if (processedSettings.votingEndTime && typeof processedSettings.votingEndTime === 'string') {
-        processedSettings.votingEndTime = new Date(processedSettings.votingEndTime);
+      if (
+        processedSettings.votingEndTime &&
+        typeof processedSettings.votingEndTime === "string"
+      ) {
+        processedSettings.votingEndTime = new Date(
+          processedSettings.votingEndTime,
+        );
       }
 
       // Validate parsed dates
       if (processedSettings.votingStartTime) {
-        const s = processedSettings.votingStartTime instanceof Date ? processedSettings.votingStartTime : new Date(processedSettings.votingStartTime);
+        const s =
+          processedSettings.votingStartTime instanceof Date
+            ? processedSettings.votingStartTime
+            : new Date(processedSettings.votingStartTime);
         if (isNaN(s.getTime())) {
-          return res.status(400).json({ error: 'Invalid votingStartTime' });
+          return res.status(400).json({ error: "Invalid votingStartTime" });
         }
       }
       if (processedSettings.votingEndTime) {
-        const e = processedSettings.votingEndTime instanceof Date ? processedSettings.votingEndTime : new Date(processedSettings.votingEndTime);
+        const e =
+          processedSettings.votingEndTime instanceof Date
+            ? processedSettings.votingEndTime
+            : new Date(processedSettings.votingEndTime);
         if (isNaN(e.getTime())) {
-          return res.status(400).json({ error: 'Invalid votingEndTime' });
+          return res.status(400).json({ error: "Invalid votingEndTime" });
         }
       }
-      
+
       // Ensure booleans are actual booleans
-      if (processedSettings.resultsVisibleToVoters !== undefined && typeof processedSettings.resultsVisibleToVoters !== 'boolean') {
-        processedSettings.resultsVisibleToVoters = processedSettings.resultsVisibleToVoters === 'true' || processedSettings.resultsVisibleToVoters === true;
+      if (
+        processedSettings.resultsVisibleToVoters !== undefined &&
+        typeof processedSettings.resultsVisibleToVoters !== "boolean"
+      ) {
+        processedSettings.resultsVisibleToVoters =
+          processedSettings.resultsVisibleToVoters === "true" ||
+          processedSettings.resultsVisibleToVoters === true;
       }
-      if (processedSettings.showLiveResults !== undefined && typeof processedSettings.showLiveResults !== 'boolean') {
-        processedSettings.showLiveResults = processedSettings.showLiveResults === 'true' || processedSettings.showLiveResults === true;
+      if (
+        processedSettings.showLiveResults !== undefined &&
+        typeof processedSettings.showLiveResults !== "boolean"
+      ) {
+        processedSettings.showLiveResults =
+          processedSettings.showLiveResults === "true" ||
+          processedSettings.showLiveResults === true;
       }
-      if (processedSettings.requireApproval !== undefined && typeof processedSettings.requireApproval !== 'boolean') {
-        processedSettings.requireApproval = processedSettings.requireApproval === 'true' || processedSettings.requireApproval === true;
+      if (
+        processedSettings.requireApproval !== undefined &&
+        typeof processedSettings.requireApproval !== "boolean"
+      ) {
+        processedSettings.requireApproval =
+          processedSettings.requireApproval === "true" ||
+          processedSettings.requireApproval === true;
       }
     }
 
     // Validate time settings
     if (processedSettings.votingStartTime && processedSettings.votingEndTime) {
-      const sTime = processedSettings.votingStartTime instanceof Date ? processedSettings.votingStartTime : new Date(processedSettings.votingStartTime);
-      const eTime = processedSettings.votingEndTime instanceof Date ? processedSettings.votingEndTime : new Date(processedSettings.votingEndTime);
+      const sTime =
+        processedSettings.votingStartTime instanceof Date
+          ? processedSettings.votingStartTime
+          : new Date(processedSettings.votingStartTime);
+      const eTime =
+        processedSettings.votingEndTime instanceof Date
+          ? processedSettings.votingEndTime
+          : new Date(processedSettings.votingEndTime);
       if (sTime >= eTime) {
         return res.status(400).json({
           error: "Voting end time must be after start time",
@@ -247,16 +284,16 @@ exports.createBooth = async (req, res) => {
 
     // Determine initial status based on schedule
     let initialStatus = "active"; // Default to active
-    
+
     if (processedSettings.votingStartTime) {
       const now = new Date();
       const startTime = new Date(processedSettings.votingStartTime);
-      
+
       // If voting hasn't started yet, booth should be closed
       if (now < startTime) {
         initialStatus = "closed";
       }
-      
+
       // If there's an end time and it's already passed, booth should be closed
       if (processedSettings.votingEndTime) {
         const endTime = new Date(processedSettings.votingEndTime);
@@ -295,7 +332,9 @@ exports.createBooth = async (req, res) => {
       booth._id,
       userId,
       `${user.name} created this booth on ${createdAt}`,
-    ).catch(err => console.error("Failed to log booth creation activity:", err));
+    ).catch((err) =>
+      console.error("Failed to log booth creation activity:", err),
+    );
 
     res.status(201).json({
       success: true,
@@ -437,7 +476,9 @@ exports.joinBooth = async (req, res) => {
           booth._id,
           userId,
           `${requestingUser?.name || "Someone"} submitted a join request`,
-        ).catch(err => console.error("Failed to log join request activity:", err));
+        ).catch((err) =>
+          console.error("Failed to log join request activity:", err),
+        );
         return res.json({
           success: true,
           message: "Join request submitted and pending approval",
@@ -498,7 +539,9 @@ exports.joinBooth = async (req, res) => {
         booth._id,
         userId,
         `${user?.name || "Someone"} joined the booth`,
-      ).catch(err => console.error("Failed to log join booth activity:", err));
+      ).catch((err) =>
+        console.error("Failed to log join booth activity:", err),
+      );
 
       res.json({
         success: true,
@@ -569,7 +612,7 @@ exports.vote = async (req, res) => {
       booth._id,
       userId,
       `${votingUser?.name || "Someone"} cast a vote`,
-    ).catch(err => console.error("Failed to log vote activity:", err));
+    ).catch((err) => console.error("Failed to log vote activity:", err));
 
     // Create vote record for audit trail
     const vote = new Vote({
@@ -694,8 +737,9 @@ exports.resetInviteCode = async (req, res) => {
 
     await booth.generateNewInviteCode();
 
-    logActivity(booth._id, userId, "Admin reset the invite code")
-      .catch(err => console.error("Failed to log invite code reset activity:", err));
+    logActivity(booth._id, userId, "Admin reset the invite code").catch((err) =>
+      console.error("Failed to log invite code reset activity:", err),
+    );
 
     const inviteLink = `${req.protocol}://${req.get("host")}/booth/join/${booth.inviteCode}`;
 
@@ -754,8 +798,9 @@ exports.updateBoothSettings = async (req, res) => {
     booth.settings = { ...booth.settings, ...settings };
     await booth.save();
 
-    logActivity(booth._id, userId, "Admin updated booth settings")
-      .catch(err => console.error("Failed to log settings update activity:", err));
+    logActivity(booth._id, userId, "Admin updated booth settings").catch(
+      (err) => console.error("Failed to log settings update activity:", err),
+    );
 
     // Return consistent success shape so clients can check `response.success`
     res.json({
@@ -789,7 +834,16 @@ exports.getBoothEditForm = async (req, res) => {
 
     res.json({
       success: true,
-      booth,
+      booth: {
+        id: booth._id,
+        boothId: booth.boothId,
+        name: booth.name,
+        description: booth.description,
+        candidates: booth.candidates,
+        maxMembers: booth.maxMembers,
+        settings: booth.settings,
+        status: booth.status,
+      },
     });
   } catch (err) {
     console.error("Get booth edit form error:", err);
@@ -895,7 +949,6 @@ exports.editBooth = async (req, res) => {
     if (errors.length > 0) {
       return res.status(400).json({
         error: errors.join(". "),
-        booth,
       });
     }
 
@@ -915,8 +968,9 @@ exports.editBooth = async (req, res) => {
 
     await booth.save();
 
-    logActivity(booth._id, userId, "Admin updated booth details")
-      .catch(err => console.error("Failed to log booth update activity:", err));
+    logActivity(booth._id, userId, "Admin updated booth details").catch((err) =>
+      console.error("Failed to log booth update activity:", err),
+    );
 
     res.json({
       success: true,
@@ -958,8 +1012,9 @@ exports.deleteBooth = async (req, res) => {
     booth.deletedAt = new Date();
     await booth.save();
 
-    logActivity(booth._id, userId, "Admin deleted the booth")
-      .catch(err => console.error("Failed to log booth deletion activity:", err));
+    logActivity(booth._id, userId, "Admin deleted the booth").catch((err) =>
+      console.error("Failed to log booth deletion activity:", err),
+    );
 
     res.json({
       success: true,
@@ -1019,8 +1074,9 @@ exports.toggleBoothStatus = async (req, res) => {
 
     const statusMsg =
       newStatus === "active" ? "Admin started voting" : "Admin closed voting";
-    logActivity(booth._id, userId, statusMsg)
-      .catch(err => console.error("Failed to log status toggle activity:", err));
+    logActivity(booth._id, userId, statusMsg).catch((err) =>
+      console.error("Failed to log status toggle activity:", err),
+    );
 
     // Return consistent success shape so client handlers can check response.success
     res.json({
@@ -1081,7 +1137,7 @@ exports.approveJoinRequest = async (req, res) => {
       booth._id,
       actorId,
       `Admin approved ${approvedUser?.name || "a member"}`,
-    ).catch(err => console.error("Failed to log approval activity:", err));
+    ).catch((err) => console.error("Failed to log approval activity:", err));
 
     // Notify the requester via socket (if connected)
     try {
@@ -1142,7 +1198,7 @@ exports.rejectJoinRequest = async (req, res) => {
       booth._id,
       actorId,
       `Admin rejected ${rejectedUser?.name || "a user"}'s join request`,
-    ).catch(err => console.error("Failed to log rejection activity:", err));
+    ).catch((err) => console.error("Failed to log rejection activity:", err));
 
     // Notify the requester via socket (if connected)
     try {
@@ -1271,7 +1327,7 @@ exports.getBoothActivity = async (req, res) => {
 
     res.json({
       success: true,
-      data: { 
+      data: {
         activities,
         pagination: {
           page,

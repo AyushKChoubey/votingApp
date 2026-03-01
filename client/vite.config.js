@@ -18,5 +18,6 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true
-  }
+  },
+  publicDir: 'public' // Ensures robots.txt and sitemap.xml are copied to dist
 })

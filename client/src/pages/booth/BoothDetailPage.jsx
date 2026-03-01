@@ -152,7 +152,7 @@ const BoothDetailPage = () => {
         const ms = end - now;
         setCountdownText(`Time remaining ${formatDuration(ms)}`);
         currentStatus = "active";
-        
+
         // Transition from waiting to active - refetch to update booth status
         if (lastStatusRef.current === "waiting") {
           fetchBoothDetails(true);
@@ -165,7 +165,7 @@ const BoothDetailPage = () => {
       if (end && now >= end) {
         setCountdownText(`Voting ended`);
         currentStatus = "ended";
-        
+
         // Transition to ended - refetch to update booth status
         if (lastStatusRef.current === "active") {
           fetchBoothDetails(true);
@@ -727,7 +727,7 @@ const BoothDetailPage = () => {
                 <div className="space-y-3 sm:space-y-4">
                   {booth?.candidates?.map((candidate, index) => (
                     <div
-                      key={candidate._id}
+                      key={candidate.id}
                       className={`border-2 rounded-lg sm:rounded-xl p-4 sm:p-6 cursor-pointer transition-all duration-300 transform hover:scale-[1.02] ${
                         selectedCandidate === index
                           ? "border-accent bg-accent/5 shadow-lg ring-2 ring-accent/20"
@@ -832,7 +832,7 @@ const BoothDetailPage = () => {
 
                       return (
                         <div
-                          key={candidate._id}
+                          key={candidate.id}
                           className="bg-theme-surface/50 rounded-lg p-3 sm:p-4 hover:bg-theme-surface transition-all duration-300"
                         >
                           <div className="flex justify-between items-start mb-2 sm:mb-3">

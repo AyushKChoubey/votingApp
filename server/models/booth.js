@@ -152,6 +152,16 @@ const boothSchema = new mongoose.Schema({
   },
 });
 
+// Strip internal fields from JSON output
+boothSchema.set("toJSON", {
+  transform: (doc, ret) => {
+    ret.id = ret._id;
+    delete ret._id;
+    delete ret.__v;
+    return ret;
+  },
+});
+
 // Generate unique boothId (VBB prefix + exactly 6 hex chars)
 boothSchema.methods.generateBoothId = function () {
   const crypto = require("crypto");
@@ -520,7 +530,7 @@ boothSchema.methods.openIfScheduled = async function () {
     ) {
       const start = new Date(this.settings.votingStartTime);
       const now = new Date();
-      
+
       // Check if voting should start
       if (now >= start) {
         // If there's an end time, make sure we haven't passed it
@@ -531,11 +541,11 @@ boothSchema.methods.openIfScheduled = async function () {
             return false;
           }
         }
-        
+
         // Open the booth
         this.status = "active";
         await this.save();
-        
+
         // Log as a system action
         try {
           const logActivity = require("../utils/logActivity");
@@ -559,15 +569,15 @@ boothSchema.methods.openIfScheduled = async function () {
 // Update booth status based on schedule (checks both open and close)
 boothSchema.methods.updateScheduledStatus = async function () {
   let changed = false;
-  
+
   // First check if it should open
   const opened = await this.openIfScheduled();
   if (opened) changed = true;
-  
+
   // Then check if it should close
   const closed = await this.closeIfExpired();
   if (closed) changed = true;
-  
+
   return changed;
 };
 
