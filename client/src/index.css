@@ -1,14 +1,32 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+/* Google Fonts (Inter) are loaded non-blocking via <link rel="preload"> in index.html */
 @import "tailwindcss";
 @import "./styles/theme.css";
 
 body {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
 }
 
 /* Prevent horizontal scroll caused by toasts or other full-width elements */
-html, body {
+html,
+body {
   overflow-x: hidden;
+  /* Mobile: remove 300ms tap delay */
+  touch-action: manipulation;
+}
+
+/* Skip layout/paint of off-screen page sections until needed.
+   Apply .cv-auto to major below-the-fold sections in page components. */
+.cv-auto {
+  content-visibility: auto;
+  /* Hint to browser about approximate rendered height to prevent scroll jumps */
+  contain-intrinsic-size: 0 500px;
+}
+
+/* Mobile: remove tap highlight flash on interactive elements */
+a,
+button,
+[role="button"] {
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Custom Loading Animations */
@@ -74,7 +92,7 @@ html, body {
 }
 
 .skeleton-shimmer::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: -100%;

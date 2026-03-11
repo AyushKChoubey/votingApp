@@ -1,0 +1,26 @@
+{
+  "name": "VoteBooth - Secure Online Voting",
+  "short_name": "VoteBooth",
+  "description": "Create and manage secure online voting booths in real-time.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f5f5f1",
+  "theme_color": "#1e40af",
+  "lang": "en-US",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
+

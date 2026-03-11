@@ -93,7 +93,7 @@ api.interceptors.response.use(
         }
 
         // Use replace instead of redirect to prevent back button showing empty page
-        window.location.replace("/login?message=session_expired");
+        window.location.replace("/?session Expired");
 
         // Don't reset the flag - we're navigating away anyway
         return new Promise(() => {}); // Never resolve to prevent further execution

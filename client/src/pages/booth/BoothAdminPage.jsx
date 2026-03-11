@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api, { boothService } from "../../services/api";
 import { Alert } from "../../components/layout/Alert";
@@ -6,7 +6,11 @@ import { LoadingButton, PageLoading } from "../../components/layout/Loading";
 import { useToast } from "../../components/layout/Toast";
 import ConfirmModal from "../../components/layout/ConfirmModal";
 import Button from "../../components/layout/Button";
-import { QRCodeModal } from "../../components/booth/QRCodeModal";
+const QRCodeModal = lazy(() =>
+  import("../../components/booth/QRCodeModal").then((m) => ({
+    default: m.QRCodeModal,
+  })),
+);
 
 // Helper function to convert ISO datetime to datetime-local format
 const toDatetimeLocal = (isoString) => {
@@ -1668,7 +1672,11 @@ const BoothAdminPage = () => {
                         <div className="flex flex-col gap-2 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
                           {booth?.candidates?.map((candidate, idx) => (
                             <div
-                              key={candidate.id || candidate.name + idx}
+                              key={
+                                candidate._id ||
+                                candidate.id ||
+                                candidate.name + idx
+                              }
                               className="flex items-center justify-between p-2 theme-surface rounded-lg border border-border hover:bg-accent/5 transition-all text-sm"
                             >
                               <div className="min-w-0">
@@ -1854,7 +1862,11 @@ const BoothAdminPage = () => {
                             {booth.pendingRequests.map((req) => (
                               <div
                                 key={
-                                  (req.user && (req.user.id || req.user)) ||
+                                  (req.user &&
+                                    (req.user._id ||
+                                      req.user.id ||
+                                      req.user)) ||
+                                  req._id ||
                                   JSON.stringify(req)
                                 }
                                 className="flex items-center justify-between p-2 theme-surface hover:bg-accent/5 rounded-lg border border-border hover:shadow-md transition-all"
@@ -1934,7 +1946,7 @@ const BoothAdminPage = () => {
                       )}
                     {booth?.members?.map((member, index) => (
                       <div
-                        key={member.id}
+                        key={member._id || member.id}
                         className="group flex items-center justify-between p-2 theme-surface hover:bg-accent/5 rounded-lg transition-all duration-300 border border-border hover:shadow-md"
                       >
                         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -2190,13 +2202,15 @@ const BoothAdminPage = () => {
                 }
             `}</style>
 
-      {/* QR Code Modal */}
+      {/* QR Code Modal - lazy loaded */}
       {qrModalData && (
-        <QRCodeModal
-          data={qrModalData}
-          onClose={() => setQrModalData(null)}
-          onDownload={downloadQRCode}
-        />
+        <Suspense fallback={null}>
+          <QRCodeModal
+            data={qrModalData}
+            onClose={() => setQrModalData(null)}
+            onDownload={downloadQRCode}
+          />
+        </Suspense>
       )}
     </div>
   );

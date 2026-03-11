@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, lazy, Suspense } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -7,7 +7,6 @@ import {
   useLocation,
 } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 
@@ -29,8 +28,6 @@ import ContactPage from "./pages/ContactPage";
 import HelpPage from "./pages/HelpPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import TermsPage from "./pages/TermsPage";
-import ProfilePage from "./pages/user/ProfilePage";
-import SettingsPage from "./pages/user/SettingsPage";
 import OAuthCallback from "./pages/auth/OAuthCallback";
 
 // Email Verification Pages
@@ -42,12 +39,23 @@ import VerificationErrorPage from "./pages/auth/email-verification/VerificationE
 import ForgotPasswordPage from "./pages/auth/forgot-password/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/auth/forgot-password/ResetPasswordPage";
 
-// Booth Pages
-import CreateBoothPage from "./pages/booth/CreateBoothPage";
+// Booth Pages — lazy loaded (heavy, not needed on first paint)
 import JoinBoothPage from "./pages/booth/JoinBoothPage";
-import BoothDetailPage from "./pages/booth/BoothDetailPage";
-import BoothAdminPage from "./pages/booth/BoothAdminPage";
-import BoothResultsPage from "./pages/booth/BoothResultsPage";
+const ProfilePage = lazy(() => import("./pages/user/ProfilePage"));
+const SettingsPage = lazy(() => import("./pages/user/SettingsPage"));
+const CreateBoothPage = lazy(() => import("./pages/booth/CreateBoothPage"));
+const BoothDetailPage = lazy(() => import("./pages/booth/BoothDetailPage"));
+const BoothAdminPage = lazy(() => import("./pages/booth/BoothAdminPage"));
+const BoothResultsPage = lazy(() => import("./pages/booth/BoothResultsPage"));
+
+// Dev tools — excluded from production bundle via dead-code elimination
+const DevTools = import.meta.env.PROD
+  ? () => null
+  : lazy(() =>
+      import("@tanstack/react-query-devtools").then((m) => ({
+        default: m.ReactQueryDevtools,
+      })),
+    );
 
 // Create a query client
 const queryClient = new QueryClient({
@@ -169,17 +177,21 @@ const AppRoutes = () => {
       <Route
         path="/user/profile"
         element={
-          <ProtectedRoute>
-            <ProfilePage />
-          </ProtectedRoute>
+          <Suspense fallback={<PageLoading />}>
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          </Suspense>
         }
       />
       <Route
         path="/user/settings"
         element={
-          <ProtectedRoute>
-            <SettingsPage />
-          </ProtectedRoute>
+          <Suspense fallback={<PageLoading />}>
+            <ProtectedRoute>
+              <SettingsPage />
+            </ProtectedRoute>
+          </Suspense>
         }
       />
 
@@ -187,9 +199,11 @@ const AppRoutes = () => {
       <Route
         path="/booth/create"
         element={
-          <ProtectedRoute>
-            <CreateBoothPage />
-          </ProtectedRoute>
+          <Suspense fallback={<PageLoading />}>
+            <ProtectedRoute>
+              <CreateBoothPage />
+            </ProtectedRoute>
+          </Suspense>
         }
       />
       <Route
@@ -212,25 +226,31 @@ const AppRoutes = () => {
       <Route
         path="/booth/:boothId"
         element={
-          <ProtectedRoute>
-            <BoothDetailPage />
-          </ProtectedRoute>
+          <Suspense fallback={<PageLoading />}>
+            <ProtectedRoute>
+              <BoothDetailPage />
+            </ProtectedRoute>
+          </Suspense>
         }
       />
       <Route
         path="/booth/:boothId/admin"
         element={
-          <ProtectedRoute>
-            <BoothAdminPage />
-          </ProtectedRoute>
+          <Suspense fallback={<PageLoading />}>
+            <ProtectedRoute>
+              <BoothAdminPage />
+            </ProtectedRoute>
+          </Suspense>
         }
       />
       <Route
         path="/booth/:boothId/results"
         element={
-          <ProtectedRoute>
-            <BoothResultsPage />
-          </ProtectedRoute>
+          <Suspense fallback={<PageLoading />}>
+            <ProtectedRoute>
+              <BoothResultsPage />
+            </ProtectedRoute>
+          </Suspense>
         }
       />
 
@@ -260,7 +280,9 @@ function App() {
           </AuthProvider>
         </ThemeProvider>
       </Router>
-      <ReactQueryDevtools initialIsOpen={false} />
+      <Suspense fallback={null}>
+        <DevTools initialIsOpen={false} />
+      </Suspense>
       <Analytics />
       <SpeedInsights />
     </QueryClientProvider>

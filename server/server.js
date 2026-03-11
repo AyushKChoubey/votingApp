@@ -30,6 +30,7 @@ const cors = require("cors");
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
 const passport = require("./config/passport");
+const serverPackage = require("./package.json");
 
 // Import security middleware
 const {
@@ -43,13 +44,36 @@ const {
 app.use(securityHeaders);
 app.use(compression());
 
+const parseOrigins = (value) =>
+  value
+    ? value
+        .split(",")
+        .map((url) => url.trim())
+        .filter(Boolean)
+    : [];
+
+const isLocalDevelopmentOrigin = (origin) => {
+  try {
+    const { protocol, hostname } = new URL(origin);
+    const isHttp = protocol === "http:" || protocol === "https:";
+    const isLocalHost =
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "[::1]" ||
+      hostname === "::1";
+
+    return isHttp && isLocalHost;
+  } catch (err) {
+    return false;
+  }
+};
+
 // CORS configuration for React frontend
 const corsOptions = {
   origin: function (origin, callback) {
     // Get allowed origins from environment variables or use defaults
-    const productionOrigins = process.env.ALLOWED_ORIGINS
-      ? process.env.ALLOWED_ORIGINS.split(",").map((url) => url.trim())
-      : null;
+    const configuredOrigins = parseOrigins(process.env.ALLOWED_ORIGINS);
+    const productionOrigins = configuredOrigins.length > 0 ? configuredOrigins : null;
 
     // In production, require ALLOWED_ORIGINS to be set
     if (process.env.NODE_ENV === "production" && !productionOrigins) {
@@ -60,6 +84,7 @@ const corsOptions = {
 
     const developmentOrigins = [
       "http://localhost:5173",
+      "https://localhost:5173",
       "http://localhost:3000",
       "http://127.0.0.1:5173",
     ];
@@ -67,14 +92,17 @@ const corsOptions = {
     const allowedOrigins =
       process.env.NODE_ENV === "production"
         ? productionOrigins
-        : developmentOrigins;
+        : [...new Set([...developmentOrigins, ...configuredOrigins])];
 
     // Allow requests with no origin (like mobile apps, curl, or same-origin requests)
     if (!origin) {
       return callback(null, true);
     }
 
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    if (
+      allowedOrigins.indexOf(origin) !== -1 ||
+      (process.env.NODE_ENV !== "production" && isLocalDevelopmentOrigin(origin))
+    ) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
@@ -95,6 +123,7 @@ const corsOptions = {
 
 // Apply CORS configuration to all routes
 app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 // Body parsing middleware
 app.use(
@@ -170,7 +199,7 @@ app.get("/health", (req, res) => {
   res.status(200).json({
     status: "healthy",
     timestamp: new Date().toISOString(),
-    version: process.env.APP_VERSION || "1.0.0",
+    version: process.env.APP_VERSION || serverPackage.version || "1.0.0",
     environment: process.env.NODE_ENV || "development",
   });
 });
@@ -182,7 +211,7 @@ app.get("/api/status", (req, res) => {
     status: "running",
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || "development",
-    version: process.env.APP_VERSION || "1.0.0",
+    version: process.env.APP_VERSION || serverPackage.version || "1.0.0",
   });
 });
 

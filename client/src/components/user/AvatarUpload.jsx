@@ -1,8 +1,8 @@
-import React, { useState, useRef } from 'react';
-import { useToast } from '../layout/Toast';
-import api from '../../services/api';
+import React, { useState, useRef } from "react";
+import { useToast } from "../layout/Toast";
+import api from "../../services/api";
 
-const AvatarUpload = ({ currentAvatar, onAvatarUpdate, userName = 'User' }) => {
+const AvatarUpload = ({ currentAvatar, onAvatarUpdate, userName = "User" }) => {
   const { addToast } = useToast();
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -11,11 +11,11 @@ const AvatarUpload = ({ currentAvatar, onAvatarUpdate, userName = 'User' }) => {
 
   // Generate initials from user name
   const getInitials = (name) => {
-    if (!name) return 'U';
+    if (!name) return "U";
     return name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
+      .split(" ")
+      .map((word) => word[0])
+      .join("")
       .toUpperCase()
       .slice(0, 2);
   };
@@ -25,16 +25,25 @@ const AvatarUpload = ({ currentAvatar, onAvatarUpdate, userName = 'User' }) => {
     if (!file) return;
 
     // Validate file type
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    const validTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+    ];
     if (!validTypes.includes(file.type)) {
-      addToast('Please select a valid image file (JPEG, PNG, GIF, or WebP)', 'error');
+      addToast(
+        "Please select a valid image file (JPEG, PNG, GIF, or WebP)",
+        "error",
+      );
       return;
     }
 
     // Validate file size (5MB)
     const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
-      addToast('Image size must be less than 5MB', 'error');
+      addToast("Image size must be less than 5MB", "error");
       return;
     }
 
@@ -54,29 +63,29 @@ const AvatarUpload = ({ currentAvatar, onAvatarUpdate, userName = 'User' }) => {
 
     try {
       const formData = new FormData();
-      formData.append('avatar', file);
+      formData.append("avatar", file);
 
-      const response = await api.post('/api/user/avatar', formData, {
+      const response = await api.post("/api/user/avatar", formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          "Content-Type": "multipart/form-data",
         },
       });
 
       if (response.success) {
-        addToast('Avatar updated successfully!', 'success');
+        addToast("Avatar updated successfully!", "success");
         setPreviewUrl(response.avatar);
         if (onAvatarUpdate) {
           onAvatarUpdate(response.avatar);
         }
       }
     } catch (error) {
-      console.error('Avatar upload error:', error);
-      addToast(error.message || 'Failed to upload avatar', 'error');
+      console.error("Avatar upload error:", error);
+      addToast(error.message || "Failed to upload avatar", "error");
       setPreviewUrl(currentAvatar); // Revert to original
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+        fileInputRef.current.value = "";
       }
     }
   };
@@ -84,25 +93,25 @@ const AvatarUpload = ({ currentAvatar, onAvatarUpdate, userName = 'User' }) => {
   const handleDelete = async () => {
     if (!currentAvatar && !previewUrl) return;
 
-    if (!window.confirm('Are you sure you want to remove your avatar?')) {
+    if (!window.confirm("Are you sure you want to remove your avatar?")) {
       return;
     }
 
     setDeleting(true);
 
     try {
-      const response = await api.delete('/api/user/avatar');
+      const response = await api.delete("/api/user/avatar");
 
       if (response.success) {
-        addToast('Avatar removed successfully', 'success');
+        addToast("Avatar removed successfully", "success");
         setPreviewUrl(null);
         if (onAvatarUpdate) {
           onAvatarUpdate(null);
         }
       }
     } catch (error) {
-      console.error('Avatar delete error:', error);
-      addToast(error.message || 'Failed to remove avatar', 'error');
+      console.error("Avatar delete error:", error);
+      addToast(error.message || "Failed to remove avatar", "error");
     } finally {
       setDeleting(false);
     }
@@ -120,6 +129,7 @@ const AvatarUpload = ({ currentAvatar, onAvatarUpdate, userName = 'User' }) => {
             src={previewUrl}
             alt="Avatar"
             className="w-16 h-16 rounded-full object-cover ring-1 ring-white"
+            crossOrigin="anonymous"
           />
         ) : (
           <div className="w-16 h-16 rounded-full bg-gradient-to-r from-primary to-accent flex items-center justify-center text-white font-semibold">
@@ -137,8 +147,12 @@ const AvatarUpload = ({ currentAvatar, onAvatarUpdate, userName = 'User' }) => {
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-3">
           <div className="truncate">
-            <div className="text-sm font-medium theme-text truncate">{userName}</div>
-            <div className="text-xs theme-muted">{previewUrl ? 'Custom avatar' : 'No avatar'}</div>
+            <div className="text-sm font-medium theme-text truncate">
+              {userName}
+            </div>
+            <div className="text-xs theme-muted">
+              {previewUrl ? "Custom avatar" : "No avatar"}
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
@@ -148,7 +162,7 @@ const AvatarUpload = ({ currentAvatar, onAvatarUpdate, userName = 'User' }) => {
               disabled={uploading || deleting}
               className="px-3 py-1 rounded-md text-sm btn-theme btn-theme-ghost"
             >
-              {uploading ? 'Uploading...' : (previewUrl ? 'Change' : 'Upload')}
+              {uploading ? "Uploading..." : previewUrl ? "Change" : "Upload"}
             </button>
 
             {previewUrl && (
@@ -158,12 +172,14 @@ const AvatarUpload = ({ currentAvatar, onAvatarUpdate, userName = 'User' }) => {
                 disabled={uploading || deleting}
                 className="px-3 py-1 rounded-md text-sm btn-theme btn-theme-danger"
               >
-                {deleting ? 'Removing...' : 'Remove'}
+                {deleting ? "Removing..." : "Remove"}
               </button>
             )}
           </div>
         </div>
-        <p className="text-xs theme-muted mt-1">Accepts JPEG, PNG, GIF, WebP — max 5MB</p>
+        <p className="text-xs theme-muted mt-1">
+          Accepts JPEG, PNG, GIF, WebP — max 5MB
+        </p>
       </div>
 
       <input
@@ -171,7 +187,7 @@ const AvatarUpload = ({ currentAvatar, onAvatarUpdate, userName = 'User' }) => {
         type="file"
         accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
         onChange={handleFileSelect}
-        style={{ display: 'none' }}
+        style={{ display: "none" }}
       />
     </div>
   );

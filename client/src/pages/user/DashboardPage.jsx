@@ -1,4 +1,11 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  lazy,
+  Suspense,
+} from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
@@ -11,7 +18,11 @@ import {
 import { Alert } from "../../components/layout/Alert";
 import { useToast } from "../../components/layout/Toast";
 import Button from "../../components/layout/Button";
-import { QRCodeModal } from "../../components/booth/QRCodeModal";
+const QRCodeModal = lazy(() =>
+  import("../../components/booth/QRCodeModal").then((m) => ({
+    default: m.QRCodeModal,
+  })),
+);
 
 function Dashboard() {
   const [dashboardData, setDashboardData] = useState(null);
@@ -329,7 +340,7 @@ function Dashboard() {
           </div>
           <div className="animate-fadeIn" style={{ "--stagger-index": 2 }}>
             <StatsCard
-              title="Total Votes"
+              title="Votes Received"
               value={stats.totalVotes || 0}
               icon="votes"
               color="secondary"
@@ -503,13 +514,15 @@ function Dashboard() {
           </div>
         )}
 
-        {/* QR Code Modal */}
+        {/* QR Code Modal - lazy loaded */}
         {qrModalData && (
-          <QRCodeModal
-            data={qrModalData}
-            onClose={() => setQrModalData(null)}
-            onDownload={downloadQRCode}
-          />
+          <Suspense fallback={null}>
+            <QRCodeModal
+              data={qrModalData}
+              onClose={() => setQrModalData(null)}
+              onDownload={downloadQRCode}
+            />
+          </Suspense>
         )}
       </div>
     </div>

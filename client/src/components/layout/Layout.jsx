@@ -330,6 +330,7 @@ const Navigation = () => {
                             alt={`Avatar of ${user?.name || "user"}`}
                             className="w-full h-full object-cover"
                             loading="lazy"
+                            crossOrigin="anonymous"
                             onError={(e) => {
                               e.currentTarget.style.display = "none";
                             }}
@@ -416,6 +417,7 @@ const Navigation = () => {
                     alt={`Avatar of ${user?.name || "user"}`}
                     className="w-full h-full object-cover"
                     loading="lazy"
+                    crossOrigin="anonymous"
                     onError={(e) => {
                       e.currentTarget.style.display = "none";
                     }}
@@ -432,6 +434,9 @@ const Navigation = () => {
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="p-2 theme-muted hover:text-accent hover:bg-accent-50 rounded-lg transition-colors focus:outline-none focus-ring"
+              aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={isMenuOpen}
+              aria-controls="mobile-nav"
             >
               <svg
                 className="h-6 w-6"
@@ -470,6 +475,7 @@ const Navigation = () => {
             {/* Fullscreen Mobile Menu Panel - covers entire viewport and prevents scrolling */}
             <div
               ref={mobileMenuRef}
+              id="mobile-nav"
               className="fixed inset-0 theme-surface shadow-2xl transform transition-transform duration-300 ease-out overflow-hidden"
             >
               <div className="flex flex-col h-full">
@@ -498,6 +504,7 @@ const Navigation = () => {
                   <button
                     onClick={() => setIsMenuOpen(false)}
                     className="p-2 theme-muted hover:text-accent hover:bg-accent-50 rounded-lg transition-colors"
+                    aria-label="Close menu"
                   >
                     <svg
                       className="h-5 w-5"

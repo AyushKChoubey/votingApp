@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import {
   useParams,
   useNavigate,
@@ -10,7 +10,11 @@ import { Alert } from "../../components/layout/Alert";
 import { LoadingButton, PageLoading } from "../../components/layout/Loading";
 import { useToast } from "../../components/layout/Toast";
 import Button from "../../components/layout/Button";
-import { QRCodeModal } from "../../components/booth/QRCodeModal";
+const QRCodeModal = lazy(() =>
+  import("../../components/booth/QRCodeModal").then((m) => ({
+    default: m.QRCodeModal,
+  })),
+);
 
 const BoothDetailPage = () => {
   const { boothId } = useParams();
@@ -727,7 +731,7 @@ const BoothDetailPage = () => {
                 <div className="space-y-3 sm:space-y-4">
                   {booth?.candidates?.map((candidate, index) => (
                     <div
-                      key={candidate.id}
+                      key={candidate._id || candidate.id || index}
                       className={`border-2 rounded-lg sm:rounded-xl p-4 sm:p-6 cursor-pointer transition-all duration-300 transform hover:scale-[1.02] ${
                         selectedCandidate === index
                           ? "border-accent bg-accent/5 shadow-lg ring-2 ring-accent/20"
@@ -832,7 +836,7 @@ const BoothDetailPage = () => {
 
                       return (
                         <div
-                          key={candidate.id}
+                          key={candidate._id || candidate.id || index}
                           className="bg-theme-surface/50 rounded-lg p-3 sm:p-4 hover:bg-theme-surface transition-all duration-300"
                         >
                           <div className="flex justify-between items-start mb-2 sm:mb-3">
@@ -1171,13 +1175,15 @@ const BoothDetailPage = () => {
         </div>
       </div>
 
-      {/* QR Code Modal */}
+      {/* QR Code Modal - lazy loaded */}
       {qrModalData && (
-        <QRCodeModal
-          data={qrModalData}
-          onClose={() => setQrModalData(null)}
-          onDownload={downloadQRCode}
-        />
+        <Suspense fallback={null}>
+          <QRCodeModal
+            data={qrModalData}
+            onClose={() => setQrModalData(null)}
+            onDownload={downloadQRCode}
+          />
+        </Suspense>
       )}
     </div>
   );

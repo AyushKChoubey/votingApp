@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import api, { boothService } from "../../services/api";
+import  { boothService } from "../../services/api";
 import { Alert } from "../../components/layout/Alert";
-import { LoadingButton, PageLoading } from "../../components/layout/Loading";
+import { PageLoading } from "../../components/layout/Loading";
 import Button from "../../components/layout/Button";
 import { useToast } from "../../components/layout/Toast";
 
@@ -525,14 +525,14 @@ const BoothResultsPage = () => {
   const turnout = getTurnout();
 
   return (
-    <div className="min-h-screen theme-bg py-8 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+    <div className="min-h-screen theme-bg py-4 sm:py-6 lg:py-8 px-3 sm:px-4 lg:px-8 relative overflow-hidden">
       {/* Animated Background Elements */}
       <div className="absolute top-0 right-0 -translate-y-12 translate-x-12 pointer-events-none float">
         <div
           className="w-48 h-48 sm:w-64 sm:h-64 rounded-full blur-3xl opacity-15"
           style={{
             background:
-              "radial-gradient(circle, var(--color-accent), var(--color-primary))",
+              "radial-gradient(circle, var(--color-primary), var(--color-accent))",
           }}
         />
       </div>
@@ -552,19 +552,53 @@ const BoothResultsPage = () => {
       <div className="max-w-6xl mx-auto relative z-10">
         {/* Header */}
         <div className="mb-4 animate-fadeIn">
-          <div className="text-center pt-2 sm:pt-3 mb-6">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold theme-text mb-3 sm:mb-4 break-words">
-              <span className="text-gradient">{booth?.name}</span>
+          <div className="text-center pt-2 sm:pt-3 mb-4">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2 break-words">
+              <span className="text-gradient">Booth Results</span>
             </h1>
-            <p
-              className="text-sm sm:text-base lg:text-lg theme-muted mb-2 sm:mb-3 max-w-2xl mx-auto leading-relaxed animate-fadeIn break-words"
-              style={{ "--stagger-index": 1 }}
+            <p className="text-sm sm:text-base theme-muted font-mono font-semibold mb-1">
+              Booth ID: {booth?.boothId || booth?.id}
+            </p>
+            <p className="text-base sm:text-lg font-semibold theme-text mb-1 break-words">
+              {booth?.name}
+            </p>
+            {booth?.description && (
+              <p className="text-sm sm:text-base theme-muted max-w-2xl mx-auto leading-relaxed break-words">
+                {booth?.description}
+              </p>
+            )}
+          </div>
+
+          {/* Status Badges (centered below description) */}
+          <div
+            className="flex flex-wrap justify-center gap-2 animate-fadeIn mb-4"
+            style={{ "--stagger-index": 1 }}
+          >
+            <span
+              className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-300 ${
+                booth?.status === "active"
+                  ? "bg-success/10 text-success border border-success/20"
+                  : "bg-theme-surface theme-muted border border-border"
+              }`}
             >
-              Result
-            </p>
-            <p className="text-xs theme-muted mb-2">
-              ID: {booth?.boothId || booth?.id}
-            </p>
+              {booth?.status?.toUpperCase()}
+            </span>
+
+            {permissions.isCreator && (
+              <span className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold bg-accent/10 text-accent border border-accent/20">
+                CREATOR
+              </span>
+            )}
+
+            {permissions.hasVoted && (
+              <span className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold bg-secondary/10 text-secondary border border-secondary/20">
+                VOTED
+              </span>
+            )}
+
+            <span className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold bg-warning/10 text-warning border border-warning/20">
+              TURNOUT {turnout}%
+            </span>
           </div>
 
           {/* Action Buttons (Admin only, centered below title) */}

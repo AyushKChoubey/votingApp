@@ -295,6 +295,7 @@ const ProfilePage = () => {
                       }
                       alt="Profile"
                       className="h-16 w-16 rounded-full object-cover ring-2 ring-gray-100"
+                      crossOrigin="anonymous"
                     />
                   ) : (
                     <div className="h-16 w-16 rounded-full bg-gradient-to-r from-primary to-accent flex items-center justify-center ring-2 ring-gray-100">

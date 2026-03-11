@@ -90,6 +90,18 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
+      // Proactively check token expiry client-side to avoid a doomed API call
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        if (payload.exp && Date.now() / 1000 >= payload.exp) {
+          localStorage.removeItem("token");
+          dispatch({ type: "AUTH_LOGOUT" });
+          return;
+        }
+      } catch (e) {
+        // Malformed token — fall through and let the server reject it
+      }
+
       try {
         // authService.getProfile() may return an envelope { success, user, stats }
         // normalize to ensure `user` in context is the actual user object
