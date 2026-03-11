@@ -121,6 +121,18 @@ const corsOptions = {
   optionsSuccessStatus: 200, // For legacy browser support
 };
 
+// Health endpoints are intentionally public for uptime checks and preview bots.
+const healthCorsOptions = {
+  origin: true,
+  credentials: false,
+  methods: ["GET", "OPTIONS"],
+  optionsSuccessStatus: 200,
+};
+
+app.options("/health", cors(healthCorsOptions));
+app.options("/api/health", cors(healthCorsOptions));
+app.options("/api/health/services", cors(healthCorsOptions));
+
 // Apply CORS configuration to all routes
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
@@ -196,6 +208,16 @@ if (process.env.NODE_ENV === "production") {
 
 // Health check endpoint
 app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "healthy",
+    timestamp: new Date().toISOString(),
+    version: process.env.APP_VERSION || serverPackage.version || "1.0.0",
+    environment: process.env.NODE_ENV || "development",
+  });
+});
+
+// Alias health endpoint for external monitors expecting /api/health
+app.get("/api/health", cors(healthCorsOptions), (req, res) => {
   res.status(200).json({
     status: "healthy",
     timestamp: new Date().toISOString(),
