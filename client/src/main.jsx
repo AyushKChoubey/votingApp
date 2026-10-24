@@ -13,7 +13,11 @@ createRoot(document.getElementById('root')).render(
 const handleAppUrl = (url) => {
   try {
     const callbackUrl = new URL(url)
-    window.history.pushState({}, '', `${callbackUrl.pathname}${callbackUrl.search}`)
+    const route =
+      callbackUrl.protocol === 'votebooth:' && callbackUrl.host === 'auth'
+        ? `/auth${callbackUrl.pathname}`
+        : callbackUrl.pathname
+    window.history.pushState({}, '', `${route}${callbackUrl.search}`)
     window.dispatchEvent(new PopStateEvent('popstate'))
   } catch {
     // Ignore unrelated or malformed deep links.
