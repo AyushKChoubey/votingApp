@@ -1,6 +1,7 @@
 // routes/authRoutes.js - OAuth2 Authentication Routes
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const passport = require('../config/passport');
 const { generateToken } = require('../middleware/jwt');
 const { resendLimiter, verifyEmailLimiter, passwordResetLimiter } = require('../middleware/rateLimiter');
@@ -27,7 +28,6 @@ router.get('/google', (req, res, next) => {
     };
 
     // create CSRF nonce and store minimally in session
-    const crypto = require('crypto');
     const nonce = crypto.randomBytes(16).toString('hex');
     try {
         if (req.session) req.session.oauthNonce = nonce;
@@ -36,8 +36,22 @@ router.get('/google', (req, res, next) => {
     }
 
     let stateObj = { n: nonce };
+    if (req.query.mobile === '1') {
+        stateObj.m = 1;
+    }
     if (isSafeRedirect(redirect)) {
         stateObj.r = redirect;
+    }
+
+    // Native OAuth finishes in an external browser, so its WebView session
+    // cookie is unavailable when the callback returns to the app. Sign the
+    // state so native callbacks can be verified without that cookie.
+    if (stateObj.m === 1) {
+        const statePayload = JSON.stringify(stateObj);
+        stateObj.s = crypto
+            .createHmac('sha256', process.env.SESSION_SECRET || 'dev-secret-change-in-production')
+            .update(statePayload)
+            .digest('hex');
     }
 
     // Encode state as JSON then URI component to keep it safe for query use
@@ -63,14 +77,37 @@ router.get('/google/callback',
             // Validate state & nonce BEFORE issuing any token.
             const clientURL = process.env.CLIENT_URL || 'http://localhost:5173';
             let statePart = '';
+            let mobileRedirect = false;
             if (req.query.state) {
                 try {
                     const decoded = decodeURIComponent(req.query.state);
                     const parsed = JSON.parse(decoded);
+                    mobileRedirect = parsed && parsed.m === 1;
+
+                    if (mobileRedirect) {
+                        const signature = parsed.s;
+                        const unsignedState = { ...parsed };
+                        delete unsignedState.s;
+                        const expectedSignature = crypto
+                            .createHmac('sha256', process.env.SESSION_SECRET || 'dev-secret-change-in-production')
+                            .update(JSON.stringify(unsignedState))
+                            .digest('hex');
+                        const signaturesMatch =
+                            typeof signature === 'string' &&
+                            signature.length === expectedSignature.length &&
+                            crypto.timingSafeEqual(
+                                Buffer.from(signature),
+                                Buffer.from(expectedSignature),
+                            );
+                        if (!signaturesMatch) {
+                            console.warn('Invalid native OAuth state signature. Rejecting callback.');
+                            return res.redirect(`${clientURL}/login?error=invalid_oauth_state`);
+                        }
+                    }
 
                     // Validate CSRF nonce from session. Any error reading session
                     // or mismatch must be treated as failure.
-                    let nonceValid = false;
+                    let nonceValid = mobileRedirect;
                     try {
                         const sessionNonce = req.session && req.session.oauthNonce;
                         const parsedNonce = parsed && parsed.n;
@@ -116,7 +153,10 @@ router.get('/google/callback',
                 name: req.user.name
             });
 
-            res.redirect(`${clientURL}/auth/callback?token=${token}${statePart}`);
+            const callbackBase = mobileRedirect
+                ? 'votebooth://auth/callback'
+                : `${clientURL}/auth/callback`;
+            res.redirect(`${callbackBase}?token=${token}${statePart}`);
         } catch (err) {
             console.error('OAuth callback error:', err);
             const clientURL = process.env.CLIENT_URL || 'http://localhost:5173';

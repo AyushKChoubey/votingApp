@@ -19,6 +19,17 @@ npm-debug.log*
 dist/
 build/
 
+# Capacitor generated files and native platform projects
+client/android/
+client/ios/
+client/.capacitor/
+client/capacitor.config.*
+client/android/.gradle/
+client/android/build/
+client/android/app/build/
+client/android/capacitor-cordova-android-plugins/
+client/ios/Pods/
+
 # Database files
 *.db
 *.sqlite

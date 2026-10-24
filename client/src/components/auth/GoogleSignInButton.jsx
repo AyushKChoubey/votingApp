@@ -1,11 +1,12 @@
 import React from "react";
+import { Capacitor } from "@capacitor/core";
 import { GoogleIcon } from "../icons/Icons";
 
 const GoogleSignInButton = ({ text = "Continue with Google" }) => {
   const handleGoogleSignIn = () => {
     // Get the API base URL from environment or default to localhost
     const API_BASE_URL =
-      import.meta.env.VITE_API_URL || "http://localhost:5000";
+      import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "" : "http://localhost:5000");
 
     // Preserve any `redirect` query parameter from the current URL so the
     // OAuth flow can return the user to their intended destination.
@@ -15,8 +16,17 @@ const GoogleSignInButton = ({ text = "Continue with Google" }) => {
       ? `?redirect=${encodeURIComponent(redirectParam)}`
       : "";
 
+    const isNativeApp =
+      Capacitor.isNativePlatform() ||
+      window.location.protocol === "capacitor:" ||
+      (window.location.protocol === "https:" &&
+        window.location.hostname === "localhost" &&
+        !window.location.port);
+    const mobileQuery = isNativeApp ? "&mobile=1" : "";
+    const separator = redirectQuery ? "&" : "?";
+
     // Redirect to backend OAuth endpoint with optional redirect info
-    window.location.href = `${API_BASE_URL}/api/auth/google${redirectQuery}`;
+    window.location.href = `${API_BASE_URL}/api/auth/google${redirectQuery}${mobileQuery ? `${separator}${mobileQuery.slice(1)}` : ""}`;
   };
 
   return (

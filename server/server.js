@@ -87,11 +87,19 @@ const corsOptions = {
       "https://localhost:5173",
       "http://localhost:3000",
       "http://127.0.0.1:5173",
+      "https://localhost",
+      "http://localhost",
+      "capacitor://localhost",
     ];
 
     const allowedOrigins =
       process.env.NODE_ENV === "production"
-        ? productionOrigins
+        ? [
+            ...productionOrigins,
+            "https://localhost",
+            "http://localhost",
+            "capacitor://localhost",
+          ]
         : [...new Set([...developmentOrigins, ...configuredOrigins])];
 
     // Allow requests with no origin (like mobile apps, curl, or same-origin requests)
@@ -179,9 +187,10 @@ app.use(
     saveUninitialized: false,
     store: MongoStore.create({
       mongoUrl:
-        process.env.MONGODB_URI ||
-        process.env.MONGODB_LOCAL_URL ||
-        "mongodb://localhost:27017/votingApp",
+        process.env.NODE_ENV === "production"
+          ? process.env.MONGODB_URI
+          : process.env.MONGODB_URI_LOCAL ||
+            "mongodb://localhost:27017/votingApp",
       touchAfter: 24 * 3600, // lazy session update
       ttl: 24 * 60 * 60, // = 24 hours. Default session expiration time
       autoRemove: "native", // Default - let MongoDB handle expired sessions
@@ -340,11 +349,11 @@ app.use((err, req, res, next) => {
 const http = require("http");
 const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
-// Use 0.0.0.0 for production (cloud platforms) and localhost for development
+// Bind locally to all interfaces so phones on the same network can use the dev app.
 const HOST =
   process.env.NODE_ENV === "production"
     ? "0.0.0.0"
-    : process.env.HOST || "localhost";
+    : process.env.HOST || "0.0.0.0";
 
 // Initialize socket.io (lazy module to avoid circular requires)
 try {
