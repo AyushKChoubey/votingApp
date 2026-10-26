@@ -146,11 +146,57 @@ router.get('/google/callback',
                 }
             }
 
+            // Record active session for OAuth login
+            const sessionId = crypto.randomUUID();
+            try {
+                const User = require('../models/user');
+                const user = await User.findById(req.user._id);
+                if (user) {
+                    if (!user.sessions) user.sessions = [];
+                    const ua = req.headers['user-agent'] || '';
+                    let browser = 'Web Browser';
+                    let os = 'Unknown OS';
+                    let deviceType = 'desktop';
+                    if (/iphone/i.test(ua)) { os = 'iOS'; deviceType = 'mobile'; }
+                    else if (/ipad/i.test(ua)) { os = 'iPadOS'; deviceType = 'tablet'; }
+                    else if (/android/i.test(ua)) { os = 'Android'; deviceType = /mobile/i.test(ua) ? 'mobile' : 'tablet'; }
+                    else if (/windows/i.test(ua)) os = 'Windows';
+                    else if (/macintosh/i.test(ua)) os = 'macOS';
+                    else if (/linux/i.test(ua)) os = 'Linux';
+                    if (/edg\//i.test(ua)) browser = 'Microsoft Edge';
+                    else if (/chrome/i.test(ua)) browser = 'Chrome';
+                    else if (/firefox/i.test(ua)) browser = 'Firefox';
+                    else if (/safari/i.test(ua)) browser = 'Safari';
+
+                    const existingIndex = user.sessions.findIndex(
+                        (s) => s.browser === browser && s.os === os && s.deviceType === deviceType
+                    );
+                    if (existingIndex !== -1) {
+                        user.sessions[existingIndex].sessionId = sessionId;
+                        user.sessions[existingIndex].lastActive = new Date();
+                    } else {
+                        user.sessions.push({
+                            sessionId,
+                            browser,
+                            os,
+                            deviceType,
+                            lastActive: new Date(),
+                            createdAt: new Date(),
+                        });
+                    }
+                    if (user.sessions.length > 20) user.sessions = user.sessions.slice(-20);
+                    await user.save();
+                }
+            } catch (sessionErr) {
+                console.warn('OAuth session tracking error:', sessionErr.message);
+            }
+
             // Generate JWT token AFTER validation
             const token = generateToken({
                 id: req.user._id,
                 email: req.user.email,
-                name: req.user.name
+                name: req.user.name,
+                sessionId,
             });
 
             const callbackBase = mobileRedirect

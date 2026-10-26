@@ -1,4 +1,4 @@
-// routes/userRoutes-api.js (API-only user routes)
+ // routes/userRoutes-api.js (API-only user routes)
 const express = require('express');
 const router = express.Router();
 const { jwtAuthMiddleware } = require('../middleware/jwt');
@@ -43,6 +43,12 @@ router.post('/avatar', jwtAuthMiddleware, upload.single('avatar'), handleMulterE
 
 // DELETE: Delete avatar
 router.delete('/avatar', jwtAuthMiddleware, userController.deleteAvatar);
+
+// GET: Active sessions / devices
+router.get('/devices', jwtAuthMiddleware, userController.getDevices);
+
+// POST: Sign out of all other devices
+router.post('/devices/revoke-others', jwtAuthMiddleware, userController.revokeOtherDevices);
 
 // DELETE: Delete account
 router.delete('/account', jwtAuthMiddleware, userController.deleteAccount);

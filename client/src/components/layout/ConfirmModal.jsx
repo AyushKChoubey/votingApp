@@ -8,6 +8,7 @@ export default function ConfirmModal({
   cancelLabel = 'Cancel',
   requireText = null, // string the user must type to confirm
   loading = false,
+  variant = 'danger', // 'danger' | 'primary'
   onConfirm = () => {},
   onCancel = () => {}
 }) {
@@ -21,14 +22,26 @@ export default function ConfirmModal({
 
   const canConfirm = !requireText || input.trim() === requireText;
 
+  const confirmBtnClasses = variant === 'primary'
+    ? (canConfirm && !loading ? 'btn-theme text-on-primary font-semibold shadow-md active:scale-95' : 'bg-accent/40 text-on-primary cursor-not-allowed')
+    : (canConfirm && !loading ? 'bg-red-600 hover:bg-red-700 font-semibold' : 'bg-red-300 cursor-not-allowed');
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="theme-surface rounded-2xl shadow-xl max-w-lg w-full p-6 mx-4 border border-border">
         <div className="flex items-start gap-4">
           <div className="flex-shrink-0 mt-1">
-            <svg className="w-8 h-8 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
-            </svg>
+            {variant === 'primary' ? (
+              <div className="w-10 h-10 rounded-xl bg-accent-50 text-accent flex items-center justify-center">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            ) : (
+              <svg className="w-8 h-8 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
+              </svg>
+            )}
           </div>
           <div className="flex-1">
             <h3 className="text-lg font-semibold theme-text">{title}</h3>
@@ -53,7 +66,7 @@ export default function ConfirmModal({
               <button
                 onClick={onConfirm}
                 disabled={!canConfirm || loading}
-                className={`px-4 py-2 rounded-lg text-white transition-colors ${canConfirm && !loading ? 'bg-red-600 hover:bg-red-700' : 'bg-red-300 cursor-not-allowed'}`}
+                className={`px-4 py-2 rounded-lg text-white transition-colors ${confirmBtnClasses}`}
               >
                 {loading ? 'Working...' : confirmLabel}
               </button>

@@ -6,6 +6,8 @@ import { LoadingButton, PageLoading } from "../../components/layout/Loading";
 import { useToast } from "../../components/layout/Toast";
 import ConfirmModal from "../../components/layout/ConfirmModal";
 import Button from "../../components/layout/Button";
+import BackButton from "../../components/layout/BackButton";
+import Toggle from "../../components/layout/Toggle";
 const QRCodeModal = lazy(() =>
   import("../../components/booth/QRCodeModal").then((m) => ({
     default: m.QRCodeModal,
@@ -50,6 +52,187 @@ const BoothAdminPage = () => {
   const [countdownText, setCountdownText] = useState(null);
   const lastStatusRef = useRef(null);
 
+  // Mobile specific state for 6-screen mockup
+  const [mobileTab, setMobileTab] = useState("overview"); // "overview" | "members" | "candidates" | "settings"
+  const [mobileSearchMembers, setMobileSearchMembers] = useState("");
+  const [mobileSearchActivity, setMobileSearchActivity] = useState("");
+  const [showMenuDropdown, setShowMenuDropdown] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showCloseBoothModal, setShowCloseBoothModal] = useState(false);
+  const [showReopenBoothModal, setShowReopenBoothModal] = useState(false);
+  const [showResetInviteModal, setShowResetInviteModal] = useState(false);
+  const [showDeleteBoothModal, setShowDeleteBoothModal] = useState(false);
+  const [candidateModal, setCandidateModal] = useState({
+    open: false,
+    mode: "add",
+    index: -1,
+    name: "",
+    description: "",
+    saving: false,
+  });
+  const [memberActionModal, setMemberActionModal] = useState({
+    open: false,
+    member: null,
+  });
+
+  const handleSaveCandidate = async ({ name, description }) => {
+    try {
+      setCandidateModal((prev) => ({ ...prev, saving: true }));
+      let updatedCandidates = [];
+      if (candidateModal.mode === "edit") {
+        updatedCandidates = (booth?.candidates || []).map((c, i) =>
+          i === candidateModal.index ? { ...c, name, description } : c
+        );
+      } else {
+        updatedCandidates = [
+          ...(booth?.candidates || []),
+          { name, description, voteCount: 0 },
+        ];
+      }
+
+      const response = await boothService.updateBooth(boothId, {
+        candidates: updatedCandidates,
+      });
+
+      if (response && response.success) {
+        addToast(
+          candidateModal.mode === "edit"
+            ? "Candidate updated successfully"
+            : "Candidate added successfully",
+          "success"
+        );
+        setCandidateModal({
+          open: false,
+          mode: "add",
+          index: -1,
+          name: "",
+          description: "",
+          saving: false,
+        });
+        await fetchBoothDetails();
+      } else {
+        addToast(response?.error || "Failed to update candidate", "error");
+        setCandidateModal((prev) => ({ ...prev, saving: false }));
+      }
+    } catch (err) {
+      addToast(err.message || "Failed to save candidate", "error");
+      setCandidateModal((prev) => ({ ...prev, saving: false }));
+    }
+  };
+
+  const handleConfirmReopenBooth = async () => {
+    try {
+      setUpdating(true);
+      const srvSettings = booth?.settings || {};
+      try {
+        await boothService.updateSettings(boothId, {
+          ...srvSettings,
+          scheduled: false,
+          votingStartTime: null,
+          votingEndTime: null,
+        });
+      } catch (settingsErr) {
+        console.warn("Failed to clear settings before reopen:", settingsErr);
+      }
+
+      const response = await boothService.toggleStatus(boothId);
+      if (response && (response.success || response.status === "active")) {
+        setShowReopenBoothModal(false);
+        setSettings((prev) => ({
+          ...prev,
+          scheduled: false,
+          votingStartTime: null,
+          votingEndTime: null,
+        }));
+        setCountdownText(null);
+        await fetchBoothDetails();
+        addToast("Booth reopened successfully", "success");
+      } else {
+        addToast(response?.error || "Failed to reopen booth", "error");
+      }
+    } catch (err) {
+      addToast(err.message || "Failed to reopen booth", "error");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleConfirmCloseBooth = async () => {
+    try {
+      setUpdating(true);
+      const response = await boothService.toggleStatus(boothId);
+      if (response.success) {
+        setShowCloseBoothModal(false);
+        await fetchBoothDetails();
+        addToast("Booth closed successfully", "success");
+      } else {
+        addToast(response.error || "Failed to close booth", "error");
+      }
+    } catch (err) {
+      addToast(err.message || "Failed to close booth", "error");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleConfirmResetInvite = async () => {
+    try {
+      setUpdating(true);
+      const response = await boothService.resetInviteCode(boothId);
+      if (response && response.success) {
+        setShowResetInviteModal(false);
+        await fetchBoothDetails();
+        addToast("Invite code reset successfully", "success");
+      } else {
+        addToast(response?.error || "Failed to reset invite code", "error");
+      }
+    } catch (err) {
+      addToast(err.message || "Failed to reset invite code", "error");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleConfirmDeleteBooth = async () => {
+    try {
+      setUpdating(true);
+      const response = await boothService.deleteBooth(boothId);
+      if (response.success) {
+        setShowDeleteBoothModal(false);
+        addToast("Booth deleted successfully", "success");
+        navigate("/dashboard");
+      } else {
+        addToast(response.error || "Failed to delete booth", "error");
+      }
+    } catch (err) {
+      addToast(err.message || "Failed to delete booth", "error");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleRemoveMemberFromModal = async (memberId) => {
+    try {
+      setRemovingMembers((prev) => new Set(prev).add(memberId));
+      const response = await boothService.removeMember(boothId, memberId);
+      if (response.success) {
+        setMemberActionModal({ open: false, member: null });
+        await fetchBoothDetails();
+        addToast("Member removed successfully", "success");
+      } else {
+        addToast(response.error || "Failed to remove member", "error");
+      }
+    } catch (err) {
+      addToast(err.message || "Failed to remove member", "error");
+    } finally {
+      setRemovingMembers((prev) => {
+        const next = new Set(prev);
+        next.delete(memberId);
+        return next;
+      });
+    }
+  };
+
   // Activity tab state
   const [activeTab, setActiveTab] = useState("overview");
   const [activities, setActivities] = useState([]);
@@ -59,6 +242,7 @@ const BoothAdminPage = () => {
 
   useEffect(() => {
     fetchBoothDetails();
+    fetchActivity();
     // Reset activities fetch flag when booth changes
     setActivitiesFetched(false);
   }, [boothId]);
@@ -194,9 +378,9 @@ const BoothAdminPage = () => {
             Array.isArray(srvSettings.allowedEmailDomains) &&
             srvSettings.allowedEmailDomains.length > 0,
           // show schedule toggle when any schedule values exist
-          scheduled: !!(
-            srvSettings.votingStartTime || srvSettings.votingEndTime
-          ),
+          scheduled: srvSettings.scheduled !== undefined
+            ? Boolean(srvSettings.scheduled && (srvSettings.votingStartTime || srvSettings.votingEndTime))
+            : !!(srvSettings.votingStartTime || srvSettings.votingEndTime),
         });
 
         if (!response.data?.permissions?.isCreator) {
@@ -225,7 +409,13 @@ const BoothAdminPage = () => {
       setUpdating(true);
       setError("");
 
-      const response = await boothService.updateSettings(boothId, settings);
+      const payload = {
+        ...settings,
+        votingStartTime: settings.scheduled ? (settings.votingStartTime || null) : null,
+        votingEndTime: settings.scheduled ? (settings.votingEndTime || null) : null,
+      };
+
+      const response = await boothService.updateSettings(boothId, payload);
 
       if (response.success) {
         // refresh data first, then notify user so toasts reflect final state
@@ -243,28 +433,50 @@ const BoothAdminPage = () => {
     }
   };
 
-  const handleToggleStatus = async () => {
-    const newStatus = booth.status === "active" ? "closed" : "active";
-    setConfirm({
-      open: true,
-      action: "toggleStatus",
-      payload: { newStatus },
-      title: `${newStatus === "active" ? "Activate" : "Close"} booth`,
-      description: `Are you sure you want to ${newStatus === "active" ? "activate" : "close"} this booth?`,
-    });
-    return;
+  const isScheduleExpired = () => {
+    if (countdownText === "Voting ended") return true;
+    const endTime = settings?.votingEndTime || booth?.settings?.votingEndTime;
+    if (endTime) {
+      const end = new Date(endTime);
+      if (!isNaN(end.getTime()) && new Date() >= end) {
+        return true;
+      }
+    }
+    return false;
   };
 
-  const handleResetInviteCode = async () => {
-    setConfirm({
-      open: true,
-      action: "resetInvite",
-      payload: null,
-      title: "Reset invite code",
-      description:
-        "Generating a new invite code invalidates the previous code and links — anyone using the old link will no longer be able to join. Continue?",
-    });
-    return;
+  const handleToggleStatus = async () => {
+    // 1. If currently active, prompt danger zone bottom sheet to confirm closing
+    if (booth?.status === "active") {
+      setShowCloseBoothModal(true);
+      return;
+    }
+
+    // 2. If currently closed and schedule is expired, show friendly Reopen Voting drawer
+    if (isScheduleExpired()) {
+      setShowReopenBoothModal(true);
+      return;
+    }
+
+    // 3. If closed and schedule is not expired, activate directly
+    try {
+      setUpdating(true);
+      const response = await boothService.toggleStatus(boothId);
+      if (response && (response.success || response.status === "active")) {
+        await fetchBoothDetails();
+        addToast("Booth activated", "success");
+      } else {
+        addToast(response?.error || "Failed to activate booth", "error");
+      }
+    } catch (err) {
+      addToast(err.message || "Failed to activate booth", "error");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleResetInviteCode = () => {
+    setShowResetInviteModal(true);
   };
 
   const handleRemoveMember = async (memberId) => {
@@ -278,7 +490,7 @@ const BoothAdminPage = () => {
     });
     return;
   };
-
+ 
   const handleApproveRequest = async (userId) => {
     setPendingActionLoading((prev) => new Set(prev).add(userId));
     try {
@@ -321,17 +533,8 @@ const BoothAdminPage = () => {
     }
   };
 
-  const handleDeleteBooth = async () => {
-    setConfirm({
-      open: true,
-      action: "deleteBooth",
-      payload: null,
-      title: "Delete booth",
-      description:
-        "Are you sure you want to permanently delete this booth? Members will lose access and this action cannot be undone.",
-      requireText: "DELETE",
-      confirmLabel: "Delete booth",
-    });
+  const handleDeleteBooth = () => {
+    setShowDeleteBoothModal(true);
   };
 
   const handleSettingChange = (key, value) => {
@@ -356,33 +559,7 @@ const BoothAdminPage = () => {
             addToast(response.error || "Failed to toggle status", "error");
           }
         } catch (err) {
-          // If schedule expired, show a helpful warning and open settings to update schedule
-          const status = err?.response?.status || err?.status;
-          const isExpired =
-            status === 400 &&
-            (err?.data?.code === "SCHEDULE_EXPIRED" ||
-              /voting period has already ended/i.test(
-                err?.data?.error || err?.message || "",
-              ));
-          if (isExpired) {
-            addToast(
-              "Cannot activate: voting period already ended. Update schedule or disable scheduling to reopen.",
-              "warning",
-            );
-            // Open settings so admin can update times
-            setEditingSettings(true);
-            setError(
-              "Voting period ended — update schedule or disable scheduling to reopen voting.",
-            );
-            // Refresh booth details to reflect auto-closed state
-            try {
-              await fetchBoothDetails();
-            } catch (e) {
-              /* ignore */
-            }
-          } else {
-            addToast(err.message || "Action failed", "error");
-          }
+          addToast(err.message || "Failed to toggle status", "error");
         }
       }
 
@@ -626,40 +803,15 @@ const BoothAdminPage = () => {
     );
   }
 
-  return (
-    <div className="min-h-screen theme-bg py-4 sm:py-6 lg:py-8 px-3 sm:px-4 lg:px-8 relative overflow-hidden">
-      {/* Floating orbs */}
-      <div className="absolute top-0 right-0 -translate-y-12 translate-x-12 pointer-events-none float">
-        <div
-          className="w-48 h-48 sm:w-64 sm:h-64 rounded-full blur-3xl opacity-20"
-          style={{
-            background:
-              "radial-gradient(circle, var(--color-primary), var(--color-accent))",
-          }}
-        />
-      </div>
-      <div
-        className="absolute bottom-0 left-0 translate-y-12 -translate-x-12 pointer-events-none float"
-        style={{ "--stagger-index": 1 }}
-      >
-        <div
-          className="w-48 h-48 sm:w-64 sm:h-64 rounded-full blur-3xl opacity-15"
-          style={{
-            background:
-              "radial-gradient(circle, var(--color-accent), var(--color-secondary))",
-          }}
-        />
-      </div>
-
+  const renderDesktopAdmin = () => (
+    <div className="py-4 sm:py-6 lg:py-8 px-3 sm:px-4 lg:px-8 relative overflow-hidden">
       <div className="max-w-6xl mx-auto relative z-10">
         {/* Header */}
         <div className="mb-1 animate-fadeIn">
           {/* Title and Status Toggle Row */}
           <div className="flex items-start justify-center pt-1 sm:pt-2 mb-2 relative">
             <div className="text-center max-w-4xl mx-auto px-4 sm:px-12">
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2 break-words">
-                <span className="text-gradient">Admin Dashboard</span>
-              </h1>
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2 break-words"></h1>
               <p className="text-sm sm:text-base theme-muted font-mono font-semibold mb-1">
                 Booth ID: {booth?.boothId}
               </p>
@@ -673,24 +825,15 @@ const BoothAdminPage = () => {
               <div className="text-right">
                 <div className="text-sm font-bold theme-text mb-2">Status</div>
 
-                <button
-                  onClick={handleToggleStatus}
-                  disabled={updating}
-                  aria-label="Toggle booth status"
-                  className={`relative inline-flex mt-0 h-5 w-10 items-center rounded-full transition-all focus:outline-none focus-ring disabled:opacity-50 disabled:cursor-not-allowed ${
-                    booth?.status === "active"
-                      ? "bg-success-50 border-success"
-                      : "bg-gray-300"
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-sm ${
-                      booth?.status === "active"
-                        ? "translate-x-6"
-                        : "translate-x-0"
-                    }`}
+                <div className="flex justify-end">
+                  <Toggle
+                    checked={booth?.status === "active"}
+                    onChange={handleToggleStatus}
+                    disabled={updating}
+                    ariaLabel="Toggle booth status"
+                    size="md"
                   />
-                </button>
+                </div>
 
                 <div
                   className={`mt-1 text-xs font-bold ${booth?.status === "active" ? "text-success" : "text-error"}`}
@@ -1462,8 +1605,8 @@ const BoothAdminPage = () => {
                                 const checked = e.target.checked;
                                 handleSettingChange("scheduled", checked);
                                 if (!checked) {
-                                  handleSettingChange("votingStartTime", "");
-                                  handleSettingChange("votingEndTime", "");
+                                  handleSettingChange("votingStartTime", null);
+                                  handleSettingChange("votingEndTime", null);
                                 }
                               }}
                               className="mt-1 h-4 w-4 text-accent theme-surface border-border rounded focus:ring-accent"
@@ -2173,12 +2316,905 @@ const BoothAdminPage = () => {
           </>
         )}
       </div>
+    </div>
+  );
+
+  // ── MOBILE ADMIN SCREEN (Screens 1 to 6 from mockup) ────────────────────
+  const renderMobileAdmin = () => {
+    const filteredMembers = (booth?.members || []).filter((m) => {
+      if (!mobileSearchMembers.trim()) return true;
+      const q = mobileSearchMembers.toLowerCase();
+      return (
+        m.user?.name?.toLowerCase().includes(q) ||
+        m.user?.email?.toLowerCase().includes(q)
+      );
+    });
+
+    const formatActivityDate = (dateString) => {
+      if (!dateString) return "";
+      const d = new Date(dateString);
+      if (isNaN(d.getTime())) return "";
+      return d.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+    };
+
+    // Full activity list for "See all" page with search
+    const allActivities = activities && activities.length > 0 ? activities : [
+      { id: 'created', message: 'Booth created', createdAt: booth?.createdAt },
+      ...(booth?.members || []).map((m, i) => ({
+        id: `member-${i}`,
+        message: `${m.user?.name || 'Member'} joined the booth`,
+        createdAt: m.joinedAt
+      }))
+    ];
+
+    const filteredActivities = allActivities.filter((act) => {
+      if (!mobileSearchActivity.trim()) return true;
+      return act.message?.toLowerCase().includes(mobileSearchActivity.toLowerCase());
+    });
+
+    return (
+      <div className="pb-28 sm:pb-12 w-full max-w-full overflow-x-hidden">
+        {/* Top App Bar: Back Button & Title Consistent with other pages, NO horizontal line */}
+        <div className="flex items-center justify-between px-4 pt-4 pb-2 w-full max-w-full">
+          <div className="flex items-center gap-3">
+            <BackButton fallback="/dashboard" />
+            <h1 className="text-xl font-bold theme-text">Manage Booth</h1>
+          </div>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowMenuDropdown((prev) => !prev)}
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-border theme-surface theme-text shadow-sm transition-colors hover:border-accent hover:bg-accent-50"
+              aria-label="Booth options"
+            >
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+              </svg>
+            </button>
+
+            {/* Dropdown Menu */}
+            {showMenuDropdown && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowMenuDropdown(false)} />
+                <div className="absolute right-0 mt-1 w-48 rounded-2xl theme-surface border border-border shadow-xl py-1.5 z-50 animate-fadeIn">
+                  <button
+                    onClick={() => { setShowMenuDropdown(false); navigate(`/booth/${boothId}`); }}
+                    className="w-full px-4 py-2 text-left text-xs font-medium theme-text hover:bg-accent-50 flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                    View as Voter
+                  </button>
+                  <button
+                    onClick={() => { setShowMenuDropdown(false); navigate(`/booth/${boothId}/results`); }}
+                    className="w-full px-4 py-2 text-left text-xs font-medium theme-text hover:bg-accent-50 flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                    View Results
+                  </button>
+                  <button
+                    onClick={() => { setShowMenuDropdown(false); setShowShareModal(true); }}
+                    className="w-full px-4 py-2 text-left text-xs font-medium theme-text hover:bg-accent-50 flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                    Share Booth
+                  </button>
+                  <button
+                    onClick={() => { setShowMenuDropdown(false); handleResetInviteCode(); }}
+                    className="w-full px-4 py-2 text-left text-xs font-medium theme-text hover:bg-accent-50 flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                    Reset Invite Code
+                  </button>
+                  <div className="h-px bg-border my-1" />
+                  <button
+                    onClick={() => { setShowMenuDropdown(false); setShowDeleteBoothModal(true); }}
+                    className="w-full px-4 py-2 text-left text-xs font-medium text-error hover:bg-error/10 flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    Delete Booth
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Booth Header Card: consistent box around name, boothId, status, creator, countdown and toggle */}
+        <div className="px-4 pt-2 mb-3 w-full max-w-full">
+          <div className="theme-surface rounded-2xl border border-border p-4 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-accent-50 text-accent border border-accent/20 flex items-center justify-center shrink-0 shadow-xs">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 14l9-5-9-5-9 5 9 5z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
+                </svg>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <h2 className="text-base font-bold theme-text truncate">{booth?.name}</h2>
+                  <div className="flex flex-col items-end shrink-0 pl-2">
+                    <span
+                      className={`text-[11px] font-bold tracking-wide uppercase mb-1 transition-colors ${
+                        booth?.status === "active" ? "text-success" : "text-error"
+                      }`}
+                    >
+                      {booth?.status === "active" ? "Active" : "Closed"}
+                    </span>
+                    <Toggle
+                      checked={booth?.status === "active"}
+                      onChange={handleToggleStatus}
+                      disabled={updating}
+                      ariaLabel="Toggle booth active status"
+                      size="sm"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs theme-muted mb-1.5">
+                  <span className="truncate">Booth ID: {booth?.boothId}</span>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(booth?.boothId, "Booth ID copied")}
+                    className="p-0.5 hover:text-accent shrink-0"
+                    title="Copy Booth ID"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold btn-theme text-on-primary shadow-xs">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                    Creator
+                  </span>
+                  {countdownText && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-300 dark:border-red-800">
+                      <svg className="w-3 h-3 animate-pulse text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      {countdownText}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Segmented Tab Bar: 4 columns with ZERO horizontal scroll */}
+        <div className="px-4 py-2.5 w-full max-w-full">
+          <div className="grid grid-cols-4 gap-1 sm:gap-1.5 w-full">
+            {[
+              { id: "overview", label: "Overview" },
+              { id: "members", label: "Members" },
+              { id: "candidates", label: "Candidates" },
+              { id: "settings", label: "Settings" },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setMobileTab(tab.id)}
+                className={`py-1.5 px-1 rounded-full text-xs font-semibold text-center transition-all duration-150 truncate ${
+                  mobileTab === tab.id
+                    ? "btn-theme text-on-primary shadow-sm"
+                    : "border border-border theme-surface theme-muted hover:theme-text"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* TAB 1: OVERVIEW SCREEN */}
+        {mobileTab === "overview" && (
+          <div className="animate-fadeIn w-full max-w-full">
+            {/* 3 Stat Cards in a row */}
+            <div className="grid grid-cols-3 gap-2.5 px-4 my-2 w-full">
+              <div className="theme-surface rounded-2xl border border-border p-3 text-center">
+                <div className="w-8 h-8 mx-auto mb-1.5 rounded-xl bg-accent-50 text-accent flex items-center justify-center">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                </div>
+                <div className="text-xl font-bold theme-text">{booth?.totalVotes || 0}</div>
+                <div className="text-[11px] theme-muted mt-0.5">Total Votes</div>
+              </div>
+
+              <div className="theme-surface rounded-2xl border border-border p-3 text-center">
+                <div className="w-8 h-8 mx-auto mb-1.5 rounded-xl bg-accent-50 text-accent flex items-center justify-center">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                </div>
+                <div className="text-xl font-bold theme-text">{booth?.members?.length || 0}</div>
+                <div className="text-[11px] theme-muted mt-0.5">Members</div>
+              </div>
+
+              <div className="theme-surface rounded-2xl border border-border p-3 text-center">
+                <div className="w-8 h-8 mx-auto mb-1.5 rounded-xl bg-accent-50 text-accent flex items-center justify-center">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                </div>
+                <div className="text-xl font-bold theme-text">{booth?.candidates?.length || 0}</div>
+                <div className="text-[11px] theme-muted mt-0.5">Candidates</div>
+              </div>
+            </div>
+
+            {/* 3) REDESIGNED VOTER ACCESS & INVITE CODE CARD (No redundancy, Reset Code on the card itself, clear purpose) */}
+            <div className="mx-4 mt-3 theme-surface rounded-2xl border border-border p-4 shadow-sm w-[calc(100%-2rem)] max-w-full">
+              {/* Header with Title, Description, and Reset Code Button */}
+              <div className="flex items-start justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-accent-50 text-accent border border-accent/20 flex items-center justify-center shrink-0">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                    </svg>
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-bold theme-text text-sm leading-tight">Voter Invite Code</h3>
+                    <p className="text-[11px] theme-muted mt-0.5">Share with voters to let them join this private booth</p>
+                  </div>
+                </div>
+
+                {/* Reset Code Button directly on the card */}
+                <button
+                  type="button"
+                  onClick={handleResetInviteCode}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border text-[11px] font-semibold theme-muted hover:text-warning hover:border-warning/40 hover:bg-warning/10 transition-colors shrink-0 active:scale-95"
+                  title="Generate a new invite code"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span>Reset</span>
+                </button>
+              </div>
+
+              {/* Monospace Code Display Box with One-Click Copy */}
+              <div className="p-3 rounded-xl border border-accent/25 bg-accent-50/40 flex items-center justify-between mb-3">
+                <div className="flex flex-col min-w-0 pr-2">
+                  <span className="text-[10px] font-bold text-accent uppercase tracking-wider">Join Code</span>
+                  <span className="font-mono text-xl font-extrabold tracking-widest theme-text select-all">
+                    {booth?.inviteCode}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(booth?.inviteCode, "Invite code copied")}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl btn-theme text-on-primary text-xs font-semibold shadow-xs hover:shadow-md active:scale-95 transition-all shrink-0"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  Copy Code
+                </button>
+              </div>
+
+              {/* Clean Quick Actions: Share Link & Show QR Code */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={handleShareInvite}
+                  className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl border border-border text-xs font-semibold theme-surface theme-text hover:bg-accent-50 hover:border-accent/40 active:scale-95 transition-all shadow-xs"
+                >
+                  <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                  </svg>
+                  Share Link
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowShareModal(true)}
+                  className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl border border-border text-xs font-semibold theme-surface theme-text hover:bg-accent-50 hover:border-accent/40 active:scale-95 transition-all shadow-xs"
+                >
+                  <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                  </svg>
+                  QR Code
+                </button>
+              </div>
+            </div>
+
+            {/* Recent Activity Section with See All */}
+            <div className="mx-4 mt-4 mb-4 w-[calc(100%-2rem)] max-w-full">
+              <div className="flex items-center justify-between mb-2.5">
+                <h3 className="text-sm font-bold theme-text">Recent Activity</h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    fetchActivity();
+                    setMobileTab("activity");
+                  }}
+                  className="text-xs font-semibold text-accent hover:underline"
+                >
+                  See all
+                </button>
+              </div>
+              <div className="space-y-2">
+                {activities && activities.length > 0 ? (
+                  activities.slice(0, 3).map((act, i) => (
+                    <div key={act.id || i} className="flex items-center gap-3 p-3 rounded-2xl border border-border theme-surface">
+                      <div className="w-8 h-8 rounded-full bg-accent-50 text-accent flex items-center justify-center shrink-0">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-semibold theme-text truncate">{act.message}</div>
+                        <div className="text-[11px] theme-muted mt-0.5">{formatActivityDate(act.createdAt)}</div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <>
+                    <div className="flex items-center gap-3 p-3 rounded-2xl border border-border theme-surface">
+                      <div className="w-8 h-8 rounded-full bg-accent-50 text-accent flex items-center justify-center shrink-0">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-semibold theme-text truncate">Booth created</div>
+                        <div className="text-[11px] theme-muted mt-0.5">{formatActivityDate(booth?.createdAt)}</div>
+                      </div>
+                    </div>
+                    {booth?.members && booth.members.length > 0 && (
+                      <div className="flex items-center gap-3 p-3 rounded-2xl border border-border theme-surface">
+                        <div className="w-8 h-8 rounded-full bg-accent-50 text-accent flex items-center justify-center shrink-0">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-semibold theme-text truncate">
+                            {booth.members[booth.members.length - 1]?.user?.name || "Member"} joined
+                          </div>
+                          <div className="text-[11px] theme-muted mt-0.5">
+                            {formatActivityDate(booth.members[booth.members.length - 1]?.joinedAt)}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* FULL ACTIVITY SCREEN */}
+        {mobileTab === "activity" && (
+          <div className="animate-fadeIn w-full max-w-full px-4">
+            <div className="flex items-center justify-between pt-1 pb-3">
+              <button
+                type="button"
+                onClick={() => setMobileTab("overview")}
+                className="flex items-center gap-1.5 text-xs font-semibold text-accent hover:underline"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Back to Overview
+              </button>
+              <button
+                type="button"
+                onClick={fetchActivity}
+                disabled={activitiesLoading}
+                className="flex items-center gap-1 text-xs font-semibold theme-muted hover:theme-text disabled:opacity-50"
+              >
+                <svg className={`w-3.5 h-3.5 ${activitiesLoading ? "animate-spin" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Refresh
+              </button>
+            </div>
+
+            <div className="relative mb-3 w-full">
+              <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                <svg className="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
+                </svg>
+              </span>
+              <input
+                type="text"
+                placeholder="Search activities..."
+                value={mobileSearchActivity}
+                onChange={(e) => setMobileSearchActivity(e.target.value)}
+                className="w-full pl-9 pr-8 py-2 rounded-xl border border-border theme-surface theme-text text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+              />
+              {mobileSearchActivity && (
+                <button
+                  type="button"
+                  onClick={() => setMobileSearchActivity("")}
+                  className="absolute inset-y-0 right-2.5 flex items-center text-muted hover:theme-text"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            <div className="theme-surface rounded-2xl border border-border p-4 shadow-xs">
+              <h3 className="text-sm font-bold theme-text mb-3">Activity Timeline</h3>
+
+              {activitiesLoading ? (
+                <div className="space-y-3 py-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex gap-3 items-start animate-pulse">
+                      <div className="w-2.5 h-2.5 rounded-full bg-accent/30 mt-1.5 shrink-0" />
+                      <div className="flex-1 space-y-1">
+                        <div className="h-3 bg-accent/10 rounded w-3/4" />
+                        <div className="h-2 bg-accent/10 rounded w-1/4" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : filteredActivities.length > 0 ? (
+                <ol className="relative border-l-2 border-accent/20 ml-2 space-y-4 py-1">
+                  {filteredActivities.map((act, idx) => (
+                    <li key={act.id || idx} className="ml-4 relative">
+                      <span className="absolute -left-[23px] top-1 flex items-center justify-center w-3 h-3 rounded-full bg-accent/30 border-2 border-accent" />
+                      <p className="text-xs font-semibold theme-text leading-snug">
+                        {act.message}
+                      </p>
+                      <time className="text-[10px] theme-muted mt-0.5 block">
+                        {formatActivityDate(act.createdAt)} ({formatRelativeTime(act.createdAt)})
+                      </time>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-xs theme-muted">No activity matching your search</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 2: MEMBERS SCREEN */}
+        {mobileTab === "members" && (
+          <div className="animate-fadeIn w-full max-w-full">
+            <div className="px-4 pt-1 pb-3 flex items-center gap-2 w-full">
+              <div className="relative flex-1 min-w-0">
+                <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                  <svg className="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" /></svg>
+                </span>
+                <input
+                  type="text"
+                  placeholder="Search members..."
+                  value={mobileSearchMembers}
+                  onChange={(e) => setMobileSearchMembers(e.target.value)}
+                  className="w-full pl-9 pr-8 py-2 rounded-xl border border-border theme-surface theme-text text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+                />
+                {mobileSearchMembers && (
+                  <button
+                    type="button"
+                    onClick={() => setMobileSearchMembers("")}
+                    className="absolute inset-y-0 right-2.5 flex items-center text-muted hover:theme-text"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowShareModal(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl btn-theme text-on-primary text-xs font-semibold shadow-sm shrink-0 whitespace-nowrap active:scale-95 transition-transform"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                Add Member
+              </button>
+            </div>
+
+            {/* PENDING APPROVAL REQUESTS */}
+            {booth?.pendingRequests && booth.pendingRequests.length > 0 && (
+              <div className="mx-4 mb-4 p-3.5 rounded-2xl border border-warning/30 bg-warning/10 w-[calc(100%-2rem)] max-w-full">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="w-2 h-2 rounded-full bg-warning animate-pulse" />
+                  <span className="text-xs font-bold text-warning uppercase tracking-wider">
+                    Pending Requests ({booth.pendingRequests.length})
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {booth.pendingRequests.map((req) => {
+                    const userId = req.user?.id || req.user?._id || req.user;
+                    const isActionLoading = pendingActionLoading.has(userId);
+                    return (
+                      <div key={userId} className="flex items-center justify-between p-2.5 rounded-xl border border-border theme-surface shadow-xs min-w-0">
+                        <div className="flex items-center gap-2.5 min-w-0 pr-2 flex-1">
+                          <div className="w-9 h-9 rounded-full bg-warning/20 text-warning font-bold text-xs flex items-center justify-center shrink-0">
+                            {req.user?.name?.charAt(0)?.toUpperCase() || "?"}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-semibold theme-text truncate">{req.user?.name || "Unknown User"}</div>
+                            <div className="text-[11px] theme-muted truncate">{req.user?.email || ""}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleApproveRequest(userId)}
+                            disabled={isActionLoading}
+                            className="px-2.5 py-1 bg-success text-white rounded-lg text-xs font-semibold flex items-center gap-1 disabled:opacity-50 active:scale-95 transition-transform shadow-xs"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                            Approve
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRejectRequest(userId)}
+                            disabled={isActionLoading}
+                            className="px-2.5 py-1 bg-error text-white rounded-lg text-xs font-semibold flex items-center gap-1 disabled:opacity-50 active:scale-95 transition-transform shadow-xs"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                            Reject
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Members List Header & Cards */}
+            <div className="px-4 w-full max-w-full">
+              <div className="text-sm font-bold theme-text mb-2.5">
+                Members ({filteredMembers.length})
+              </div>
+
+              {filteredMembers.length > 0 ? (
+                <div className="space-y-2.5 mb-6">
+                  {filteredMembers.map((member) => (
+                    <div
+                      key={member.user?.id || member._id || member.id}
+                      className="flex items-center justify-between p-3 rounded-2xl border border-border theme-surface shadow-xs min-w-0"
+                    >
+                      <div className="flex items-center gap-3 min-w-0 pr-2 flex-1">
+                        <div className="w-10 h-10 rounded-full bg-accent-50 text-accent border border-accent/20 font-bold text-sm flex items-center justify-center shrink-0">
+                          {member.user?.name?.charAt(0)?.toUpperCase() || "U"}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs sm:text-sm font-bold theme-text truncate">
+                            {member.user?.name || "User"}
+                          </div>
+                          <div className="text-[11px] theme-muted mt-0.5">
+                            Joined {new Date(member.joinedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {member.user?.id === booth?.creator?.id || member.user?.id === booth?.creator ? (
+                          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-warning/15 text-warning border border-warning/30">
+                            Admin
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setMemberActionModal({ open: true, member })}
+                            className="p-1.5 rounded-full hover:bg-accent-50 text-muted hover:theme-text"
+                            aria-label="Member options"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" /></svg>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-8 text-center theme-surface rounded-2xl border border-border">
+                  <p className="text-xs theme-muted">No members found</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: CANDIDATES SCREEN */}
+        {mobileTab === "candidates" && (
+          <div className="animate-fadeIn w-full max-w-full">
+            <div className="px-4 pt-1">
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-sm font-bold theme-text">
+                  Candidates ({booth?.candidates?.length || 0})
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (booth?.totalVotes > 0) {
+                      addToast("Candidate editing is locked — votes already exist", "warning");
+                      return;
+                    }
+                    setCandidateModal({ open: true, mode: "add", index: -1, name: "", description: "" });
+                  }}
+                  disabled={booth?.totalVotes > 0}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full btn-theme text-on-primary disabled:opacity-50 text-xs font-semibold shadow-sm active:scale-95 transition-transform"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                  Add Candidate
+                </button>
+              </div>
+
+              {booth?.totalVotes > 0 && (
+                <div className="mb-3 p-2.5 rounded-xl bg-warning/10 border border-warning/30 text-xs text-warning">
+                  Candidate editing locked ({booth.totalVotes} votes recorded).
+                </div>
+              )}
+
+              <div className="space-y-2.5 mb-6">
+                {(booth?.candidates || []).map((candidate, idx) => (
+                  <div
+                    key={candidate._id || candidate.id || idx}
+                    className="flex items-center justify-between p-3 rounded-2xl border border-border theme-surface shadow-xs min-w-0"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 pr-2 flex-1">
+                      <div className="w-10 h-10 rounded-full bg-secondary/15 text-secondary border border-secondary/20 font-bold text-sm flex items-center justify-center shrink-0">
+                        {candidate.name?.charAt(0)?.toUpperCase() || "C"}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs sm:text-sm font-bold theme-text truncate">{candidate.name}</div>
+                        <div className="text-[11px] theme-muted truncate mt-0.5">{candidate.description || "Candidate"}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (booth?.totalVotes > 0) {
+                            addToast("Candidate editing is locked — votes already exist", "warning");
+                            return;
+                          }
+                          setCandidateModal({
+                            open: true,
+                            mode: "edit",
+                            index: idx,
+                            name: candidate.name,
+                            description: candidate.description || "",
+                          });
+                        }}
+                        disabled={booth?.totalVotes > 0}
+                        className="p-1.5 rounded-lg text-accent hover:bg-accent-50 disabled:opacity-40"
+                        title="Edit candidate"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (booth?.totalVotes > 0) {
+                            addToast("Candidate editing is locked — votes already exist", "warning");
+                            return;
+                          }
+                          if ((booth?.candidates?.length || 0) <= 2) {
+                            addToast("Cannot delete - minimum 2 candidates required", "warning");
+                            return;
+                          }
+                          setConfirm({
+                            open: true,
+                            action: "removeCandidate",
+                            payload: { index: idx },
+                            title: "Remove candidate",
+                            description: `Remove candidate "${candidate.name}"? This cannot be undone.`,
+                          });
+                        }}
+                        disabled={booth?.totalVotes > 0 || (booth?.candidates?.length || 0) <= 2}
+                        className="p-1.5 rounded-lg text-error hover:bg-error/10 disabled:opacity-40"
+                        title="Delete candidate"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: SETTINGS SCREEN (Using Toggle component & standard single toast) */}
+        {mobileTab === "settings" && (
+          <div className="animate-fadeIn w-full max-w-full">
+            <div className="px-4 pt-1">
+              <div className="text-sm font-bold theme-text mb-3">Voting Settings</div>
+
+              <div className="space-y-3 mb-6">
+                {/* 1. Show live results */}
+                <div className="flex items-center justify-between p-3.5 rounded-2xl border border-border theme-surface">
+                  <div className="flex items-center gap-3 min-w-0 pr-2">
+                    <div className="w-10 h-10 rounded-xl bg-accent-50 text-accent flex items-center justify-center shrink-0">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                    </div>
+                    <div>
+                      <div className="text-xs sm:text-sm font-bold theme-text">Show live results</div>
+                      <div className="text-[11px] theme-muted mt-0.5">Allow voters to see results in real-time</div>
+                    </div>
+                  </div>
+                  <Toggle
+                    checked={Boolean(settings.showLiveResults)}
+                    onChange={(val) => handleSettingChange("showLiveResults", val)}
+                    ariaLabel="Toggle live results"
+                    size="md"
+                  />
+                </div>
+
+                {/* 2. Allow results after voting ends */}
+                <div className="flex items-center justify-between p-3.5 rounded-2xl border border-border theme-surface">
+                  <div className="flex items-center gap-3 min-w-0 pr-2">
+                    <div className="w-10 h-10 rounded-xl bg-accent-50 text-accent flex items-center justify-center shrink-0">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                    </div>
+                    <div>
+                      <div className="text-xs sm:text-sm font-bold theme-text">Allow results after voting ends</div>
+                      <div className="text-[11px] theme-muted mt-0.5">Make results visible after the end date</div>
+                    </div>
+                  </div>
+                  <Toggle
+                    checked={Boolean(settings.resultsVisibleToVoters)}
+                    onChange={(val) => handleSettingChange("resultsVisibleToVoters", val)}
+                    ariaLabel="Toggle results visibility after voting ends"
+                    size="md"
+                  />
+                </div>
+
+                {/* 3. Require approval */}
+                <div className="flex items-center justify-between p-3.5 rounded-2xl border border-border theme-surface">
+                  <div className="flex items-center gap-3 min-w-0 pr-2">
+                    <div className="w-10 h-10 rounded-xl bg-accent-50 text-accent flex items-center justify-center shrink-0">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                    </div>
+                    <div>
+                      <div className="text-xs sm:text-sm font-bold theme-text">Require approval</div>
+                      <div className="text-[11px] theme-muted mt-0.5">Manually approve new members</div>
+                    </div>
+                  </div>
+                  <Toggle
+                    checked={Boolean(settings.requireApproval)}
+                    onChange={(val) => handleSettingChange("requireApproval", val)}
+                    ariaLabel="Toggle member approval requirement"
+                    size="md"
+                  />
+                </div>
+
+                {/* 4. Restrict by email domain */}
+                <div className="p-3.5 rounded-2xl border border-border theme-surface">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 min-w-0 pr-2">
+                      <div className="w-10 h-10 rounded-xl bg-accent-50 text-accent flex items-center justify-center shrink-0">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                      </div>
+                      <div>
+                        <div className="text-xs sm:text-sm font-bold theme-text">Restrict by email domain</div>
+                        <div className="text-[11px] theme-muted mt-0.5">Only allow specific email domains</div>
+                      </div>
+                    </div>
+                    <Toggle
+                      checked={Boolean(settings.restrictByEmailDomain)}
+                      onChange={(val) => {
+                        handleSettingChange("restrictByEmailDomain", val);
+                        if (!val) handleSettingChange("allowedEmailDomains", []);
+                      }}
+                      ariaLabel="Toggle email domain restriction"
+                      size="md"
+                    />
+                  </div>
+                  {settings.restrictByEmailDomain && (
+                    <div className="mt-3 pt-3 border-t border-border">
+                      <label className="block text-[11px] font-semibold theme-text mb-1">Allowed Domains (comma-separated)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. university.edu, company.com"
+                        value={Array.isArray(settings.allowedEmailDomains) ? settings.allowedEmailDomains.join(", ") : ""}
+                        onChange={(e) =>
+                          handleSettingChange(
+                            "allowedEmailDomains",
+                            e.target.value.split(",").map((s) => s.trim()).filter(Boolean)
+                          )
+                        }
+                        className="w-full px-3 py-1.5 rounded-xl border border-border theme-surface theme-text text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* 5. Scheduled voting */}
+                <div className="p-3.5 rounded-2xl border border-border theme-surface">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 min-w-0 pr-2">
+                      <div className="w-10 h-10 rounded-xl bg-accent-50 text-accent flex items-center justify-center shrink-0">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                      </div>
+                      <div>
+                        <div className="text-xs sm:text-sm font-bold theme-text">Scheduled voting</div>
+                        <div className="text-[11px] theme-muted mt-0.5">Set start and end time</div>
+                      </div>
+                    </div>
+                    <Toggle
+                      checked={Boolean(settings.scheduled)}
+                      onChange={(val) => {
+                        handleSettingChange("scheduled", val);
+                        if (!val) {
+                          handleSettingChange("votingStartTime", null);
+                          handleSettingChange("votingEndTime", null);
+                        }
+                      }}
+                      ariaLabel="Toggle scheduled voting"
+                      size="md"
+                    />
+                  </div>
+                  {settings.scheduled && (
+                    <div className="mt-3 pt-3 border-t border-border space-y-2">
+                      <div>
+                        <label className="block text-[11px] font-semibold theme-text mb-1">Start Time</label>
+                        <input
+                          type="datetime-local"
+                          value={settings.votingStartTime || ""}
+                          onChange={(e) => handleSettingChange("votingStartTime", e.target.value)}
+                          className="w-full px-3 py-1.5 rounded-xl border border-border theme-surface theme-text text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold theme-text mb-1">End Time</label>
+                        <input
+                          type="datetime-local"
+                          value={settings.votingEndTime || ""}
+                          onChange={(e) => handleSettingChange("votingEndTime", e.target.value)}
+                          className="w-full px-3 py-1.5 rounded-xl border border-border theme-surface theme-text text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Save Settings Button - only triggers standard global toast */}
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={handleUpdateSettings}
+                    disabled={updating}
+                    className="w-full py-3 rounded-2xl btn-theme text-on-primary font-semibold text-xs shadow-md disabled:opacity-50 active:scale-95 transition-transform"
+                  >
+                    {updating ? "Saving..." : "Save Settings"}
+                  </button>
+                </div>
+
+                {/* Danger Zone: Delete Booth */}
+                <div className="pt-4 border-t border-border mt-6">
+                  <div className="text-xs font-bold text-error uppercase tracking-wider mb-2">Danger Zone</div>
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteBoothModal(true)}
+                    disabled={updating}
+                    className="w-full py-3 rounded-2xl border border-error/30 text-error hover:bg-error/10 font-semibold text-xs flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    Delete Booth Permanently
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+  return (
+    <div className="min-h-screen theme-bg">
+      {/* ── MOBILE ADMIN VIEW (md:hidden) ── */}
+      <div className="md:hidden">
+        {renderMobileAdmin()}
+      </div>
+
+      {/* ── DESKTOP ADMIN VIEW (hidden md:block) ── */}
+      <div className="hidden md:block">
+        {renderDesktopAdmin()}
+      </div>
 
       <ConfirmModal
         isOpen={confirm.open}
         title={confirm.title}
         description={confirm.description}
         confirmLabel={confirm.confirmLabel || "Confirm"}
+        variant={confirm.variant || "danger"}
         requireText={confirm.requireText}
         loading={confirm.loading}
         onConfirm={onConfirm}
@@ -2212,9 +3248,528 @@ const BoothAdminPage = () => {
           />
         </Suspense>
       )}
+
+      {/* SCREEN 5: Share & QR Bottom Sheet */}
+      <MobileShareBottomSheet
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        booth={booth}
+        onShare={handleShareInvite}
+      />
+
+      {/* Friendly Reopen Booth Drawer */}
+      <MobileReopenBoothBottomSheet
+        isOpen={showReopenBoothModal}
+        onClose={() => setShowReopenBoothModal(false)}
+        onConfirm={handleConfirmReopenBooth}
+        loading={updating}
+      />
+
+      {/* SCREEN 6: Danger Zone Confirmation (Close Booth Bottom Sheet) */}
+      <MobileCloseBoothBottomSheet
+        isOpen={showCloseBoothModal}
+        onClose={() => setShowCloseBoothModal(false)}
+        onConfirm={handleConfirmCloseBooth}
+        loading={updating}
+      />
+
+      {/* Delete Booth Bottom Sheet */}
+      {/* Reset Invite Code Bottom Sheet */}
+      <MobileResetInviteBottomSheet
+        isOpen={showResetInviteModal}
+        onClose={() => setShowResetInviteModal(false)}
+        onConfirm={handleConfirmResetInvite}
+        loading={updating}
+        currentCode={booth?.inviteCode}
+      />
+
+      {/* Delete Booth Bottom Sheet */}
+      <MobileDeleteBoothBottomSheet
+        isOpen={showDeleteBoothModal}
+        onClose={() => setShowDeleteBoothModal(false)}
+        onConfirm={handleConfirmDeleteBooth}
+        loading={updating}
+        boothName={booth?.name}
+      />
+
+      {/* Candidate Add / Edit Bottom Sheet */}
+      <MobileCandidateModal
+        isOpen={candidateModal.open}
+        onClose={() => setCandidateModal((prev) => ({ ...prev, open: false }))}
+        onSave={handleSaveCandidate}
+        mode={candidateModal.mode}
+        initialData={candidateModal}
+        saving={candidateModal.saving}
+      />
+
+      {/* Member Action Bottom Sheet */}
+      <MobileMemberActionBottomSheet
+        isOpen={memberActionModal.open}
+        onClose={() => setMemberActionModal({ open: false, member: null })}
+        member={memberActionModal.member}
+        onRemove={handleRemoveMemberFromModal}
+        isRemoving={removingMembers.has(memberActionModal.member?.user?.id)}
+      />
     </div>
   );
 };
+
+// ── Mobile Bottom Sheet Sub-Components ──────────────────────────────────────
+
+const MobileShareBottomSheet = ({ isOpen, onClose, booth, onShare }) => {
+  const canvasRef = useRef(null);
+  const inviteLink = `${window.location.origin}/booth/join/${booth?.inviteCode}`;
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && canvasRef.current && booth?.inviteCode) {
+      import("qrcode")
+        .then(({ default: QRCode }) => {
+          QRCode.toCanvas(
+            canvasRef.current,
+            inviteLink,
+            {
+              width: 160,
+              margin: 1,
+              color: { dark: "#000000", light: "#ffffff" },
+              errorCorrectionLevel: "H",
+            },
+            (err) => {
+              if (err) console.error("QR render error:", err);
+            }
+          );
+        })
+        .catch(console.error);
+    }
+  }, [isOpen, inviteLink, booth?.inviteCode]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center animate-fadeIn" onClick={onClose}>
+      <div className="w-full max-w-lg theme-surface rounded-t-3xl p-6 pb-28 sm:pb-8 shadow-2xl border-t border-border animate-slideUp max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="w-6" />
+          <h3 className="text-base font-bold theme-text">Share Booth</h3>
+          <button type="button" onClick={onClose} className="p-1 rounded-full text-muted hover:theme-text">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        {/* QR Canvas */}
+        <div className="flex justify-center mb-3">
+          <div className="p-2.5 bg-white rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center">
+            <canvas ref={canvasRef} id="mobile-qr-canvas" className="rounded-lg" />
+          </div>
+        </div>
+
+        {/* Booth Name */}
+        <div className="text-center font-bold theme-text text-base mb-3 truncate">
+          {booth?.name}
+        </div>
+
+        {/* URL Box */}
+        <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-border bg-black/5 dark:bg-white/5 mb-4 min-w-0">
+          <span className="font-mono text-xs theme-muted truncate pr-2 min-w-0 flex-1">
+            {inviteLink}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard.writeText(inviteLink);
+              setCopiedLink(true);
+              setTimeout(() => setCopiedLink(false), 2000);
+            }}
+            className="p-1 hover:text-accent shrink-0 text-muted"
+            title="Copy Link"
+          >
+            {copiedLink ? (
+              <span className="text-xs font-semibold text-success">Copied!</span>
+            ) : (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+            )}
+          </button>
+        </div>
+
+        {/* 3 Buttons Row */}
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard.writeText(inviteLink);
+              setCopiedLink(true);
+              setTimeout(() => setCopiedLink(false), 2000);
+            }}
+            className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl border border-border text-xs font-semibold theme-surface theme-text hover:bg-accent-50 active:scale-95 transition-transform"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+            Copy Link
+          </button>
+          <button
+            type="button"
+            onClick={onShare}
+            className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl border border-border text-xs font-semibold theme-surface theme-text hover:bg-accent-50 active:scale-95 transition-transform"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 12v.01M12 12v.01M20 12v.01M4 12a8 8 0 0116 0M4 12c0-4.418 3.582-8 8-8s8 3.582 8 8" /></svg>
+            Share
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const canvas = canvasRef.current || document.getElementById("mobile-qr-canvas");
+              if (canvas) {
+                const url = canvas.toDataURL("image/png");
+                const link = document.createElement("a");
+                link.download = `${(booth?.name || "booth").replace(/\s+/g, "-")}-QR.png`;
+                link.href = url;
+                link.click();
+              }
+            }}
+            className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl btn-theme text-on-primary text-xs font-semibold shadow-sm active:scale-95 transition-transform"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+            Download QR
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+const MobileReopenBoothBottomSheet = ({ isOpen, onClose, onConfirm, loading }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center animate-fadeIn" onClick={onClose}>
+      <div
+        className="w-full max-w-lg theme-surface rounded-t-3xl p-6 pb-28 sm:pb-8 shadow-2xl border-t border-border animate-slideUp text-center"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-2">
+          <div className="w-6" />
+          <h3 className="text-base font-bold theme-text">Reopen Voting</h3>
+          <button type="button" onClick={onClose} className="p-1 rounded-full text-muted hover:theme-text">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        {/* Friendly Clock / Refresh Icon in App Accent Colors */}
+        <div className="w-16 h-16 rounded-full bg-accent-50 text-accent border border-accent/20 flex items-center justify-center mx-auto my-4 shadow-sm">
+          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+
+        <h4 className="text-lg font-bold theme-text mb-2">Voting period ended</h4>
+        <p className="text-xs sm:text-sm theme-muted leading-relaxed max-w-xs mx-auto mb-6">
+          The scheduled voting time has ended. Would you like to reopen voting for everyone?
+        </p>
+
+        <div className="space-y-2.5">
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={loading}
+            className="w-full py-3 rounded-2xl btn-theme text-on-primary font-semibold text-sm flex items-center justify-center gap-2 shadow-md disabled:opacity-50 active:scale-95 transition-transform"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {loading ? "Reopening..." : "Reopen Booth"}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full py-3 rounded-2xl theme-surface border border-border theme-text font-semibold text-sm hover:bg-accent-50 active:scale-95 transition-transform"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const MobileCloseBoothBottomSheet = ({ isOpen, onClose, onConfirm, loading }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center animate-fadeIn" onClick={onClose}>
+      <div className="w-full max-w-lg theme-surface rounded-t-3xl p-6 pb-28 sm:pb-8 shadow-2xl border-t border-border animate-slideUp text-center" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-2">
+          <div className="w-6" />
+          <h3 className="text-base font-bold theme-text">Close Booth</h3>
+          <button type="button" onClick={onClose} className="p-1 rounded-full text-muted hover:theme-text">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        {/* Warning Icon (Screen 6) */}
+        <div className="w-16 h-16 rounded-full bg-error/15 text-error flex items-center justify-center mx-auto my-4">
+          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L5.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+        </div>
+
+        <h4 className="text-lg font-bold theme-text mb-2">Close this booth?</h4>
+        <p className="text-xs sm:text-sm theme-muted leading-relaxed max-w-xs mx-auto mb-6">
+          This will stop voting and prevent new members from joining. You can still view the results.
+        </p>
+
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={loading}
+            className="w-full py-3 rounded-2xl bg-error hover:bg-error/90 text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-md disabled:opacity-50 active:scale-95 transition-transform"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            {loading ? "Closing..." : "Close Booth"}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full py-3 rounded-2xl theme-surface border border-border theme-text font-semibold text-sm hover:bg-accent-50"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+const MobileResetInviteBottomSheet = ({ isOpen, onClose, onConfirm, loading, currentCode }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center animate-fadeIn" onClick={onClose}>
+      <div
+        className="w-full max-w-lg theme-surface rounded-t-3xl p-6 pb-28 sm:pb-8 shadow-2xl border-t border-border animate-slideUp text-center"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-2">
+          <div className="w-6" />
+          <h3 className="text-base font-bold theme-text">Reset Invite Code</h3>
+          <button type="button" onClick={onClose} className="p-1 rounded-full text-muted hover:theme-text">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        {/* Warning / Refresh Icon */}
+        <div className="w-16 h-16 rounded-full bg-warning/15 text-warning flex items-center justify-center mx-auto my-4 shadow-sm">
+          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </div>
+
+        <h4 className="text-lg font-bold theme-text mb-2">Generate new invite code?</h4>
+        <p className="text-xs sm:text-sm theme-muted leading-relaxed max-w-xs mx-auto mb-4">
+          This will immediately invalidate the current code and all existing share links. Anyone using the old link will no longer be able to join.
+        </p>
+
+        {currentCode && (
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl border border-border bg-black/5 dark:bg-white/5 mb-6 text-xs font-mono font-bold theme-text">
+            <span className="text-[11px] font-normal theme-muted">Current code:</span>
+            <span>{currentCode}</span>
+          </div>
+        )}
+
+        <div className="space-y-2.5">
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={loading}
+            className="w-full py-3 rounded-2xl bg-warning hover:bg-warning/90 text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-md disabled:opacity-50 active:scale-95 transition-transform"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {loading ? "Resetting..." : "Reset Invite Code"}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full py-3 rounded-2xl theme-surface border border-border theme-text font-semibold text-sm hover:bg-accent-50 active:scale-95 transition-transform"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const MobileDeleteBoothBottomSheet = ({ isOpen, onClose, onConfirm, loading, boothName }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center animate-fadeIn" onClick={onClose}>
+      <div className="w-full max-w-lg theme-surface rounded-t-3xl p-6 pb-28 sm:pb-8 shadow-2xl border-t border-border animate-slideUp text-center" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-2">
+          <div className="w-6" />
+          <h3 className="text-base font-bold theme-text">Delete Booth</h3>
+          <button type="button" onClick={onClose} className="p-1 rounded-full text-muted hover:theme-text">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        <div className="w-16 h-16 rounded-full bg-error/15 text-error flex items-center justify-center mx-auto my-4 shadow-sm">
+          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </div>
+
+        <h4 className="text-lg font-bold theme-text mb-2">Delete this booth permanently?</h4>
+        {boothName && (
+          <div className="inline-block px-3 py-1 rounded-xl bg-error/10 border border-error/20 text-error font-semibold text-xs mb-3 truncate max-w-xs">
+            {boothName}
+          </div>
+        )}
+        <p className="text-xs sm:text-sm theme-muted leading-relaxed max-w-xs mx-auto mb-6">
+          This will permanently delete this booth. All members will lose access and this action cannot be undone.
+        </p>
+
+        <div className="space-y-2.5">
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={loading}
+            className="w-full py-3 rounded-2xl bg-error hover:bg-error/90 text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-md disabled:opacity-50 active:scale-95 transition-transform"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            {loading ? "Deleting..." : "Permanently Delete"}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full py-3 rounded-2xl theme-surface border border-border theme-text font-semibold text-sm hover:bg-accent-50 active:scale-95 transition-transform"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const MobileCandidateModal = ({ isOpen, onClose, onSave, mode, initialData, saving }) => {
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+
+  useEffect(() => {
+    if (isOpen) {
+      setName(initialData?.name || "");
+      setDescription(initialData?.description || "");
+    }
+  }, [isOpen, initialData]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center animate-fadeIn" onClick={onClose}>
+      <div className="w-full max-w-lg theme-surface rounded-t-3xl p-6 pb-28 sm:pb-8 shadow-2xl border-t border-border animate-slideUp max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="w-6" />
+          <h3 className="text-base font-bold theme-text">{mode === "edit" ? "Edit Candidate" : "Add Candidate"}</h3>
+          <button type="button" onClick={onClose} className="p-1 rounded-full text-muted hover:theme-text">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        <div className="space-y-4 mb-6">
+          <div>
+            <label className="block text-xs font-semibold theme-text mb-1">Candidate Name *</label>
+            <input
+              type="text"
+              placeholder="e.g. Arpit"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-border theme-surface theme-text text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold theme-text mb-1">Role / Bio (optional)</label>
+            <input
+              type="text"
+              placeholder="e.g. General Secretary"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-border theme-surface theme-text text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => {
+              if (!name.trim()) return;
+              onSave({ name: name.trim(), description: description.trim() });
+            }}
+            disabled={saving || !name.trim()}
+            className="w-full py-3 rounded-2xl btn-theme text-on-primary font-semibold text-xs shadow-md disabled:opacity-50 active:scale-95 transition-transform"
+          >
+            {saving ? "Saving..." : mode === "edit" ? "Update Candidate" : "Add Candidate"}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full py-3 rounded-2xl theme-surface border border-border theme-text font-semibold text-xs hover:bg-accent-50"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const MobileMemberActionBottomSheet = ({ isOpen, onClose, member, onRemove, isRemoving }) => {
+  if (!isOpen || !member) return null;
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center animate-fadeIn" onClick={onClose}>
+      <div className="w-full max-w-lg theme-surface rounded-t-3xl p-6 pb-28 sm:pb-8 shadow-2xl border-t border-border animate-slideUp" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="w-6" />
+          <h3 className="text-base font-bold theme-text">Member Options</h3>
+          <button type="button" onClick={onClose} className="p-1 rounded-full text-muted hover:theme-text">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        <div className="flex items-center gap-3 p-3.5 rounded-2xl border border-border bg-black/5 dark:bg-white/5 mb-6 min-w-0">
+          <div className="w-10 h-10 rounded-full bg-accent-50 text-accent border border-accent/20 font-bold text-sm flex items-center justify-center shrink-0">
+            {member.user?.name?.charAt(0)?.toUpperCase() || "U"}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-bold theme-text truncate">{member.user?.name}</div>
+            <div className="text-xs theme-muted truncate">{member.user?.email || "No email"}</div>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => onRemove(member.user?.id || member.user?._id)}
+            disabled={isRemoving}
+            className="w-full py-3 rounded-2xl bg-error hover:bg-error/90 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-md disabled:opacity-50 active:scale-95 transition-transform"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            {isRemoving ? "Removing..." : "Remove Member"}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full py-3 rounded-2xl theme-surface border border-border theme-text font-semibold text-xs hover:bg-accent-50"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 // Small inline add-candidate component
 const AddCandidateInline = ({ onAdd }) => {

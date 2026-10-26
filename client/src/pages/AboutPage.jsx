@@ -21,7 +21,6 @@ const AboutPage = () => {
         
         {/* Background decoration */}
         <div className="absolute top-0 right-0 -translate-y-12 translate-x-12 pointer-events-none float">
-          <div className="w-64 h-64 md:w-96 md:h-96 rounded-full blur-3xl opacity-15" style={{ background: 'radial-gradient(circle, var(--color-primary), var(--color-accent))' }} />
         </div>
       </div>
 
@@ -46,7 +45,6 @@ const AboutPage = () => {
 
       {/* Core Values Section */}
       <div className="py-16 sm:py-20 relative">
-        <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, var(--color-accent) 1px, transparent 0)', backgroundSize: '40px 40px' }} />
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="text-center mb-12 sm:mb-16">
@@ -102,7 +100,6 @@ const AboutPage = () => {
       {/* Who It's For Section */}
       <div className="py-16 sm:py-20 theme-surface relative overflow-hidden">
         <div className="absolute inset-0 opacity-30">
-          <div className="absolute inset-0" style={{backgroundImage: "radial-gradient(circle at 2px 2px, var(--color-border) 1px, transparent 0)", backgroundSize: "32px 32px"}}></div>
         </div>
         
         <div className="max-w-5xl mx-auto px-4 sm:px-6 text-center relative">

@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+ import { useState, useEffect, useRef } from "react";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import {
   Mail,
   RefreshCw,
@@ -9,6 +9,7 @@ import {
   Clock,
 } from "../../../components/icons/Icons";
 import { Alert } from "../../../components/layout/Alert";
+import AuthWatermarkBackground from "../../../components/layout/AuthWatermarkBackground";
 import api from "../../../services/api";
 
 const CheckEmailPage = () => {
@@ -131,6 +132,125 @@ const CheckEmailPage = () => {
   };
 
   return (
+    <>
+      {/* ══════════════════════════════════════════════════════════════ */}
+      {/* ── MOBILE VIEW ONLY (block md:hidden) - Matching Screen 6 ──── */}
+      {/* ══════════════════════════════════════════════════════════════ */}
+      <div className="block md:hidden w-full max-w-md mx-auto min-h-screen theme-bg relative px-5 pt-8 pb-10 flex flex-col justify-between overflow-x-hidden animate-fadeIn">
+        <AuthWatermarkBackground />
+
+        <div className="relative z-10 w-full">
+          {/* Central Envelope Illustration with checkmark badge */}
+          <div className="flex flex-col items-center justify-center mb-6 mt-4">
+            <div className="relative">
+              <div className="w-28 h-28 rounded-full bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-200/50 dark:border-cyan-800/50 flex items-center justify-center shadow-inner">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center text-white shadow-md">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </div>
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-emerald-500 border-2 border-white dark:border-surface flex items-center justify-center text-white shadow-md">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <polyline points="20 6 9 17 4 12" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              {/* Subtle floating dots */}
+              <div className="absolute -top-1 right-2 w-2 h-2 rounded-full bg-cyan-400" />
+              <div className="absolute bottom-3 -left-1 w-1.5 h-1.5 rounded-full bg-sky-400" />
+            </div>
+          </div>
+
+          {/* Heading & Subtitle */}
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-extrabold theme-text tracking-tight mb-2">
+              Check Your Email
+            </h1>
+            <p className="text-xs theme-muted leading-relaxed px-4">
+              We sent a verification link to{" "}
+              <span className="font-bold theme-text">{email || "your email"}</span>. Tap the link to activate your account.
+            </p>
+          </div>
+
+          {error && (
+            <div className="mb-4">
+              <Alert type="error" message={error} onClose={() => setError("")} />
+            </div>
+          )}
+          {success && (
+            <div className="mb-4">
+              <Alert type="success" message={success} onClose={() => setSuccess("")} />
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="space-y-3">
+            {/* Open Email App */}
+            <a
+              href="mailto:"
+              className="w-full py-3.5 rounded-2xl btn-theme text-on-primary font-bold text-sm shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              <span>Open Email App</span>
+            </a>
+
+            {/* Resend Email */}
+            <button
+              onClick={handleResendEmail}
+              disabled={isResending || cooldown > 0}
+              className="w-full py-3.5 rounded-2xl border border-border theme-surface theme-text font-bold text-sm shadow-xs active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <svg className={`w-4 h-4 ${isResending ? "animate-spin" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>{isResending ? "Sending..." : "Resend Email"}</span>
+            </button>
+
+            {cooldown > 0 && (
+              <p className="text-center text-xs theme-muted">
+                You can resend in {cooldown}s
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Footer Links & Spam Callout */}
+        <div className="relative z-10 space-y-4 pt-6">
+          <div className="flex flex-col items-center gap-2 text-xs">
+            <Link
+              to="/register"
+              className="text-accent hover:underline font-semibold"
+            >
+              Wrong email? <span className="underline">Change it</span>
+            </Link>
+            <Link
+              to="/login"
+              className="inline-flex items-center gap-1.5 font-bold theme-muted hover:theme-text"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              <span>Back to Sign in</span>
+            </Link>
+          </div>
+
+          <div className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-border/80 bg-surface/50 text-[11px] theme-muted text-center">
+            <svg className="w-4 h-4 text-accent flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" strokeWidth={2} />
+              <line x1="12" y1="16" x2="12" y2="12" strokeWidth={2} strokeLinecap="round" />
+              <line x1="12" y1="8" x2="12.01" y2="8" strokeWidth={2} strokeLinecap="round" />
+            </svg>
+            <span>Can't find it? Check your spam folder.</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════ */}
+      {/* ── DESKTOP VIEW ONLY (hidden md:block) - Preserved Desktop ─── */}
+      {/* ══════════════════════════════════════════════════════════════ */}
+      <div className="hidden md:block w-full">
     <div className="min-h-screen theme-bg flex items-center justify-center px-4 relative overflow-hidden">
       {/* Floating orbs background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -300,6 +420,8 @@ const CheckEmailPage = () => {
         </div>
       </div>
     </div>
+      </div>
+    </>
   );
 };
 

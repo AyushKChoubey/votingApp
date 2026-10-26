@@ -66,5 +66,6 @@ coverage/
 
 # Ignore all Markdown files
 *.md
+CAPACITOR_MOBILE_SETUP.md
 
 tests/

@@ -83,6 +83,37 @@ const userSchema = new mongoose.Schema({
     default: 0,
   },
 
+  // Active sessions / devices (no precise location information stored)
+  sessions: [
+    {
+      sessionId: {
+        type: String,
+        required: true,
+      },
+      deviceType: {
+        type: String,
+        enum: ["desktop", "mobile", "tablet"],
+        default: "desktop",
+      },
+      browser: {
+        type: String,
+        default: "Web Browser",
+      },
+      os: {
+        type: String,
+        default: "Unknown OS",
+      },
+      lastActive: {
+        type: Date,
+        default: Date.now,
+      },
+      createdAt: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+  ],
+
   // Track booths created by this user
   createdBooths: [
     {

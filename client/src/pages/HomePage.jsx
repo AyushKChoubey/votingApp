@@ -2,12 +2,25 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/layout/Button';
+import ThemeToggle from '../components/layout/ThemeToggle';
 
 const HomePage = () => {
   const { isAuthenticated } = useAuth();
 
   return (
     <div className="min-h-screen theme-bg">
+      <div className="md:hidden flex items-center justify-between px-4 pt-4">
+        <Link to="/" className="flex items-center gap-3" aria-label="Go to home">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl btn-theme shadow-sm">
+            <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </span>
+          <span className="text-xl font-bold theme-text">VoteBooth</span>
+        </Link>
+        <ThemeToggle />
+      </div>
+
       {/* Hero Section - Modern & Engaging */}
       <div className="relative overflow-hidden">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-12 pb-16 sm:pt-20 sm:pb-24">
@@ -97,24 +110,7 @@ const HomePage = () => {
         </div>
 
         {/* Enhanced Background decoration with float animation */}
-        <div className="absolute top-0 right-0 -translate-y-12 translate-x-12 pointer-events-none float">
-          <div className="w-48 h-48 sm:w-64 sm:h-64 md:w-96 md:h-96 rounded-full blur-3xl opacity-20" style={{ background: 'radial-gradient(circle, var(--color-primary), var(--color-accent))' }} />
-        </div>
-        <div className="absolute bottom-0 left-0 translate-y-12 -translate-x-12 pointer-events-none float" style={{"--stagger-index": 1}}>
-          <div className="w-48 h-48 sm:w-64 sm:h-64 md:w-96 md:h-96 rounded-full blur-3xl opacity-15" style={{ background: 'radial-gradient(circle, var(--color-accent), var(--color-secondary))' }} />
-        </div>
         
-        {/* Floating orbs for depth */}
-        <div className="absolute top-1/4 left-1/4 w-32 h-32 rounded-full blur-2xl opacity-10 float pointer-events-none" style={{ background: 'var(--color-success)' }} />
-        <div className="absolute bottom-1/3 right-1/4 w-24 h-24 rounded-full blur-2xl opacity-10 float pointer-events-none" style={{ background: 'var(--color-warning)', animationDelay: '2s' }} />
-      </div>
-
-      {/* How It Works Section */}
-      <div className="py-16 sm:py-24 theme-surface relative overflow-hidden">
-        {/* Background pattern */}
-        <div className="absolute inset-0 opacity-30">
-          <div className="absolute inset-0" style={{backgroundImage: "radial-gradient(circle at 2px 2px, var(--color-border) 1px, transparent 0)", backgroundSize: "32px 32px"}}></div>
-        </div>
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 relative">
           <div className="text-center mb-12 sm:mb-16 stagger-children">

@@ -40,6 +40,52 @@ const validateName = (name) => {
   );
 };
 
+// Helper: Parse user-agent safely without exposing unnecessary location data
+const parseUserAgent = (uaString = "") => {
+  let browser = "Web Browser";
+  let os = "Unknown OS";
+  let deviceType = "desktop";
+
+  if (!uaString) {
+    return { browser, os, deviceType };
+  }
+
+  // OS & deviceType detection
+  if (/iphone/i.test(uaString)) {
+    os = "iOS";
+    deviceType = "mobile";
+  } else if (/ipad/i.test(uaString)) {
+    os = "iPadOS";
+    deviceType = "tablet";
+  } else if (/android/i.test(uaString)) {
+    os = "Android";
+    deviceType = /mobile/i.test(uaString) ? "mobile" : "tablet";
+  } else if (/windows nt 10/i.test(uaString)) {
+    os = "Windows 10/11";
+  } else if (/windows nt/i.test(uaString)) {
+    os = "Windows";
+  } else if (/macintosh|mac os x/i.test(uaString)) {
+    os = "macOS";
+  } else if (/linux/i.test(uaString)) {
+    os = "Linux";
+  }
+
+  // Browser detection
+  if (/edg\//i.test(uaString)) {
+    browser = "Microsoft Edge";
+  } else if (/opr\/|opera/i.test(uaString)) {
+    browser = "Opera";
+  } else if (/chrome|crios/i.test(uaString)) {
+    browser = "Chrome";
+  } else if (/firefox|fxios/i.test(uaString)) {
+    browser = "Firefox";
+  } else if (/safari/i.test(uaString) && !/chrome/i.test(uaString)) {
+    browser = "Safari";
+  }
+
+  return { browser, os, deviceType };
+};
+
 // Register new user
 exports.signup = async (req, res) => {
   try {
@@ -250,11 +296,44 @@ exports.login = async (req, res) => {
     // Update last login and login count
     user.lastLogin = new Date();
     user.loginCount = (user.loginCount || 0) + 1;
+
+    // Track active session / device: strictly 1 entry per device, update if already exists
+    const sessionId = crypto.randomUUID();
+    const { browser, os, deviceType } = parseUserAgent(req.headers["user-agent"]);
+
+    if (!user.sessions) {
+      user.sessions = [];
+    }
+
+    const existingDeviceIndex = user.sessions.findIndex(
+      (s) => s.browser === browser && s.os === os && s.deviceType === deviceType
+    );
+
+    if (existingDeviceIndex !== -1) {
+      // Device already signed in previously: update sessionId and last active, DO NOT create duplicate
+      user.sessions[existingDeviceIndex].sessionId = sessionId;
+      user.sessions[existingDeviceIndex].lastActive = new Date();
+    } else {
+      // New device signed in: add one entry for this device
+      user.sessions.push({
+        sessionId,
+        browser,
+        os,
+        deviceType,
+        lastActive: new Date(),
+        createdAt: new Date(),
+      });
+    }
+
+    if (user.sessions.length > 20) {
+      user.sessions = user.sessions.slice(-20);
+    }
+
     await user.save();
 
     // Generate tokens
     const tokenExpiry = remember ? "7d" : "24h";
-    const token = generateToken(user, { expiresIn: tokenExpiry });
+    const token = generateToken(user, { expiresIn: tokenExpiry, sessionId });
     const refreshToken = generateRefreshToken(user);
     // Set refresh token as an httpOnly cookie for secure refresh flow
     try {
@@ -551,13 +630,7 @@ exports.refreshToken = async (req, res) => {
 exports.deleteAccount = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { password } = req.body;
-
-    if (!password) {
-      return res
-        .status(400)
-        .json({ error: "Password is required to delete account" });
-    }
+    const { password } = req.body || {};
 
     // Get user with password
     const user = await User.findById(userId).select("+password");
@@ -565,10 +638,18 @@ exports.deleteAccount = async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Verify password
-    const isPasswordValid = await user.comparePassword(password);
-    if (!isPasswordValid) {
-      return res.status(401).json({ error: "Incorrect password" });
+    // For local accounts, verify password
+    if (user.authProvider !== "google") {
+      if (!password) {
+        return res
+          .status(400)
+          .json({ error: "Password is required to delete account" });
+      }
+
+      const isPasswordValid = await user.comparePassword(password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ error: "Incorrect password" });
+      }
     }
 
     // Delete user's votes
@@ -1154,5 +1235,133 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({
       error: "Failed to reset password. Please try again.",
     });
+  }
+};
+
+// GET: Get active sessions / devices (safely without exposing precise location, 1 entry per device)
+exports.getDevices = async (req, res) => {
+  try {
+    const userId = req.user.id || req.user._id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    let currentSessionId = req.user.sessionId;
+    const { browser, os, deviceType } = parseUserAgent(req.headers["user-agent"]);
+
+    if (!user.sessions) {
+      user.sessions = [];
+    }
+
+    // Deduplicate any existing sessions: strictly 1 entry per device (deviceType + browser + os)
+    const deviceMap = new Map();
+    for (const session of user.sessions) {
+      const key = `${session.deviceType || "desktop"}|${session.browser || "Web Browser"}|${session.os || "Unknown OS"}`;
+      if (!deviceMap.has(key)) {
+        deviceMap.set(key, session);
+      } else {
+        const existing = deviceMap.get(key);
+        // Keep the one with the most recent lastActive
+        if (new Date(session.lastActive) > new Date(existing.lastActive)) {
+          deviceMap.set(key, session);
+        }
+      }
+    }
+    user.sessions = Array.from(deviceMap.values());
+
+    // If completely empty, add exactly 1 entry for this current device
+    if (user.sessions.length === 0) {
+      currentSessionId = currentSessionId || crypto.randomUUID();
+      user.sessions.push({
+        sessionId: currentSessionId,
+        browser,
+        os,
+        deviceType,
+        lastActive: new Date(),
+        createdAt: new Date(),
+      });
+      await user.save();
+    }
+
+    // Find current device session
+    let currentSession = user.sessions.find(
+      (s) => currentSessionId && s.sessionId === currentSessionId
+    );
+
+    if (!currentSession) {
+      // Fallback: match by current device fingerprint
+      currentSession = user.sessions.find(
+        (s) => s.browser === browser && s.os === os && s.deviceType === deviceType
+      );
+    }
+
+    if (currentSession) {
+      currentSessionId = currentSession.sessionId;
+      // Only touch lastActive if at least 15 minutes passed to avoid write churn
+      if (Date.now() - new Date(currentSession.lastActive).getTime() > 15 * 60 * 1000) {
+        currentSession.lastActive = new Date();
+        await user.save();
+      }
+    }
+
+    const devices = user.sessions.map((s) => ({
+      sessionId: s.sessionId,
+      browser: s.browser || "Web Browser",
+      os: s.os || "Unknown OS",
+      deviceType: s.deviceType || "desktop",
+      lastActive: s.lastActive || s.createdAt || new Date(),
+      isCurrent: s.sessionId === currentSessionId,
+    }));
+
+    // Current device always first, then sort remaining by lastActive desc
+    devices.sort((a, b) => {
+      if (a.isCurrent) return -1;
+      if (b.isCurrent) return 1;
+      return new Date(b.lastActive) - new Date(a.lastActive);
+    });
+
+    res.json({
+      success: true,
+      currentSessionId,
+      devices,
+    });
+  } catch (err) {
+    console.error("Get devices error:", err);
+    res.status(500).json({ error: "Failed to retrieve active devices" });
+  }
+};
+
+// POST: Sign out of all other devices
+exports.revokeOtherDevices = async (req, res) => {
+  try {
+    const userId = req.user.id || req.user._id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    let currentSessionId = req.user.sessionId;
+    const { browser, os, deviceType } = parseUserAgent(req.headers["user-agent"]);
+
+    if (user.sessions && user.sessions.length > 0) {
+      const current = user.sessions.find(
+        (s) => (currentSessionId && s.sessionId === currentSessionId) ||
+               (s.browser === browser && s.os === os && s.deviceType === deviceType)
+      ) || user.sessions[0];
+
+      user.sessions = [current];
+      await user.save();
+    }
+
+    res.json({
+      success: true,
+      message: "Signed out of all other devices successfully",
+    });
+  } catch (err) {
+    console.error("Revoke other devices error:", err);
+    res.status(500).json({ error: "Failed to revoke other devices" });
   }
 };

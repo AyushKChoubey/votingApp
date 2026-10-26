@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getFriendlyErrorMessage } from "../utils/errorMessages";
 
 // API Configuration
 const API_BASE_URL =
@@ -36,12 +37,26 @@ api.interceptors.response.use(
     // API errors are propagated to callers; avoid noisy console output here.
 
     // Extract error message from various possible response formats
-    const message =
+    const rawMessage =
       error.response?.data?.error ||
       error.response?.data?.message ||
       error.response?.data?.msg ||
       error.message ||
       "An unexpected error occurred";
+    const message = getFriendlyErrorMessage(
+      { ...error, status: error.response?.status, message: rawMessage },
+      "We could not complete that request. Please try again.",
+    );
+    const safeResponse = error.response
+      ? {
+          ...error.response,
+          data: {
+            ...(error.response.data || {}),
+            error: message,
+            message,
+          },
+        }
+      : undefined;
 
     // Handle 401 unauthorized or 403 forbidden (token expired or invalid)
     const status = error.response?.status;
@@ -74,38 +89,37 @@ api.interceptors.response.use(
     // If on auth page, NEVER redirect - just propagate the error
     if (isAuthPage) {
       const enhancedError = new Error(message);
-      enhancedError.response = error.response;
+      enhancedError.response = safeResponse;
       enhancedError.status = error.response?.status;
-      enhancedError.data = error.response?.data;
+      enhancedError.data = safeResponse?.data;
       return Promise.reject(enhancedError);
     }
 
     // Only redirect for token expiry on NON-auth pages
     if (status === 401 || isTokenExpiredMsg) {
+      // Clear token immediately
+      try {
+        localStorage.removeItem("token");
+      } catch (e) {
+        // ignore
+      }
+
       // Prevent multiple redirects from concurrent failing requests
       if (!authRedirectInProgress) {
         authRedirectInProgress = true;
-
-        // Clear token immediately
-        try {
-          localStorage.removeItem("token");
-        } catch (e) {
-          // ignore
-        }
-
-        // Use replace instead of redirect to prevent back button showing empty page
-        window.location.replace("/?session Expired");
-
-        // Don't reset the flag - we're navigating away anyway
-        return new Promise(() => {}); // Never resolve to prevent further execution
+        // Use replace to land directly on the home page cleanly
+        window.location.replace("/");
       }
+
+      // Never resolve to prevent further execution or error toasts while redirecting
+      return new Promise(() => {});
     }
 
     // Preserve the original error structure but with our message
     const enhancedError = new Error(message);
-    enhancedError.response = error.response;
+    enhancedError.response = safeResponse;
     enhancedError.status = error.response?.status;
-    enhancedError.data = error.response?.data;
+    enhancedError.data = safeResponse?.data;
 
     return Promise.reject(enhancedError);
   },

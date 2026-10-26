@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import ThemeToggle from "./ThemeToggle";
+import BackButton from "./BackButton";
 import packageJson from "../../../package.json";
 
 // ── Service health banner ────────────────────────────────────────────────────
@@ -147,9 +148,8 @@ const ServiceBanner = () => {
 };
 // ─────────────────────────────────────────────────────────────────────────────
 
-const Navigation = () => {
+const Navigation = ({ isMenuOpen, setIsMenuOpen }) => {
   const { user, isAuthenticated, logout } = useAuth();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const mobileMenuRef = useRef(null);
 
@@ -197,8 +197,9 @@ const Navigation = () => {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
+    setIsMenuOpen(false);
     await logout();
-    navigate("/?message=logged_out");
+    navigate("/", { replace: true });
   };
 
   const isActivePath = (path) => location.pathname === path;
@@ -210,10 +211,16 @@ const Navigation = () => {
     { path: "/contact", label: "Contact" },
   ];
 
+  const secondaryNavItems = [
+    { path: "/help", label: "Help Center" },
+    { path: "/privacy", label: "Privacy Policy" },
+    { path: "/terms", label: "Terms of Service" },
+  ];
+
   const userNavItems = [{ path: "/dashboard", label: "Dashboard" }];
 
   return (
-    <nav className="theme-surface shadow-sm border-b border-border sticky top-0 z-40">
+    <nav className="hidden md:block theme-surface shadow-sm border-b border-border sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
         <style>{`
               /* Hide username and slightly reduce avatar in the narrow mid breakpoint (767px - 840px)
@@ -403,63 +410,37 @@ const Navigation = () => {
             </div>
           </div>
 
-          {/* Mobile menu button + Profile icon - Enhanced Design */}
+          {/* Mobile header: branding and theme only. Navigation lives below. */}
           <div className="md:hidden flex items-center space-x-2">
-            {/* Theme Toggle for mobile */}
             <ThemeToggle />
-
-            {/* Profile icon - only when authenticated */}
+            <span className="hidden">
             {isAuthenticated && (
-              <div className="w-8 h-8 nav-avatar overflow-hidden rounded-full theme-surface flex items-center justify-center border border-border">
-                {user?.profile?.avatar || user?.profilePicture ? (
-                  <img
-                    src={user?.profile?.avatar || user?.profilePicture}
-                    alt={`Avatar of ${user?.name || "user"}`}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                    crossOrigin="anonymous"
-                    onError={(e) => {
-                      e.currentTarget.style.display = "none";
-                    }}
-                  />
-                ) : (
-                  <span className="theme-text font-medium text-sm">
-                    {user?.name?.charAt(0)?.toUpperCase()}
-                  </span>
-                )}
-              </div>
+              <>
+                <Link
+                  to="/user/settings"
+                  className="p-2 theme-muted hover:text-accent hover:bg-accent-50 rounded-lg transition-colors focus-ring"
+                  aria-label="Open settings"
+                  title="Settings"
+                >
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 15.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1-1.8 1.8-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5v.1h-2.6v-.1a1.7 1.7 0 00-1-1.5 1.7 1.7 0 00-.3-1.9l-.1.1-1.8-1.8.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H6v-2.6h.1a1.7 1.7 0 001.5-1 1.7 1.7 0 00-.3-1.9l-.1-.1L9 6.6l.1.1a1.7 1.7 0 001.9.3 1.7 1.7 0 001-1.5v-.1h2.6v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1 1.8 1.8-.1.1a1.7 1.7 0 00-.3 1.9 1.7 1.7 0 001.5 1h.1V14h-.1a1.7 1.7 0 00-1.5 1z" />
+                  </svg>
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="p-2 theme-muted hover:text-error hover:bg-error-50 rounded-lg transition-colors focus-ring"
+                  aria-label="Sign out"
+                  title="Sign out"
+                >
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 17l5-5-5-5M15 12H3m8 8h8a2 2 0 002-2V6a2 2 0 00-2-2h-8" />
+                  </svg>
+                </button>
+              </>
             )}
-
-            {/* Hamburger menu */}
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 theme-muted hover:text-accent hover:bg-accent-50 rounded-lg transition-colors focus:outline-none focus-ring"
-              aria-label={isMenuOpen ? "Close menu" : "Open menu"}
-              aria-expanded={isMenuOpen}
-              aria-controls="mobile-nav"
-            >
-              <svg
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                {isMenuOpen ? (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                ) : (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                )}
-              </svg>
-            </button>
+            </span>
           </div>
         </div>
 
@@ -476,7 +457,7 @@ const Navigation = () => {
             <div
               ref={mobileMenuRef}
               id="mobile-nav"
-              className="fixed inset-0 theme-surface shadow-2xl transform transition-transform duration-300 ease-out overflow-hidden"
+              className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] theme-surface rounded-t-3xl shadow-2xl transform transition-transform duration-300 ease-out overflow-hidden z-[60]"
             >
               <div className="flex flex-col h-full">
                 {/* Header - Improved Spacing */}
@@ -522,15 +503,34 @@ const Navigation = () => {
                   </button>
                 </div>
 
+                {isAuthenticated && (
+                  <div className="flex items-center justify-end gap-2 border-b border-border px-4 py-3">
+                    <Link
+                      to="/user/settings"
+                      className="flex min-h-10 items-center rounded-xl border border-border px-3 text-sm font-semibold theme-text hover:border-accent hover:bg-accent-50"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Settings
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="min-h-10 rounded-xl border border-error px-3 text-sm font-semibold text-error hover:bg-error-50"
+                    >
+                      Sign out
+                    </button>
+                  </div>
+                )}
+
                 {/* Navigation Links - enhanced spacing; content is fixed (no scroll) */}
-                <div className="flex-1 py-4 px-4">
-                  <div className="space-y-1 h-full">
-                    {/* Always show public nav items */}
+                <div className="py-3 px-4">
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* Secondary links stay in More so every destination remains available. */}
                     {publicNavItems.map((item) => (
                       <Link
                         key={item.path}
                         to={item.path}
-                        className={`flex items-center px-4 py-3 text-base font-medium rounded-xl transition-all duration-200 ${
+                        className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${
                           isActivePath(item.path)
                             ? "text-accent bg-accent-50 border-l-4 border-accent shadow-sm"
                             : "theme-text theme-muted hover:text-accent hover:bg-gray-50"
@@ -541,9 +541,22 @@ const Navigation = () => {
                       </Link>
                     ))}
 
+                    <div className="col-span-2 grid grid-cols-2 gap-2 mt-1 border-t border-border pt-3">
+                      {secondaryNavItems.map((item) => (
+                        <Link
+                          key={item.path}
+                          to={item.path}
+                          className="flex items-center px-3 py-2.5 text-sm font-medium theme-text theme-muted hover:text-accent hover:bg-accent-50 rounded-xl transition-all duration-200"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          {item.label}
+                        </Link>
+                      ))}
+                    </div>
+
                     {/* Auth Actions - Improved Design */}
                     {!isAuthenticated && (
-                      <div className="pt-4 mt-4 border-t border-gray-100">
+                      <div className="col-span-2 pt-3 mt-1 border-t border-border">
                         <div className="space-y-3">
                           <Link
                             to="/login"
@@ -592,7 +605,7 @@ const Navigation = () => {
                     {/* Dashboard + User Settings for Authenticated Users */}
                     {isAuthenticated && (
                       <>
-                        <div className="border-t border-gray-200 my-4 pt-4">
+                        <div className="hidden border-t border-gray-200 my-4 pt-4">
                           {/* Dashboard with unique styling */}
                           <Link
                             to="/dashboard"
@@ -622,7 +635,7 @@ const Navigation = () => {
 
                         <Link
                           to="/user/profile"
-                          className="flex items-center px-4 py-4 text-base font-medium theme-text hover:text-accent hover:bg-accent-50 rounded-xl transition-all duration-200 mx-0 mb-1 focus:outline-none focus:ring-accent"
+                          className="hidden"
                           onClick={() => setIsMenuOpen(false)}
                         >
                           <svg
@@ -643,7 +656,7 @@ const Navigation = () => {
 
                         <Link
                           to="/user/settings"
-                          className="flex items-center px-4 py-4 text-base font-medium theme-text hover:text-accent hover:bg-accent-50 rounded-xl transition-all duration-200 mx-0 mb-1 focus:outline-none focus:ring-accent"
+                          className="hidden"
                           onClick={() => setIsMenuOpen(false)}
                         >
                           <svg
@@ -674,10 +687,10 @@ const Navigation = () => {
 
                 {/* Bottom Actions - Enhanced Logout */}
                 {isAuthenticated && (
-                  <div className="border-t border-border p-4 theme-surface">
+                  <div className="hidden border-t border-border p-3 theme-surface">
                     <button
                       onClick={handleLogout}
-                      className="flex items-center justify-center w-full px-4 py-3 text-base font-medium text-error hover:bg-error-50 rounded-xl border border-error transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-accent"
+                      className="flex items-center justify-center w-full px-4 py-2.5 text-sm font-medium text-error hover:bg-error-50 rounded-xl border border-error transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-accent"
                     >
                       <svg
                         className="w-5 h-5 mr-3"
@@ -817,7 +830,70 @@ const Footer = () => {
   );
 };
 
+const MobileBottomNav = () => {
+  const { isAuthenticated } = useAuth();
+  const location = useLocation();
+
+  const isAuth = isAuthenticated && Boolean(localStorage.getItem("token"));
+
+  const items = isAuth
+    ? [
+        { key: "home", path: "/dashboard", label: "Home", icon: "M3 10.5L12 3l9 7.5V21h-6v-6H9v6H3v-10.5z" },
+        { key: "booths", path: "/dashboard?view=booths", label: "My Booths", icon: "M4 5h16v14H4V5zm4 4h8M8 13h5" },
+        { key: "create", path: "/booth/create", label: "Create", icon: "M12 5v14M5 12h14", prominent: true },
+        { key: "join", path: "/booth/join", label: "Join", icon: "M9 15l6-6m-3-3h3a3 3 0 013 3v3m-6 6H9a3 3 0 01-3-3v-3" },
+        { key: "profile", path: "/user/profile", label: "Profile", icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" },
+      ]
+    : [
+        { key: "home", path: "/", label: "Home", icon: "M3 10.5L12 3l9 7.5V21h-6v-6H9v6H3v-10.5z" },
+        { key: "features", path: "/features", label: "Features", icon: "M12 3l2.8 5.7L21 9.6l-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3z" },
+        { key: "register", path: "/register", label: "Sign Up", icon: "M12 5v14M5 12h14", prominent: true },
+        { key: "contact", path: "/contact", label: "Contact", icon: "M4 5h16v14H4V5zm0 1l8 6 8-6" },
+        { key: "login", path: "/login", label: "Sign In", icon: "M10 17l5-5-5-5M15 12H3m8 8h8a2 2 0 002-2V6a2 2 0 00-2-2h-8" },
+      ];
+
+  return (
+    <nav
+      aria-label="Mobile navigation"
+      className="mobile-bottom-nav fixed bottom-0 inset-x-0 z-[70] md:hidden theme-surface border-t border-border shadow-[0_-4px_16px_rgba(15,23,42,0.08)]"
+    >
+      <div className="grid grid-cols-5 max-w-lg mx-auto px-1 pt-2">
+        {items.map((item) => {
+          const active =
+            item.key === "home"
+              ? location.pathname === (isAuthenticated ? "/dashboard" : "/") && !location.search
+              : item.key === "booths"
+                ? location.pathname === "/dashboard" && location.search.includes("view=booths")
+                : item.key === "profile"
+                  ? location.pathname.startsWith("/user/profile") || location.pathname.startsWith("/user/settings")
+                  : location.pathname === item.path;
+
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              aria-current={active ? "page" : undefined}
+              className={`${item.prominent ? "relative -mt-6" : ""} min-h-12 flex flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-semibold transition-colors ${
+                active ? "text-accent bg-accent-50" : "theme-muted hover:text-accent"
+              }`}
+            >
+              <span className={item.prominent ? "flex h-14 w-14 items-center justify-center rounded-full bg-primary text-on-primary shadow-[0_8px_20px_rgba(21,94,117,0.35)] ring-4 ring-[var(--color-surface)]" : ""}>
+                <svg className={item.prominent ? "h-7 w-7" : "h-5 w-5"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
+                </svg>
+              </span>
+              {item.label}
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
+};
+
 const Layout = ({ children, showFooter = true }) => {
+  const { isAuthenticated } = useAuth();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
   const isAuthPage = [
     "/login",
@@ -834,11 +910,14 @@ const Layout = ({ children, showFooter = true }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Navigation />
+    <div className="min-h-screen theme-bg flex flex-col overflow-x-hidden w-full">
+      <Navigation isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} />
       <ServiceBanner />
-      <main className="flex-1">{children}</main>
-      {showFooter && <Footer />}
+      <main className={`flex-1 ${isAuthenticated ? "pb-20 md:pb-0" : ""} overflow-x-hidden w-full`}>
+        {children}
+      </main>
+      {showFooter && <div className={isAuthenticated ? "hidden md:block" : ""}><Footer /></div>}
+      <MobileBottomNav />
     </div>
   );
 };

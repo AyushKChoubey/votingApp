@@ -32,10 +32,6 @@ const PrivacyPage = () => {
         <div className="absolute top-0 right-0 -translate-y-12 translate-x-12 pointer-events-none float">
           <div
             className="w-64 h-64 md:w-96 md:h-96 rounded-full blur-3xl opacity-15"
-            style={{
-              background:
-                "radial-gradient(circle, var(--color-primary), var(--color-accent))",
-            }}
           />
         </div>
       </div>

@@ -8,6 +8,20 @@ const validator = require("validator");
 const socket = require("../config/socket");
 const mongoose = require("mongoose");
 
+const isApiRequest = (req) => {
+  const url = req.originalUrl || req.url || "";
+  const baseUrl = req.baseUrl || "";
+  const path = req.path || "";
+  return (
+    url.startsWith("/api") ||
+    baseUrl.startsWith("/api") ||
+    path.startsWith("/api") ||
+    Boolean(req.headers.authorization) ||
+    Boolean(req.xhr) ||
+    (req.headers.accept && req.headers.accept.includes("application/json"))
+  );
+};
+
 // Helper function to find booth by either boothId or MongoDB _id
 const findBoothByIdOrBoothId = async (identifier) => {
   // Check if it's a boothId format (VBB + hex)
@@ -366,7 +380,7 @@ exports.getBoothDetails = async (req, res) => {
 
     if (!booth) {
       const error = "Booth not found";
-      if (req.accepts("html")) {
+      if (!isApiRequest(req) && req.accepts("html")) {
         return res.status(404).render("error", { error });
       }
       return res.status(404).json({ error });
@@ -421,7 +435,7 @@ exports.getBoothDetails = async (req, res) => {
   } catch (err) {
     console.error("Get booth details error:", err);
     const error = "Failed to fetch booth details";
-    if (req.accepts("html")) {
+    if (!isApiRequest(req) && req.accepts("html")) {
       return res.status(500).render("error", { error });
     }
     res.status(500).json({ error });
@@ -794,8 +808,32 @@ exports.updateBoothSettings = async (req, res) => {
       }
     }
 
+    // Explicitly unset votingStartTime and votingEndTime if schedule is turned off or dates are cleared/null
+    if (settings.scheduled === false) {
+      booth.set("settings.scheduled", false);
+      booth.set("settings.votingStartTime", undefined);
+      booth.set("settings.votingEndTime", undefined);
+      booth.settings.scheduled = false;
+      booth.settings.votingStartTime = undefined;
+      booth.settings.votingEndTime = undefined;
+      delete settings.votingStartTime;
+      delete settings.votingEndTime;
+    } else {
+      if (settings.votingStartTime === null || settings.votingStartTime === "") {
+        booth.set("settings.votingStartTime", undefined);
+        booth.settings.votingStartTime = undefined;
+        delete settings.votingStartTime;
+      }
+      if (settings.votingEndTime === null || settings.votingEndTime === "") {
+        booth.set("settings.votingEndTime", undefined);
+        booth.settings.votingEndTime = undefined;
+        delete settings.votingEndTime;
+      }
+    }
+
     // Update settings
     booth.settings = { ...booth.settings, ...settings };
+    booth.markModified("settings");
     await booth.save();
 
     logActivity(booth._id, userId, "Admin updated booth settings").catch(
@@ -823,13 +861,21 @@ exports.getBoothEditForm = async (req, res) => {
     const booth = await findBoothByIdOrBoothId(boothId);
 
     if (!booth) {
-      return res.status(404).render("error", { error: "Booth not found" });
+      if (!isApiRequest(req) && req.accepts("html")) {
+        return res.status(404).render("error", { error: "Booth not found" });
+      }
+      return res.status(404).json({ error: "Booth not found" });
     }
 
     if (booth.creator.toString() !== userId) {
+      if (!isApiRequest(req) && req.accepts("html")) {
+        return res
+          .status(403)
+          .render("error", { error: "Only booth creator can edit booth" });
+      }
       return res
         .status(403)
-        .render("error", { error: "Only booth creator can edit booth" });
+        .json({ error: "Only booth creator can edit booth" });
     }
 
     res.json({
@@ -867,13 +913,21 @@ exports.editBooth = async (req, res) => {
     const booth = await findBoothByIdOrBoothId(boothId);
 
     if (!booth) {
-      return res.status(404).render("error", { error: "Booth not found" });
+      if (!isApiRequest(req) && req.accepts("html")) {
+        return res.status(404).render("error", { error: "Booth not found" });
+      }
+      return res.status(404).json({ error: "Booth not found" });
     }
 
     if (booth.creator.toString() !== userId) {
+      if (!isApiRequest(req) && req.accepts("html")) {
+        return res
+          .status(403)
+          .render("error", { error: "Only booth creator can edit booth" });
+      }
       return res
         .status(403)
-        .render("error", { error: "Only booth creator can edit booth" });
+        .json({ error: "Only booth creator can edit booth" });
     }
 
     // Validate inputs
@@ -993,7 +1047,7 @@ exports.deleteBooth = async (req, res) => {
 
     if (!booth) {
       const error = "Booth not found";
-      if (req.accepts("html")) {
+      if (!isApiRequest(req) && req.accepts("html")) {
         return res.status(404).render("error", { error });
       }
       return res.status(404).json({ error });
@@ -1001,7 +1055,7 @@ exports.deleteBooth = async (req, res) => {
 
     if (booth.creator.toString() !== userId) {
       const error = "Only booth creator can delete booth";
-      if (req.accepts("html")) {
+      if (!isApiRequest(req) && req.accepts("html")) {
         return res.status(403).render("error", { error });
       }
       return res.status(403).json({ error });
@@ -1023,7 +1077,7 @@ exports.deleteBooth = async (req, res) => {
   } catch (err) {
     console.error("Delete booth error:", err);
     const error = "Failed to delete booth";
-    if (req.accepts("html")) {
+    if (!isApiRequest(req) && req.accepts("html")) {
       return res.status(500).render("error", { error });
     }
     res.status(500).json({ error });
@@ -1051,7 +1105,7 @@ exports.toggleBoothStatus = async (req, res) => {
     // Toggle between active and closed
     const newStatus = booth.status === "active" ? "closed" : "active";
 
-    // If attempting to reopen, prevent activation if votingEndTime has already passed
+    // If attempting to reopen after votingEndTime has passed, automatically clear the expired schedule so booth can activate seamlessly
     if (
       newStatus === "active" &&
       booth.settings &&
@@ -1060,12 +1114,13 @@ exports.toggleBoothStatus = async (req, res) => {
       const end = new Date(booth.settings.votingEndTime);
       const now = new Date();
       if (now > end) {
-        return res.status(400).json({
-          success: false,
-          error:
-            "Voting period has already ended. To reopen voting, update the schedule (new end time) or disable scheduling.",
-          code: "SCHEDULE_EXPIRED",
-        });
+        booth.set("settings.votingEndTime", undefined);
+        booth.set("settings.votingStartTime", undefined);
+        booth.set("settings.scheduled", false);
+        booth.settings.votingEndTime = undefined;
+        booth.settings.votingStartTime = undefined;
+        booth.settings.scheduled = false;
+        booth.markModified("settings");
       }
     }
 

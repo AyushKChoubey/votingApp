@@ -26,6 +26,20 @@ if (!process.env.JWT_REFRESH_SECRET) {
   );
 }
 
+const isApiRequest = (req) => {
+  const url = req.originalUrl || req.url || "";
+  const baseUrl = req.baseUrl || "";
+  const path = req.path || "";
+  return (
+    url.startsWith("/api") ||
+    baseUrl.startsWith("/api") ||
+    path.startsWith("/api") ||
+    Boolean(req.headers.authorization) ||
+    Boolean(req.xhr) ||
+    (req.headers.accept && req.headers.accept.includes("application/json"))
+  );
+};
+
 const jwtAuthMiddleware = async (req, res, next) => {
   try {
     let token = null;
@@ -39,7 +53,7 @@ const jwtAuthMiddleware = async (req, res, next) => {
     }
 
     if (!token) {
-      if (req.accepts("html")) {
+      if (!isApiRequest(req) && req.accepts("html")) {
         return res.redirect(
           "/user/login?redirect=" + encodeURIComponent(req.originalUrl),
         );
@@ -50,7 +64,7 @@ const jwtAuthMiddleware = async (req, res, next) => {
     // Check if token is blacklisted
     if (tokenBlacklist.has(token)) {
       res.clearCookie("token");
-      if (req.accepts("html")) {
+      if (!isApiRequest(req) && req.accepts("html")) {
         return res.redirect("/user/login?error=session_expired");
       }
       return res.status(401).json({ error: "Token has been revoked" });
@@ -65,10 +79,25 @@ const jwtAuthMiddleware = async (req, res, next) => {
 
     if (!user) {
       res.clearCookie("token");
-      if (req.accepts("html")) {
+      if (!isApiRequest(req) && req.accepts("html")) {
         return res.redirect("/user/login?error=user_not_found");
       }
       return res.status(401).json({ error: "User not found" });
+    }
+
+    // Check if session has been revoked (only if user has active sessions and token has sessionId)
+    if (user.sessions && user.sessions.length > 0 && decoded.sessionId) {
+      const sessionActive = user.sessions.some(
+        (s) => s.sessionId === decoded.sessionId
+      );
+      if (!sessionActive) {
+        res.clearCookie("token");
+        res.clearCookie("refreshToken");
+        if (!isApiRequest(req) && req.accepts("html")) {
+          return res.redirect("/user/login?error=session_revoked");
+        }
+        return res.status(401).json({ error: "Session has been signed out" });
+      }
     }
 
     // Check if token was issued before password change
@@ -77,7 +106,7 @@ const jwtAuthMiddleware = async (req, res, next) => {
       decoded.iat < user.passwordChangedAt.getTime() / 1000
     ) {
       res.clearCookie("token");
-      if (req.accepts("html")) {
+      if (!isApiRequest(req) && req.accepts("html")) {
         return res.redirect("/user/login?error=password_changed");
       }
       return res
@@ -97,7 +126,7 @@ const jwtAuthMiddleware = async (req, res, next) => {
     // Clear invalid token
     res.clearCookie("token");
 
-    if (req.accepts("html")) {
+    if (!isApiRequest(req) && req.accepts("html")) {
       return res.redirect("/user/login?error=invalid_token");
     }
 
@@ -150,10 +179,13 @@ const optionalAuth = async (req, res, next) => {
 
 // Function to generate JWT token with enhanced security
 const generateToken = (userData, options = {}) => {
+  const { sessionId: optSessionId, ...jwtOptions } = options;
+  const sessionId = optSessionId || userData.sessionId || crypto.randomUUID();
   const payload = {
     id: userData.id || userData._id,
     email: userData.email,
     role: userData.role,
+    sessionId,
     iat: Math.floor(Date.now() / 1000),
     jti: crypto.randomUUID(), // Unique token ID
   };
@@ -166,7 +198,7 @@ const generateToken = (userData, options = {}) => {
 
   return jwt.sign(payload, process.env.JWT_SECRET, {
     ...defaultOptions,
-    ...options,
+    ...jwtOptions,
   });
 };
 

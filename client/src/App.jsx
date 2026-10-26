@@ -28,6 +28,7 @@ import ContactPage from "./pages/ContactPage";
 import HelpPage from "./pages/HelpPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import TermsPage from "./pages/TermsPage";
+import NotFoundPage from "./pages/NotFoundPage";
 import OAuthCallback from "./pages/auth/OAuthCallback";
 
 // Email Verification Pages
@@ -71,18 +72,14 @@ const queryClient = new QueryClient({
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
-  const location = useLocation();
 
   if (isLoading) {
     return <PageLoading message="Checking authentication..." />;
   }
 
-  if (!isAuthenticated) {
-    // so after login we can return the user to where they intended
-    const returnTo = encodeURIComponent(
-      location.pathname + (location.search || ""),
-    );
-    return <Navigate to={`/login?redirect=${returnTo}`} replace />;
+  // If token is cleared or unauthenticated, land directly on home page
+  if (!isAuthenticated || !localStorage.getItem("token")) {
+    return <Navigate to="/" replace />;
   }
 
   return children;
@@ -255,7 +252,7 @@ const AppRoutes = () => {
       />
 
       {/* 404 Route */}
-      <Route path="*" element={<div>404 - Page Not Found</div>} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 };

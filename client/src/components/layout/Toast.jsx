@@ -90,7 +90,7 @@ export function Toast({ message, type = 'success', duration = 4500, onClose }) {
         <div
             role="status"
             aria-live={type === 'error' ? 'assertive' : 'polite'}
-            className={`pointer-events-auto transform transition-all duration-300 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+            className={`pointer-events-auto transform transition-all duration-300 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 sm:translate-y-4'}`}
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
             onTouchStart={onTouchStart}
@@ -170,7 +170,7 @@ export function ToastProvider({ children }) {
             {children}
             
             {/* Toast Container: bottom-centered full-width on mobile, compact top-right on larger screens */}
-            <div className="fixed z-50 pointer-events-none inset-x-4 bottom-4 sm:inset-x-auto sm:top-4 sm:right-4 flex flex-col items-center sm:items-end space-y-2">
+            <div className="fixed z-[100] pointer-events-none inset-x-4 top-4 sm:inset-x-auto sm:top-4 sm:right-4 flex flex-col items-center sm:items-end space-y-2">
                 {toasts.map(toast => (
                     <div key={toast.id} className="pointer-events-auto w-full sm:w-auto">
                         <Toast

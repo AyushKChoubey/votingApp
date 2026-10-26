@@ -10,6 +10,7 @@ import { Alert } from "../../components/layout/Alert";
 import { LoadingButton, PageLoading } from "../../components/layout/Loading";
 import { useToast } from "../../components/layout/Toast";
 import Button from "../../components/layout/Button";
+import BackButton from "../../components/layout/BackButton";
 const QRCodeModal = lazy(() =>
   import("../../components/booth/QRCodeModal").then((m) => ({
     default: m.QRCodeModal,
@@ -34,6 +35,19 @@ const BoothDetailPage = () => {
   const { addToast } = useToast();
   const [qrModalData, setQrModalData] = useState(null);
   const [countdownText, setCountdownText] = useState(null);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showBoothInfo, setShowBoothInfo] = useState(false);
+  const [showMenuDropdown, setShowMenuDropdown] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [expandDescription, setExpandDescription] = useState(false);
+  const [voteSuccessModal, setVoteSuccessModal] = useState({ open: false, candidateName: "" });
+  const [votedCandidateName, setVotedCandidateName] = useState(() => {
+    try {
+      return localStorage.getItem(`booth_${boothId}_voted_candidate`) || "";
+    } catch (e) {
+      return "";
+    }
+  });
 
   const location = useLocation();
   const initialBooth =
@@ -249,8 +263,18 @@ const BoothDetailPage = () => {
       const response = await boothService.vote(boothId, candidateIndex);
 
       if (response.success) {
-        // Refresh data first so the UI reflects the new vote, then show toast
-        await fetchBoothDetails(); // Refresh data
+        const votedName =
+          booth?.candidates?.[candidateIndex]?.name ||
+          response.candidate ||
+          "Candidate";
+        try {
+          localStorage.setItem(`booth_${boothId}_voted_candidate`, votedName);
+        } catch (e) {
+          // Ignore localStorage errors
+        }
+        setVotedCandidateName(votedName);
+        setVoteSuccessModal({ open: true, candidateName: votedName });
+        await fetchBoothDetails();
         addToast("Your vote has been recorded successfully!", "success");
         setSelectedCandidate(null);
       } else {
@@ -304,7 +328,10 @@ const BoothDetailPage = () => {
 
   const handleCopyDetailsPlain = () => {
     if (!booth) return;
-    const source = initialBooth || booth;
+    
+
+
+  const source = initialBooth || booth;
     const max = Number(source?.maxMembers);
     const maxDisplay = !Number.isNaN(max) && max > 0 ? max : 50;
     const membersCount =
@@ -415,7 +442,422 @@ const BoothDetailPage = () => {
     );
   }
 
-  // Derived values for display (prefer navigation state for immediate post-create render)
+  const renderMobileDetails = () => {
+    const totalMembers = booth?.members?.length || booth?.memberCount || 0;
+    let voted = 0;
+    if (booth?.members && booth.members.length > 0) {
+      voted = booth.members.filter((m) => m.hasVoted).length;
+    } else {
+      voted = booth?.totalVotes || 0;
+    }
+    const turnout = totalMembers > 0 ? Math.min(100, Math.round((voted / totalMembers) * 100)) : 0;
+    const canViewResults = Boolean(booth?.settings?.resultsVisibleToVoters || permissions.isCreator);
+
+    const candidateColors = [
+      { bg: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300", bar: "bg-cyan-600" },
+      { bg: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300", bar: "bg-purple-600" },
+      { bg: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300", bar: "bg-emerald-600" },
+      { bg: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300", bar: "bg-amber-600" },
+      { bg: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300", bar: "bg-rose-600" },
+    ];
+
+    const copyBoothId = () => {
+      const code = booth?.boothId || booth?.id || "";
+      if (code) {
+        navigator.clipboard.writeText(code);
+        setCopiedCode(true);
+        addToast("Booth ID copied", "success");
+        setTimeout(() => setCopiedCode(false), 2000);
+      }
+    };
+
+    const formatDate = (dateStr) => {
+      if (!dateStr) return "N/A";
+      try {
+        return new Date(dateStr).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+      } catch {
+        return "N/A";
+      }
+    };
+
+    const desc = booth?.description || "";
+    const isLongDesc = desc.length > 70;
+
+    return (
+      <div className="w-full max-w-full overflow-x-hidden px-4 pt-3 pb-28 sm:pb-12 animate-fadeIn">
+        {/* Top Header: Single clean header matching mockup */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <BackButton fallback="/dashboard" />
+            <h1 className="text-xl font-bold theme-text">Booth Details</h1>
+          </div>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowMenuDropdown((prev) => !prev)}
+              className="w-10 h-10 rounded-xl border border-border theme-surface theme-text flex items-center justify-center shadow-sm hover:bg-accent-50 active:scale-95 transition-all"
+              aria-label="Options"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+              </svg>
+            </button>
+            {showMenuDropdown && (
+              <div className="absolute right-0 mt-2 w-48 theme-surface rounded-2xl shadow-xl border border-border py-1.5 z-50 animate-fadeIn">
+                {canViewResults && (
+                  <button
+                    type="button"
+                    onClick={() => { setShowMenuDropdown(false); navigate(`/booth/${boothId}/results`); }}
+                    className="w-full px-4 py-2.5 text-left text-xs font-semibold theme-text hover:bg-accent-50 flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                    View Detailed Results
+                  </button>
+                )}
+                {permissions.isCreator && (
+                  <button
+                    type="button"
+                    onClick={() => { setShowMenuDropdown(false); navigate(`/booth/${boothId}/admin`); }}
+                    className="w-full px-4 py-2.5 text-left text-xs font-semibold theme-text hover:bg-accent-50 flex items-center gap-2 border-t border-border mt-0.5 pt-2"
+                  >
+                    <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110 4m0-4v2m0-6V4" /></svg>
+                    Manage Booth
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Booth Header Card */}
+        <div className="theme-surface rounded-2xl border border-border p-4 mb-4 shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-accent-50 text-accent border border-accent/20 flex items-center justify-center shrink-0 shadow-xs">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 14l9-5-9-5-9 5 9 5z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
+              </svg>
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <h2 className="text-base font-bold theme-text truncate">{booth?.name}</h2>
+                <span
+                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide uppercase shrink-0 ${
+                    booth?.status === "active"
+                      ? "bg-success/15 text-success border border-success/30"
+                      : "bg-error/15 text-error border border-error/30"
+                  }`}
+                >
+                  {booth?.status === "active" ? "Active" : "Closed"}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                {permissions.isCreator && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold btn-theme text-on-primary shadow-xs">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                    Creator
+                  </span>
+                )}
+                {permissions.hasVoted && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-success/15 text-success border border-success/30">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    Voted
+                  </span>
+                )}
+                {countdownText && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-300 dark:border-red-800">
+                    <svg className="w-3 h-3 animate-pulse text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    {countdownText}
+                  </span>
+                )}
+              </div>
+              {desc && (
+                <div className="text-xs theme-muted leading-relaxed">
+                  <span>{isLongDesc && !expandDescription ? `${desc.slice(0, 70)}...` : desc}</span>
+                  {isLongDesc && (
+                    <button
+                      type="button"
+                      onClick={() => setExpandDescription((prev) => !prev)}
+                      className="text-accent font-semibold ml-1.5 hover:underline"
+                    >
+                      {expandDescription ? "less" : "more"}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* 4 Key Stats Grid (2x2) */}
+        <div className="grid grid-cols-2 gap-2.5 mb-5">
+          <div className="theme-surface rounded-2xl p-3.5 border border-border shadow-xs flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-accent-50 text-accent border border-accent/20 flex items-center justify-center shrink-0">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+            </div>
+            <div className="min-w-0">
+              <div className="text-lg font-bold theme-text leading-tight">{booth?.totalVotes || 0}</div>
+              <div className="text-[11px] theme-muted font-medium truncate">Total Votes</div>
+            </div>
+          </div>
+
+          <div className="theme-surface rounded-2xl p-3.5 border border-border shadow-xs flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-accent-50 text-accent border border-accent/20 flex items-center justify-center shrink-0">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+            </div>
+            <div className="min-w-0">
+              <div className="text-lg font-bold theme-text leading-tight">{totalMembers}</div>
+              <div className="text-[11px] theme-muted font-medium truncate">Members</div>
+            </div>
+          </div>
+
+          <div className="theme-surface rounded-2xl p-3.5 border border-border shadow-xs flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-accent-50 text-accent border border-accent/20 flex items-center justify-center shrink-0">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+            </div>
+            <div className="min-w-0">
+              <div className="text-lg font-bold theme-text leading-tight">{booth?.candidates?.length || 0}</div>
+              <div className="text-[11px] theme-muted font-medium truncate">Candidates</div>
+            </div>
+          </div>
+
+          <div className="theme-surface rounded-2xl p-3.5 border border-border shadow-xs flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-accent-50 text-accent border border-accent/20 flex items-center justify-center shrink-0">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" /></svg>
+            </div>
+            <div className="min-w-0">
+              <div className="text-lg font-bold theme-text leading-tight">{turnout}%</div>
+              <div className="text-[11px] theme-muted font-medium truncate">Participation</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Voting Action Section (if canVote & not voted) */}
+        {permissions.canVote && !permissions.hasVoted && (
+          <div className="theme-surface rounded-2xl border border-border p-4 mb-5 shadow-xs">
+            <div className="text-sm font-bold theme-text mb-2">Cast Your Vote</div>
+            <p className="text-xs theme-muted mb-3">Select a candidate below and confirm your choice.</p>
+            <div className="space-y-2 mb-4">
+              {booth?.candidates?.map((candidate, idx) => {
+                const isSelected = selectedCandidate === idx;
+                const color = candidateColors[idx % candidateColors.length];
+                return (
+                  <div
+                    key={candidate._id || candidate.id || idx}
+                    onClick={() => setSelectedCandidate(idx)}
+                    className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
+                      isSelected
+                        ? "border-accent bg-accent-50/50 shadow-sm"
+                        : "border-border hover:bg-black/5 dark:hover:bg-white/5"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0 pr-2">
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${color.bg}`}>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold theme-text truncate">{candidate.name}</div>
+                        {candidate.description && (
+                          <div className="text-[11px] theme-muted truncate">{candidate.description}</div>
+                        )}
+                      </div>
+                    </div>
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                      isSelected ? "border-accent bg-accent" : "border-border"
+                    }`}>
+                      {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (selectedCandidate !== null) handleVote(selectedCandidate);
+              }}
+              disabled={selectedCandidate === null || voting}
+              className="w-full py-3.5 rounded-2xl btn-theme text-on-primary font-semibold text-xs shadow-md disabled:opacity-50 active:scale-95 transition-transform"
+            >
+              {voting ? "Saving vote..." : "Confirm & Cast Vote"}
+            </button>
+          </div>
+        )}
+
+        {/* If user has voted, show Vote Recorded confirmation banner */}
+        {permissions.hasVoted && (
+          <div className="theme-surface rounded-2xl border border-success/30 bg-success/5 p-4 mb-5 shadow-xs flex items-center gap-3 animate-fadeIn">
+            <div className="w-10 h-10 rounded-full bg-success/15 text-success border border-success/30 flex items-center justify-center shrink-0">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-bold theme-text">Vote Recorded</div>
+              <div className="text-[11px] theme-muted">Your vote has been saved and counted.</div>
+            </div>
+          </div>
+        )}
+
+        {/* Current Results view (ONLY rendered if results are visible to user; redundant candidate list removed) */}
+        {canViewResults && (
+          <div className="theme-surface rounded-2xl border border-border p-4 mb-5 shadow-xs">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold theme-text">Current Results</h3>
+              {booth?.settings?.showLiveResults && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-success/15 text-success border border-success/30">
+                  <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                  Live
+                </span>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              {booth?.candidates?.map((candidate, idx) => {
+                const total = booth?.totalVotes || 0;
+                const count = candidate.voteCount ?? 0;
+                const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
+                const color = candidateColors[idx % candidateColors.length];
+
+                return (
+                  <div key={candidate._id || candidate.id || idx}>
+                    <div className="flex items-center gap-3 mb-1.5">
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${color.bg}`}>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-bold theme-text truncate">{candidate.name}</div>
+                        {candidate.description && (
+                          <div className="text-[11px] theme-muted truncate">{candidate.description}</div>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-xs font-bold theme-text">{percentage}%</div>
+                        <div className="text-[10px] theme-muted">{count} vote{count !== 1 ? "s" : ""}</div>
+                      </div>
+                    </div>
+                    <div className="w-full bg-black/5 dark:bg-white/10 rounded-full h-1.5 overflow-hidden">
+                      <div
+                        className={`h-1.5 rounded-full transition-all duration-500 ${color.bar}`}
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Booth Information (Collapsible Accordion) */}
+        <div className="theme-surface rounded-2xl border border-border p-4 mb-5 shadow-xs">
+          <button
+            type="button"
+            onClick={() => setShowBoothInfo((prev) => !prev)}
+            className="w-full flex items-center justify-between text-left focus:outline-none"
+          >
+            <span className="text-sm font-bold theme-text">Booth Information</span>
+            <svg
+              className={`w-4 h-4 theme-muted transform transition-transform duration-200 ${
+                showBoothInfo ? "rotate-180" : "rotate-0"
+              }`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {showBoothInfo && (
+            <div className="mt-3 pt-3 border-t border-border space-y-2.5 text-xs animate-fadeIn">
+              <div className="flex items-center justify-between">
+                <span className="theme-muted flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" /></svg>
+                  Booth ID
+                </span>
+                <div className="flex items-center gap-1 font-mono font-bold theme-text">
+                  <span>{booth?.boothId || booth?.id}</span>
+                  <button
+                    type="button"
+                    onClick={copyBoothId}
+                    className="p-1 hover:text-accent transition-colors"
+                    title="Copy Booth ID"
+                  >
+                    {copiedCode ? (
+                      <span className="text-[10px] text-success font-semibold">Copied!</span>
+                    ) : (
+                      <svg className="w-3.5 h-3.5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="theme-muted flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                  Creator
+                </span>
+                <span className="font-semibold theme-text">{booth?.creator?.name || "Creator"}</span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="theme-muted flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                  Created
+                </span>
+                <span className="theme-text">{formatDate(booth?.createdAt)}</span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="theme-muted flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  Status
+                </span>
+                <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                  booth?.status === "active" ? "bg-success/15 text-success" : "bg-error/15 text-error"
+                }`}>
+                  {booth?.status === "active" ? "Active" : "Closed"}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="theme-muted flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                  Type
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-black/5 dark:bg-white/5 font-semibold text-[10px] theme-text">
+                  {booth?.settings?.restrictDomain ? "Restricted" : "Private"}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Primary Action Button: View Detailed Results (ONLY when canViewResults is true) */}
+        {canViewResults && (
+          <button
+            type="button"
+            onClick={() => navigate(`/booth/${boothId}/results`)}
+            className="w-full py-3.5 rounded-2xl btn-theme text-on-primary font-semibold text-sm flex items-center justify-center gap-2 shadow-md active:scale-95 transition-transform"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+            View Detailed Results
+          </button>
+        )}
+      </div>
+    );
+  };
+
+    // Derived values for display (prefer navigation state for immediate post-create render)
   const source = initialBooth || booth;
   const membersCount = source
     ? Array.isArray(source.members)
@@ -429,35 +871,19 @@ const BoothDetailPage = () => {
   })();
 
   return (
-    <div className="min-h-screen theme-bg py-4 sm:py-6 lg:py-8 px-3 sm:px-4 lg:px-8 relative overflow-hidden">
-      {/* Floating orbs */}
-      <div className="absolute top-0 right-0 -translate-y-12 translate-x-12 pointer-events-none float">
-        <div
-          className="w-48 h-48 sm:w-64 sm:h-64 rounded-full blur-3xl opacity-20"
-          style={{
-            background:
-              "radial-gradient(circle, var(--color-primary), var(--color-accent))",
-          }}
-        />
-      </div>
-      <div
-        className="absolute bottom-0 left-0 translate-y-12 -translate-x-12 pointer-events-none float"
-        style={{ "--stagger-index": 1 }}
-      >
-        <div
-          className="w-48 h-48 sm:w-64 sm:h-64 rounded-full blur-3xl opacity-15"
-          style={{
-            background:
-              "radial-gradient(circle, var(--color-accent), var(--color-secondary))",
-          }}
-        />
+    <div className="min-h-screen theme-bg">
+      {/* ── MOBILE DETAILS VIEW (md:hidden) ── */}
+      <div className="md:hidden">
+        {renderMobileDetails()}
       </div>
 
+      {/* ── DESKTOP DETAILS VIEW (hidden md:block) ── */}
+      <div className="hidden md:block py-4 sm:py-6 lg:py-8 px-3 sm:px-4 lg:px-8 relative overflow-hidden">
       <div className="max-w-6xl mx-auto relative z-10">
         {/* Header */}
         <div className="mb-6 animate-fadeIn">
           <div className="text-center pt-2 sm:pt-3 mb-4">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2 break-words">
+            <h1 className="hidden sm:block text-3xl sm:text-4xl lg:text-5xl font-bold mb-2 break-words">
               <span className="text-gradient">Booth Details</span>
             </h1>
             <p className="text-sm sm:text-base theme-muted font-mono font-semibold mb-1">
@@ -926,12 +1352,12 @@ const BoothDetailPage = () => {
                       />
                     </svg>
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <div className="font-semibold text-success text-sm sm:text-base">
                       Vote Recorded!
                     </div>
                     <div className="theme-muted text-xs sm:text-sm">
-                      Thank you! Your vote has been recorded successfully.
+                      Your vote has been saved and counted.
                     </div>
                   </div>
                 </div>
@@ -1034,144 +1460,6 @@ const BoothDetailPage = () => {
                 </div>
               </div>
             </div>
-
-            {/* Invite Section */}
-            {permissions.isCreator && booth?.inviteCode && (
-              <div
-                className="glass-card p-4 sm:p-6 hover:shadow-xl transition-all duration-300 animate-fadeIn"
-                style={{ "--stagger-index": 6 }}
-              >
-                <div className="flex items-center mb-4 sm:mb-6">
-                  <div className="w-8 h-8 bg-accent rounded-lg flex items-center justify-center mr-3">
-                    <svg
-                      className="w-4 h-4 text-on-accent"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"
-                      />
-                    </svg>
-                  </div>
-                  <h3 className="text-lg sm:text-xl font-bold theme-text">
-                    Share Booth
-                  </h3>
-                </div>
-
-                <div className="space-y-3 sm:space-y-4">
-                  {/* Invite Code */}
-                  <div>
-                    <label className="block text-sm sm:text-base font-medium theme-muted mb-2">
-                      Invite Code
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={booth.inviteCode}
-                        readOnly
-                        className="flex-1 px-3 py-2 bg-theme-surface border border-slate-500 rounded-lg theme-text font-mono text-sm sm:text-base font-semibold focus:outline-none focus:ring-2 focus:ring-accent/20"
-                      />
-                      <button
-                        onClick={handleCopyInviteCode}
-                        className="p-2 bg-accent hover:bg-accent/90 rounded-lg transition-colors shadow-md"
-                        title="Copy code"
-                      >
-                        <svg
-                          className="w-4 h-4 text-on-accent"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Invite Link */}
-                  <div>
-                    <label className="block text-sm sm:text-base font-medium theme-muted mb-2">
-                      Share Link
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={`${window.location.origin}/booth/join/${booth.inviteCode}`}
-                        readOnly
-                        className="flex-1 px-3 py-2 bg-theme-surface border border-slate-500 rounded-lg theme-text text-sm sm:text-base truncate focus:outline-none focus:ring-2 focus:ring-accent/20"
-                      />
-                      <button
-                        onClick={handleCopyDirectInviteLink}
-                        className="p-2 bg-accent hover:bg-accent/90 rounded-lg transition-colors shadow-md"
-                        title="Copy link"
-                      >
-                        <svg
-                          className="w-4 h-4 text-on-accent"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-                          />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={showQRCode}
-                        className="p-2 bg-gradient-to-r from-accent to-accent/80 hover:from-accent/90 hover:to-accent/70 rounded-lg transition-colors shadow-md"
-                        title="Show QR code"
-                      >
-                        <svg
-                          className="w-4 h-4 text-on-accent"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Info Note */}
-                  <div className="flex items-start gap-2 p-2 bg-accent/5 rounded-lg">
-                    <svg
-                      className="w-4 h-4 text-primary mt-0.5 flex-shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    <p className="text-xs sm:text-sm theme-muted">
-                      Share the link for instant access—no code entry needed.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -1186,8 +1474,71 @@ const BoothDetailPage = () => {
           />
         </Suspense>
       )}
+      </div>
+
+      {/* Vote Success Confirmation Modal with Celebration Animation */}
+      <VoteSuccessConfirmationModal
+        isOpen={voteSuccessModal.open}
+        onClose={() => setVoteSuccessModal({ open: false, candidateName: "" })}
+        candidateName={voteSuccessModal.candidateName}
+        onViewResults={() => {
+          setVoteSuccessModal({ open: false, candidateName: "" });
+          navigate(`/booth/${boothId}/results`);
+        }}
+        canViewResults={Boolean(booth?.settings?.resultsVisibleToVoters || permissions.isCreator)}
+      />
     </div>
   );
 };
+
+
+
+const VoteSuccessConfirmationModal = ({ isOpen, onClose, candidateName, onViewResults, canViewResults }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center animate-fadeIn" onClick={onClose}>
+      <div
+        className="w-full max-w-md theme-surface rounded-t-3xl sm:rounded-3xl p-6 pb-28 sm:pb-8 shadow-2xl border border-border animate-slideUp text-center"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Animated Celebration Icon */}
+        <div className="w-20 h-20 rounded-full bg-success/15 text-success border-2 border-success/30 flex items-center justify-center mx-auto my-4 shadow-lg animate-bounce">
+          <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+
+        <h3 className="text-xl font-bold theme-text mb-1">Vote Recorded!</h3>
+        <p className="text-xs sm:text-sm theme-muted leading-relaxed max-w-xs mx-auto mb-6">
+          Your vote has been saved and counted.
+        </p>
+
+        <div className="space-y-2.5">
+          {canViewResults && (
+            <button
+              type="button"
+              onClick={onViewResults}
+              className="w-full py-3.5 rounded-2xl btn-theme text-on-primary font-semibold text-sm flex items-center justify-center gap-2 shadow-md active:scale-95 transition-transform"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              View Results
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full py-3 rounded-2xl theme-surface border border-border theme-text font-semibold text-sm hover:bg-accent-50 active:scale-95 transition-transform"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 
 export default BoothDetailPage;

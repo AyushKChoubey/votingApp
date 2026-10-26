@@ -116,6 +116,10 @@ const boothSchema = new mongoose.Schema({
     },
 
     // Time Settings
+    scheduled: {
+      type: Boolean,
+      default: false,
+    },
     votingStartTime: Date,
     votingEndTime: Date,
 

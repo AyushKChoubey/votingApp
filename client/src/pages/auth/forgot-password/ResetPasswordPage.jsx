@@ -11,6 +11,7 @@ import {
 } from "../../../components/icons/Icons";
 import api from "../../../services/api";
 import { Alert } from "../../../components/layout/Alert";
+import AuthWatermarkBackground from "../../../components/layout/AuthWatermarkBackground";
 
 export default function ResetPasswordPage() {
   // URL params and navigation
@@ -153,6 +154,52 @@ export default function ResetPasswordPage() {
   // Show success message
   if (success) {
     return (
+      <>
+      {/* ══════════════════════════════════════════════════════════════ */}
+      {/* ── MOBILE VIEW ONLY (block md:hidden) - Password Reset Success */}
+      {/* ══════════════════════════════════════════════════════════════ */}
+      <div className="block md:hidden w-full max-w-md mx-auto min-h-screen theme-bg relative px-5 pt-8 pb-10 flex flex-col justify-between overflow-x-hidden animate-fadeIn">
+        <AuthWatermarkBackground />
+
+        <div className="relative z-10 w-full text-center">
+          {/* Success Checkmark Circle */}
+          <div className="flex flex-col items-center justify-center mb-6 mt-8">
+            <div className="w-24 h-24 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 flex items-center justify-center shadow-inner">
+              <div className="w-14 h-14 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-md">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <polyline points="20 6 9 17 4 12" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <h1 className="text-2xl font-extrabold theme-text tracking-tight mb-2">
+            Password Reset!
+          </h1>
+          <p className="text-xs theme-muted leading-relaxed px-4 mb-8">
+            Your password has been changed successfully. You can now log in with your new password.
+          </p>
+
+          <Link
+            to="/login"
+            className="w-full py-3.5 rounded-2xl btn-theme text-on-primary font-bold text-sm shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+          >
+            <span>Continue to Sign In</span>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
+          </Link>
+        </div>
+
+        <div className="relative z-10 text-center text-xs theme-muted">
+          Redirecting in {countdown}s...
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════ */}
+      {/* ── DESKTOP VIEW ONLY (hidden md:block) - Preserved Desktop ─── */}
+      {/* ══════════════════════════════════════════════════════════════ */}
+      <div className="hidden md:block w-full">
       <div className="min-h-screen theme-bg flex items-center justify-center py-4 sm:py-8 px-4 relative overflow-hidden">
         {/* Floating orbs background */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -231,11 +278,237 @@ export default function ResetPasswordPage() {
           </div>
         </div>
       </div>
+      </div>
+      </>
     );
   }
 
   // Show reset form
   return (
+    <>
+      {/* ══════════════════════════════════════════════════════════════ */}
+      {/* ── MOBILE VIEW ONLY (block md:hidden) - Matching Screen 5 ──── */}
+      {/* ══════════════════════════════════════════════════════════════ */}
+      <div className="block md:hidden w-full max-w-md mx-auto min-h-screen theme-bg relative px-5 pt-6 pb-10 flex flex-col justify-between overflow-x-hidden animate-fadeIn">
+        <AuthWatermarkBackground />
+
+        <div className="relative z-10 w-full">
+          {/* Top Back Button */}
+          <div className="flex items-center mb-4">
+            <Link
+              to="/login"
+              className="w-10 h-10 rounded-2xl border border-border theme-surface flex items-center justify-center text-main shadow-xs active:scale-95 transition-transform"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </Link>
+          </div>
+
+          {/* Central Padlock Illustration */}
+          <div className="flex flex-col items-center justify-center mb-5">
+            <div className="relative">
+              <div className="w-24 h-24 rounded-full bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-200/50 dark:border-cyan-800/50 flex items-center justify-center shadow-inner">
+                <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 flex items-center justify-center text-cyan-600 dark:text-cyan-400">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+              </div>
+              <div className="absolute -top-1 right-1 w-2 h-2 rounded-full bg-cyan-400" />
+              <div className="absolute bottom-2 -left-1 w-1.5 h-1.5 rounded-full bg-teal-400" />
+            </div>
+          </div>
+
+          {/* Heading & Subtitle */}
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-extrabold theme-text tracking-tight mb-2">
+              Create New Password
+            </h1>
+            <p className="text-xs theme-muted leading-relaxed px-4">
+              Your new password must be different from previous ones.
+            </p>
+          </div>
+
+          {!tokenValid ? (
+            <div className="space-y-4">
+              <div className="p-4 rounded-2xl border border-red-200 dark:border-red-900/40 bg-red-50/50 dark:bg-red-950/20 text-center">
+                <p className="text-xs font-bold text-red-600 dark:text-red-400 mb-1">
+                  Invalid or Expired Reset Link
+                </p>
+                <p className="text-[11px] theme-muted">
+                  Reset links expire after 10 minutes for security reasons.
+                </p>
+              </div>
+
+              <Link
+                to="/forgot-password"
+                className="w-full py-3.5 rounded-2xl btn-theme text-on-primary font-bold text-sm shadow-md flex items-center justify-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>Request New Reset Link</span>
+              </Link>
+            </div>
+          ) : (
+            <>
+              {error && (
+                <div className="mb-4">
+                  <Alert type="error" message={error} onClose={() => setError("")} />
+                </div>
+              )}
+
+              {/* Form */}
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* New Password */}
+                <div>
+                  <label className="text-xs font-bold theme-text mb-1 block">New Password</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-muted">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                    </div>
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      name="password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full pl-10 pr-10 py-3 rounded-2xl border border-border theme-surface theme-text text-sm focus:outline-none focus:border-accent shadow-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-muted hover:theme-text"
+                    >
+                      {showPassword ? (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Checklist matching Screen 5 */}
+                  <div className="grid grid-cols-2 gap-2 mt-2.5 px-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <div className={`w-4 h-4 rounded-full flex items-center justify-center ${validations.minLength ? "bg-emerald-500 text-white" : "border border-border text-transparent"}`}>
+                        <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <polyline points="20 6 9 17 4 12" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </div>
+                      <span className={`text-[11px] ${validations.minLength ? "theme-text font-medium" : "theme-muted"}`}>8+ characters</span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <div className={`w-4 h-4 rounded-full flex items-center justify-center ${validations.hasUppercase ? "bg-emerald-500 text-white" : "border border-border text-transparent"}`}>
+                        <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <polyline points="20 6 9 17 4 12" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </div>
+                      <span className={`text-[11px] ${validations.hasUppercase ? "theme-text font-medium" : "theme-muted"}`}>One uppercase letter</span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <div className={`w-4 h-4 rounded-full flex items-center justify-center ${validations.hasNumber ? "bg-emerald-500 text-white" : "border border-border text-transparent"}`}>
+                        <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <polyline points="20 6 9 17 4 12" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </div>
+                      <span className={`text-[11px] ${validations.hasNumber ? "theme-text font-medium" : "theme-muted"}`}>One number</span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <div className={`w-4 h-4 rounded-full flex items-center justify-center ${validations.hasLowercase ? "bg-emerald-500 text-white" : "border border-border text-transparent"}`}>
+                        <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <polyline points="20 6 9 17 4 12" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </div>
+                      <span className={`text-[11px] ${validations.hasLowercase ? "theme-text font-medium" : "theme-muted"}`}>One lowercase letter</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Confirm Password */}
+                <div>
+                  <label className="text-xs font-bold theme-text mb-1 block">Confirm Password</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-muted">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                    </div>
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      name="confirmPassword"
+                      required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full pl-10 pr-10 py-3 rounded-2xl border border-border theme-surface theme-text text-sm focus:outline-none focus:border-accent shadow-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-muted hover:theme-text"
+                    >
+                      {showConfirmPassword ? (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Reset Password Button */}
+                <button
+                  type="submit"
+                  disabled={loading || !validations.minLength || !validations.hasUppercase || !validations.hasLowercase || !validations.hasNumber || !validations.passwordsMatch}
+                  className="w-full py-3.5 rounded-2xl btn-theme text-on-primary font-bold text-sm shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-4 disabled:opacity-50"
+                >
+                  {loading ? (
+                    <span>Resetting password...</span>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      <span>Reset Password</span>
+                    </>
+                  )}
+                </button>
+              </form>
+            </>
+          )}
+        </div>
+
+        {/* Footer Link */}
+        <div className="relative z-10 text-center pt-8 text-xs theme-muted">
+          Remember your password?{" "}
+          <Link to="/login" className="font-bold text-accent hover:underline">
+            Sign in
+          </Link>
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════ */}
+      {/* ── DESKTOP VIEW ONLY (hidden md:block) - Preserved Desktop ─── */}
+      {/* ══════════════════════════════════════════════════════════════ */}
+      <div className="hidden md:block w-full">
     <div className="min-h-screen theme-bg flex items-center justify-center py-4 sm:py-8 px-4 relative overflow-hidden">
       {/* Floating orbs background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -491,6 +764,8 @@ export default function ResetPasswordPage() {
         </div>
       </div>
     </div>
+      </div>
+    </>
   );
 }
 

@@ -6,7 +6,9 @@ import {
   lazy,
   Suspense,
 } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams, Navigate } from "react-router-dom";
+import ThemeToggle from "../../components/layout/ThemeToggle";
+import BackButton from "../../components/layout/BackButton";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
 import {
@@ -30,8 +32,14 @@ function Dashboard() {
   const [error, setError] = useState("");
   const [lastUpdated, setLastUpdated] = useState(null);
   const [qrModalData, setQrModalData] = useState(null);
+  const [boothsTab, setBoothsTab] = useState("created");
+  const [boothsSearch, setBoothsSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [searchParams] = useSearchParams();
+  const isBoothsView = searchParams.get("view") === "booths";
 
-  const { user, logout } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const { addToast } = useToast();
 
@@ -65,6 +73,14 @@ function Dashboard() {
       // If last fetch was within the last 1500ms, skip to avoid duplicate calls
       if (lastFetchAtRef.current && now - lastFetchAtRef.current < 1500) return;
 
+      if (!localStorage.getItem("token")) {
+        try {
+          await logout();
+        } catch (e) {}
+        navigate("/", { replace: true });
+        return;
+      }
+
       fetchInFlightRef.current = true;
       lastFetchAtRef.current = now;
 
@@ -79,22 +95,31 @@ function Dashboard() {
         setError("");
         setLastUpdated(new Date());
       } else {
-        // Invalid response structure
-        throw new Error("Invalid response structure from server");
-      }
-    } catch (err) {
-      // Dashboard fetch error
-      // If API returned unauthorized, clear token and redirect to login
-      if (err?.response?.status === 401 || err?.response?.status === 403) {
+        // Unexpected or unauthenticated
         try {
           localStorage.removeItem("token");
         } catch (e) {}
-        // Use the central logout flow to update auth state and trigger a single redirect
         try {
           await logout();
-        } catch (e) {
-          /* ignore */
-        }
+        } catch (e) {}
+        navigate("/", { replace: true });
+        return;
+      }
+    } catch (err) {
+      // Dashboard fetch error
+      // If API returned unauthorized, clear token and redirect to home
+      if (
+        err?.response?.status === 401 ||
+        err?.response?.status === 403 ||
+        !localStorage.getItem("token")
+      ) {
+        try {
+          localStorage.removeItem("token");
+        } catch (e) {}
+        try {
+          await logout();
+        } catch (e) {}
+        navigate("/", { replace: true });
         return;
       }
       setError(err.message || "Failed to load dashboard data");
@@ -102,24 +127,22 @@ function Dashboard() {
       fetchInFlightRef.current = false;
       setLoading(false);
     }
-  }, [logout]);
+  }, [logout, navigate]);
 
   // Initial load — validate token first to avoid showing dashboard for expired sessions
   useEffect(() => {
-    if (!isTokenValid()) {
+    if (!isAuthenticated || !localStorage.getItem("token") || !isTokenValid()) {
       try {
         localStorage.removeItem("token");
       } catch (e) {}
-      // Use central logout flow instead of navigating directly to avoid conflicting redirects
       try {
         logout();
-      } catch (e) {
-        /* ignore */
-      }
+      } catch (e) {}
+      navigate("/", { replace: true });
       return;
     }
     fetchDashboardData();
-  }, [fetchDashboardData]);
+  }, [isAuthenticated, fetchDashboardData, logout, navigate]);
 
   // note: refresh via location.state was removed — dashboard now relies on explicit refresh actions
 
@@ -212,6 +235,10 @@ function Dashboard() {
     });
   };
 
+  if (!isAuthenticated || !user || !localStorage.getItem("token")) {
+    return <Navigate to="/" replace />;
+  }
+
   // Loading state with modern skeleton
   if (loading) {
     return (
@@ -287,234 +314,349 @@ function Dashboard() {
     user: userData = {},
   } = dashboardData || {};
 
-  return (
-    <div className="min-h-screen theme-bg py-4 sm:py-8 px-4 sm:px-6 lg:px-8">
+  const firstName = (userData.name || user?.name || "User").split(" ")[0];
+
+  // My Booths view filtered list
+  const activeBoothsList = boothsTab === "created" ? createdBooths : joinedBooths;
+  const filteredBooths = activeBoothsList.filter((booth) => {
+    // Status filter
+    if (statusFilter !== "all" && booth.status !== statusFilter) {
+      return false;
+    }
+    // Search query
+    if (!boothsSearch.trim()) return true;
+    const q = boothsSearch.toLowerCase();
+    return (
+      booth.name?.toLowerCase().includes(q) ||
+      booth.boothId?.toLowerCase().includes(q) ||
+      booth.inviteCode?.toLowerCase().includes(q)
+    );
+  });
+
+  // Recent activity: last 3 booths touched across created + joined
+  const recentActivity = [...createdBooths, ...joinedBooths]
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 3);
+
+  const renderDesktopDashboard = () => (
+    <div className="py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header - Modern with Theme */}
-        <div className="relative mb-6 sm:mb-12">
-          {/* Floating orbs */}
-          <div className="absolute top-0 right-0 -translate-y-8 translate-x-8 pointer-events-none float">
-            <div
-              className="w-32 h-32 sm:w-48 sm:h-48 rounded-full blur-3xl opacity-15"
-              style={{
-                background:
-                  "radial-gradient(circle, var(--color-primary), var(--color-accent))",
-              }}
-            />
-          </div>
-
-          <div className="text-center">
-            <h1 className="text-2xl sm:text-3xl lg:text-5xl font-bold theme-text mb-2 sm:mb-4 animate-fadeIn">
-              Welcome back,{" "}
-              <span className="text-gradient">
-                {(userData.name || user?.name || "User").split(" ")[0]}
-              </span>
-              !
-            </h1>
-            <p
-              className="theme-muted text-sm sm:text-base lg:text-lg animate-fadeIn"
-              style={{ "--stagger-index": 1 }}
-            >
-              Manage your booths and participate in polls
-            </p>
-          </div>
+        {/* Header */}
+        <div className="relative mb-12 text-center">
+          <h1 className="text-3xl lg:text-5xl font-bold theme-text mb-4 animate-fadeIn">
+            Welcome back,{" "}
+            <span className="text-gradient">{firstName}</span>!
+          </h1>
+          <p className="theme-muted text-base lg:text-lg animate-fadeIn">
+            Manage your booths and participate in polls
+          </p>
         </div>
 
-        {/* Stats Cards - Modern Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-12 stagger-children">
-          <div className="animate-fadeIn" style={{ "--stagger-index": 0 }}>
-            <StatsCard
-              title="Created Booths"
-              value={stats.totalBooths || 0}
-              icon="booth"
-              color="primary"
-            />
-          </div>
-          <div className="animate-fadeIn" style={{ "--stagger-index": 1 }}>
-            <StatsCard
-              title="Joined Booths"
-              value={stats.joinedBooths || 0}
-              icon="users"
-              color="success"
-            />
-          </div>
-          <div className="animate-fadeIn" style={{ "--stagger-index": 2 }}>
-            <StatsCard
-              title="Votes Received"
-              value={stats.totalVotes || 0}
-              icon="votes"
-              color="secondary"
-            />
-          </div>
-          <div className="animate-fadeIn" style={{ "--stagger-index": 3 }}>
-            <StatsCard
-              title="Active Booths"
-              value={stats.activeBooths || 0}
-              icon="active"
-              color="warning"
-            />
-          </div>
+        {/* Stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-12 stagger-children">
+          {[
+            { title: "Created Booths", value: stats.totalBooths || 0, icon: "booth", color: "primary" },
+            { title: "Joined Booths", value: stats.joinedBooths || 0, icon: "users", color: "success" },
+            { title: "Votes Received", value: stats.totalVotes || 0, icon: "votes", color: "secondary" },
+            { title: "Active Booths", value: stats.activeBooths || 0, icon: "active", color: "warning" },
+          ].map((card, i) => (
+            <div key={card.title} className="animate-fadeIn" style={{ "--stagger-index": i }}>
+              <StatsCard {...card} />
+            </div>
+          ))}
         </div>
 
-        {/* Quick Actions - Keep Create/Join Containers Unchanged */}
-        <div className="mb-8 sm:mb-12">
+        {/* Quick Actions */}
+        <div className="mb-12">
           <div className="flex flex-col sm:flex-row gap-4 stagger-children">
-            <Button
-              variant="primary"
-              size="lg"
-              to="/booth/create"
-              fullWidth
-              className="sm:w-auto animate-fadeIn"
-              icon={
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
-              }
-              iconPosition="left"
-              style={{ "--stagger-index": 0 }}
-            >
+            <Button variant="primary" size="lg" to="/booth/create" fullWidth className="sm:w-auto animate-fadeIn"
+              icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>}
+              iconPosition="left" style={{ "--stagger-index": 0 }}>
               Create New Booth
             </Button>
-
-            <Button
-              variant="secondary"
-              size="lg"
-              to="/booth/join"
-              fullWidth
-              className="sm:w-auto animate-fadeIn"
-              icon={
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                  />
-                </svg>
-              }
-              iconPosition="left"
-              style={{ "--stagger-index": 1 }}
-            >
+            <Button variant="secondary" size="lg" to="/booth/join" fullWidth className="sm:w-auto animate-fadeIn"
+              icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>}
+              iconPosition="left" style={{ "--stagger-index": 1 }}>
               Join a Booth
             </Button>
           </div>
         </div>
 
+        {/* Booth lists side-by-side */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Created Booths */}
-          <div
-            className="flex flex-col h-full animate-fadeIn"
-            style={{ "--stagger-index": 0 }}
-          >
+          {/* Created */}
+          <div className="flex flex-col h-full animate-fadeIn" style={{ "--stagger-index": 0 }}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl sm:text-2xl font-bold theme-text flex items-center gap-3">
                 <span className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
-                  <svg
-                    className="w-5 h-5 text-accent"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
+                  <svg className="w-5 h-5 text-accent" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" />
                   </svg>
                 </span>
                 <span>My Booths</span>
-                <span className="glass-card text-sm px-3 py-1.5 rounded-full theme-text font-bold">
-                  {createdBooths?.length || 0}
-                </span>
+                <span className="glass-card text-sm px-3 py-1.5 rounded-full theme-text font-bold">{createdBooths?.length || 0}</span>
               </h2>
             </div>
-
-            {createdBooths && createdBooths.length > 0 ? (
-              <div className="flex-1 glass-card rounded-2xl border border-border overflow-hidden transition-all duration-300 hover:shadow-xl">
-                <div className="h-[500px] overflow-y-auto p-5 space-y-4 scrollbar-thin scrollbar-thumb-accent/20 hover:scrollbar-thumb-accent/40">
+            {createdBooths.length > 0 ? (
+              <div className="flex-1 glass-card rounded-2xl border border-border overflow-hidden hover:shadow-xl transition-all duration-300">
+                <div className="h-[500px] overflow-y-auto p-5 space-y-4">
                   {createdBooths.map((booth) => (
-                    <CreatedBoothCard
-                      key={booth.id}
-                      booth={booth}
-                      onCopyInviteCode={copyInviteCode}
-                      onCopyInviteLink={copyInviteLink}
-                      onShowQRCode={showQRCode}
-                      formatDate={formatDate}
-                    />
+                    <CreatedBoothCard key={booth.id} booth={booth} onCopyInviteCode={copyInviteCode} onCopyInviteLink={copyInviteLink} onShowQRCode={showQRCode} formatDate={formatDate} />
                   ))}
                 </div>
               </div>
             ) : (
-              <EmptyState
-                title="No booths created yet"
-                description="Create your first voting booth to get started"
-                actionText="Create Your First Booth"
-                actionLink="/booth/create"
-                icon="booth"
-              />
+              <EmptyState title="No booths created yet" description="Create your first voting booth to get started" actionText="Create Your First Booth" actionLink="/booth/create" icon="booth" />
             )}
           </div>
 
-          {/* Joined Booths */}
-          <div
-            className="flex flex-col h-full animate-fadeIn"
-            style={{ "--stagger-index": 1 }}
-          >
+          {/* Joined */}
+          <div className="flex flex-col h-full animate-fadeIn" style={{ "--stagger-index": 1 }}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl sm:text-2xl font-bold theme-text flex items-center gap-3">
                 <span className="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center">
-                  <svg
-                    className="w-5 h-5 text-success"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
+                  <svg className="w-5 h-5 text-success" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z" />
                   </svg>
                 </span>
                 <span>Joined Booths</span>
-                <span className="glass-card text-sm px-3 py-1.5 rounded-full theme-text font-bold">
-                  {joinedBooths?.length || 0}
-                </span>
+                <span className="glass-card text-sm px-3 py-1.5 rounded-full theme-text font-bold">{joinedBooths?.length || 0}</span>
               </h2>
             </div>
-
-            {joinedBooths && joinedBooths.length > 0 ? (
-              <div className="flex-1 glass-card rounded-2xl border border-border overflow-hidden transition-all duration-300 hover:shadow-xl">
-                <div className="h-[500px] overflow-y-auto p-5 space-y-4 scrollbar-thin scrollbar-thumb-success/20 hover:scrollbar-thumb-success/40">
+            {joinedBooths.length > 0 ? (
+              <div className="flex-1 glass-card rounded-2xl border border-border overflow-hidden hover:shadow-xl transition-all duration-300">
+                <div className="h-[500px] overflow-y-auto p-5 space-y-4">
                   {joinedBooths.map((booth) => (
                     <JoinedBoothCard key={booth.id} booth={booth} />
                   ))}
                 </div>
               </div>
             ) : (
-              <EmptyState
-                title="No joined booths yet"
-                description="Join a voting booth to participate in polls"
-                actionText="Join a Booth"
-                actionLink="/booth/join"
-                icon="users"
-              />
+              <EmptyState title="No joined booths yet" description="Join a voting booth to participate in polls" actionText="Join a Booth" actionLink="/booth/join" icon="users" />
             )}
           </div>
         </div>
 
-        {error && (
-          <div className="mt-6">
-            <Alert type="warning" message={`Warning: ${error}`} />
-          </div>
-        )}
+        {error && <div className="mt-6"><Alert type="warning" message={`Warning: ${error}`} /></div>}
 
-        {/* QR Code Modal - lazy loaded */}
+        {qrModalData && (
+          <Suspense fallback={null}>
+            <QRCodeModal data={qrModalData} onClose={() => setQrModalData(null)} onDownload={downloadQRCode} />
+          </Suspense>
+        )}
+      </div>
+    </div>
+  );
+
+  if (isBoothsView) {
+    // ── MY BOOTHS SCREEN (Screen 2 from mockup - mobile only) ───────────────
+    return (
+      <div className="min-h-screen theme-bg">
+        {/* Mobile-only view */}
+        <div className="md:hidden px-4 pb-6">
+          {/* Mobile header */}
+          <div className="flex items-center justify-between pt-4 pb-3">
+            <div className="flex items-center gap-2">
+              <BackButton />
+              <h1 className="text-xl font-bold theme-text">My Booths</h1>
+            </div>
+            <ThemeToggle />
+          </div>
+
+        <div className="max-w-7xl mx-auto">
+          {/* Search bar & Filter */}
+          <div className="relative mb-3 flex items-center gap-2">
+            <div className="relative flex-1">
+              <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                <svg className="w-3.5 h-3.5 theme-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
+                </svg>
+              </span>
+              <input
+                type="text"
+                placeholder="Search booths..."
+                value={boothsSearch}
+                onChange={(e) => setBoothsSearch(e.target.value)}
+                className="w-full pl-8 pr-7 py-2 rounded-xl border border-border theme-surface theme-text text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-accent/30 placeholder:theme-muted"
+              />
+              {boothsSearch && (
+                <button
+                  type="button"
+                  onClick={() => setBoothsSearch("")}
+                  className="absolute inset-y-0 right-2.5 flex items-center text-xs theme-muted hover:text-accent"
+                  aria-label="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Filter Toggle Button */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowFilterDropdown((prev) => !prev)}
+                className={`flex h-9 w-9 items-center justify-center rounded-xl border transition-colors ${
+                  statusFilter !== "all"
+                    ? "border-accent bg-accent-50 text-accent"
+                    : "border-border theme-surface theme-text hover:bg-accent-50"
+                }`}
+                aria-label="Filter booths"
+                title="Filter booths by status"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+              </button>
+
+              {/* Filter Dropdown */}
+              {showFilterDropdown && (
+                <div
+                  className="absolute right-0 top-full mt-2 w-44 rounded-xl border border-border theme-surface shadow-xl py-1 z-30 animate-fadeIn"
+                >
+                  <div className="px-3 py-1.5 border-b border-border text-[11px] font-bold uppercase tracking-wider theme-muted">
+                    Filter by status
+                  </div>
+                  {[
+                    { key: "all", label: "All" },
+                    { key: "active", label: "Active" },
+                    { key: "closed", label: "Closed" },
+                    { key: "draft", label: "Draft" },
+                  ].map((filter) => (
+                    <button
+                      key={filter.key}
+                      type="button"
+                      onClick={() => {
+                        setStatusFilter(filter.key);
+                        setShowFilterDropdown(false);
+                      }}
+                      className={`flex items-center justify-between w-full px-3 py-2 text-xs font-medium transition-colors ${
+                        statusFilter === filter.key
+                          ? "bg-accent-50 text-accent font-bold"
+                          : "theme-text hover:bg-accent-50"
+                      }`}
+                    >
+                      <span>{filter.label}</span>
+                      {statusFilter === filter.key && (
+                        <svg className="w-3.5 h-3.5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Active filter badge if any */}
+          {statusFilter !== "all" && (
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xs theme-muted">Filtered by:</span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-accent-50 text-accent border border-accent/20">
+                <span className="capitalize">{statusFilter}</span>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter("all")}
+                  className="hover:opacity-80"
+                  aria-label="Clear filter"
+                >
+                  ✕
+                </button>
+              </span>
+            </div>
+          )}
+
+          {/* Created / Joined tab pills */}
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => setBoothsTab("created")}
+              className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                boothsTab === "created"
+                  ? "btn-theme text-on-primary"
+                  : "theme-surface border border-border theme-text hover:bg-accent-50"
+              }`}
+            >
+              Created ({createdBooths.length})
+            </button>
+            <button
+              onClick={() => setBoothsTab("joined")}
+              className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                boothsTab === "joined"
+                  ? "btn-theme text-on-primary"
+                  : "theme-surface border border-border theme-text hover:bg-accent-50"
+              }`}
+            >
+              Joined ({joinedBooths.length})
+            </button>
+          </div>
+
+          {/* Booth list */}
+          {filteredBooths.length > 0 ? (
+            <div className="space-y-3">
+              {filteredBooths.map((booth) =>
+                boothsTab === "created" ? (
+                  <CreatedBoothCard
+                    key={booth.id}
+                    booth={booth}
+                    onCopyInviteCode={copyInviteCode}
+                    onCopyInviteLink={copyInviteLink}
+                    onShowQRCode={showQRCode}
+                    formatDate={formatDate}
+                  />
+                ) : (
+                  <JoinedBoothCard key={booth.id} booth={booth} />
+                )
+              )}
+            </div>
+          ) : boothsSearch.trim() || statusFilter !== "all" ? (
+            <div className="theme-surface rounded-xl shadow-sm p-8 border border-border text-center">
+              <div className="w-12 h-12 rounded-full bg-accent-50 text-accent mx-auto mb-3 flex items-center justify-center">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
+                </svg>
+              </div>
+              <p className="theme-text text-base font-bold mb-1">No booths found</p>
+              <p className="theme-muted text-xs sm:text-sm mb-4">
+                {boothsSearch.trim() && statusFilter !== "all"
+                  ? `No ${statusFilter} booths matching "${boothsSearch}"`
+                  : boothsSearch.trim()
+                  ? `No booths matching "${boothsSearch}"`
+                  : `No ${statusFilter} booths available`}
+              </p>
+              <div className="flex justify-center gap-2">
+                {boothsSearch.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => setBoothsSearch("")}
+                    className="px-3 py-1.5 rounded-lg border border-border theme-surface text-xs font-semibold theme-text hover:bg-accent-50"
+                  >
+                    Clear Search
+                  </button>
+                )}
+                {statusFilter !== "all" && (
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter("all")}
+                    className="px-3 py-1.5 rounded-lg border border-border theme-surface text-xs font-semibold theme-text hover:bg-accent-50"
+                  >
+                    Reset Filter
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <EmptyState
+              title={boothsTab === "created" ? "No booths created yet" : "No joined booths yet"}
+              description={boothsTab === "created" ? "Create your first voting booth to get started" : "Join a voting booth to participate in polls"}
+              actionText={boothsTab === "created" ? "Create a Booth" : "Join a Booth"}
+              actionLink={boothsTab === "created" ? "/booth/create" : "/booth/join"}
+              icon={boothsTab === "created" ? "booth" : "users"}
+            />
+          )}
+        </div>
+
+        {/* QR Code Modal */}
         {qrModalData && (
           <Suspense fallback={null}>
             <QRCodeModal
@@ -524,6 +666,136 @@ function Dashboard() {
             />
           </Suspense>
         )}
+        </div>
+
+        {/* Desktop view: automatically render regular desktop dashboard */}
+        <div className="hidden md:block">
+          {renderDesktopDashboard()}
+        </div>
+      </div>
+    );
+  }
+
+  // ── HOME / DASHBOARD SCREEN (Screen 1 from mockup) ────────────────────────
+  return (
+    <div className="min-h-screen theme-bg">
+      {/* ── MOBILE HOME ── */}
+      <div className="md:hidden px-4 pb-6">
+        {/* App bar */}
+        <div className="flex items-center justify-between pt-4 pb-4">
+          <div className="flex items-center gap-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl btn-theme shadow-sm">
+              <svg className="h-5 w-5 text-on-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </span>
+            <span className="text-lg font-bold theme-text">VoteBooth</span>
+          </div>
+          <ThemeToggle />
+        </div>
+
+        {/* Greeting */}
+        <div className="mb-5">
+          <h1 className="text-2xl font-bold theme-text">Welcome back,<br />{firstName}!</h1>
+          <p className="text-sm theme-muted mt-1">Manage your booths and participate in polls</p>
+        </div>
+
+        {/* Stat cards 2×2 */}
+        <div className="grid grid-cols-2 gap-3 mb-5">
+          {[
+            { label: "Created", value: stats.totalBooths || 0, icon: "M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" },
+            { label: "Joined", value: stats.joinedBooths || 0, icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" },
+            { label: "Votes", value: stats.totalVotes || 0, icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" },
+            { label: "Active", value: stats.activeBooths || 0, icon: "M13 10V3L4 14h7v7l9-11h-7z" },
+          ].map(({ label, value, icon }) => (
+            <div key={label} className="theme-surface rounded-xl border border-border p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-xs theme-muted">{label}</p>
+                  <p className="mt-1.5 text-2xl font-bold theme-text">{value}</p>
+                </div>
+                <span className="text-accent mt-0.5">
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <path strokeLinecap="round" strokeLinejoin="round" d={icon} />
+                  </svg>
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Action buttons */}
+        <div className="space-y-2 mb-6">
+          <Link
+            to="/booth/create"
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl btn-theme text-sm font-bold shadow-sm"
+          >
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
+            </svg>
+            Create New Booth
+          </Link>
+          <Link
+            to="/booth/join"
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl theme-surface border border-border theme-text text-sm font-bold"
+          >
+            <svg className="h-5 w-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 15l6-6m-3-3h3a3 3 0 013 3v3m-6 6H9a3 3 0 01-3-3v-3" />
+            </svg>
+            Join a Booth
+          </Link>
+        </div>
+
+        {/* Recent Activity */}
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-bold theme-text">Recent Activity</h2>
+          <Link to="/dashboard?view=booths" className="text-xs font-semibold text-accent">
+            See all
+          </Link>
+        </div>
+        <div className="space-y-2">
+          {recentActivity.length > 0 ? (
+            recentActivity.map((booth, idx) => (
+              <Link
+                key={`${booth.id}-${idx}`}
+                to={`/booth/${booth.boothId || booth.id}`}
+                className="flex items-center gap-3 rounded-xl theme-surface border border-border px-3 py-3"
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent-50 text-accent">
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <path strokeLinecap="round" strokeLinejoin="round" d={
+                      idx === 0
+                        ? "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                        : "M13 10V3L4 14h7v7l9-11h-7z"
+                    } />
+                  </svg>
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold theme-text">{booth.name}</span>
+                  <span className="block text-xs theme-muted">{formatDate(booth.createdAt)}</span>
+                </span>
+                <span className={`shrink-0 text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                  booth.status === "active"
+                    ? "bg-green-100 text-green-700"
+                    : booth.status === "closed"
+                    ? "bg-red-100 text-red-600"
+                    : "bg-gray-100 text-gray-500"
+                }`}>
+                  {booth.status?.charAt(0).toUpperCase() + booth.status?.slice(1) || "Active"}
+                </span>
+              </Link>
+            ))
+          ) : (
+            <p className="rounded-xl theme-surface border border-border px-4 py-4 text-sm theme-muted text-center">
+              Your recent booth activity will appear here.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* ── DESKTOP HOME (unchanged layout) ── */}
+      <div className="hidden md:block">
+        {renderDesktopDashboard()}
       </div>
     </div>
   );
@@ -632,9 +904,15 @@ function CreatedBoothCard({
   onShowQRCode,
   formatDate,
 }) {
+  const navigate = useNavigate();
   const [showInviteOptions, setShowInviteOptions] = useState(false);
+  const boothPath = `/booth/${booth.boothId || booth.id}`;
+
   return (
-    <div className="theme-surface rounded-xl shadow-sm hover:shadow-lg border border-border p-4 transition-all duration-300 card-hover overflow-hidden">
+    <div
+      onClick={() => navigate(boothPath)}
+      className="theme-surface rounded-xl shadow-sm hover:shadow-lg border border-border p-4 transition-all duration-300 card-hover overflow-hidden cursor-pointer"
+    >
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
           <p className="text-sm sm:text-base font-bold theme-muted mb-1 font-mono">
@@ -703,36 +981,7 @@ function CreatedBoothCard({
         </div>
       </div>
 
-      <div className="flex gap-2">
-        <Button
-          variant="primary"
-          size="sm"
-          to={`/booth/${booth.boothId || booth.id}`}
-          className="flex-1"
-          icon={
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-              />
-            </svg>
-          }
-        >
-          View
-        </Button>
+      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
         <Button
           variant="secondary"
           size="sm"

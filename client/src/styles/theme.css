@@ -5,22 +5,22 @@
 
 :root {
   /* Brand */
-  --color-primary: #64748b; /* softer slate-500 */
-  --color-on-primary: #f8f9fa;
-  --color-secondary: #8b5cf6; /* softer violet */
-  --color-accent: #0ea5e9; /* sky-500 — use for backgrounds/borders only */
-  --color-accent-text: #0369a1; /* sky-700 — 4.9:1 on light bg, use for TEXT */
-  --color-on-accent: #1e293b; /* softer dark text */
+  --color-primary: #155e75; /* deep teal */
+  --color-on-primary: #f8fafc;
+  --color-secondary: #1e3a5f; /* navy */
+  --color-accent: #0891b2; /* cyan-600 */
+  --color-accent-text: #0e7490; /* cyan-700 */
+  --color-on-accent: #f8fafc;
 
   /* Surfaces - warm, easy on eyes */
-  --color-bg: #f5f5f1; /* warm beige-tinted background */
-  --color-surface: #fafaf8; /* very soft warm off-white */
-  --color-border: #d4d4d0; /* softer warm border */
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-border: #cbd5e1;
 
   /* Text - WCAG AA compliant (min 4.5:1 on bg/surface) */
-  --color-text: #1e293b; /* darkened for better contrast: ~13:1 on bg */
-  --color-text-muted: #4b5563; /* was #64748b (4.1:1) → now 5.9:1 on white */
-  --color-muted: #6b7280; /* was #94a3b8 (2.5:1) → now 5.3:1 on white */
+  --color-text: #0f172a;
+  --color-text-muted: #475569;
+  --color-muted: #64748b;
 
   /* Feedback - WCAG AA compliant on white/surface */
   --color-success: #059669; /* was #10b981 (3.1:1) → darkened to 4.5:1 on white */
@@ -30,8 +30,8 @@
   --color-warning: #b45309; /* was #fbbf24 (text on white 1.8:1) → 5.5:1 on white */
 
   /* Progress */
-  --color-progress-start: #2dd4bf; /* softer teal */
-  --color-progress-end: #38bdf8; /* softer cyan */
+  --color-progress-start: #0f766e;
+  --color-progress-end: #0891b2;
 
   /* Elevation / shadows - very subtle */
   --elevation-1: 0 4px 12px rgba(16, 24, 40, 0.04);
@@ -43,22 +43,22 @@
   --motion-damping: cubic-bezier(0.2, 0.9, 0.2, 1);
 
   /* Glass / backdrop */
-  --glass: rgba(250, 250, 248, 0.65); /* soft warm glass */
+  --glass: rgba(255, 255, 255, 0.82);
 }
 
 /* Dark theme overrides */
 [data-theme="dark"] {
-  --color-primary: #94a3b8; /* softer slate */
-  --color-on-primary: #0f172a;
-  --color-secondary: #a78bfa; /* softer violet */
-  --color-accent: #38bdf8; /* softer sky — bright enough on dark bg */
-  --color-accent-text: #38bdf8; /* same as accent — 8.6:1 on dark bg, passes as text */
-  --color-on-accent: #0f172a;
+  --color-primary: #22d3ee;
+  --color-on-primary: #082f49;
+  --color-secondary: #93c5fd;
+  --color-accent: #22d3ee;
+  --color-accent-text: #67e8f9;
+  --color-on-accent: #082f49;
 
   /* Warm dark surfaces - less harsh on eyes */
-  --color-bg: #151820; /* warmer dark background */
-  --color-surface: #1c2028; /* warmer dark surface, not pure black */
-  --color-border: #2d3441; /* softer, warmer border */
+  --color-bg: #0f172a;
+  --color-surface: #172033;
+  --color-border: #334155;
 
   /* Text - WCAG AA on dark surfaces */
   --color-text: #f1f5f9; /* slightly brighter than before for contrast */
@@ -72,15 +72,15 @@
   --color-on-info: #0f172a;
   --color-warning: #fcd34d; /* 6.5:1 on #151820 ✓ */
 
-  --color-progress-start: #2dd4bf; /* softer teal */
-  --color-progress-end: #38bdf8; /* softer cyan */
+  --color-progress-start: #2dd4bf;
+  --color-progress-end: #22d3ee;
 
   /* Very subtle shadows */
   --elevation-1: 0 4px 12px rgba(0, 0, 0, 0.15);
   --elevation-2: 0 8px 24px rgba(0, 0, 0, 0.25);
 
   /* Warm glass effect */
-  --glass: rgba(28, 32, 40, 0.65);
+  --glass: rgba(23, 32, 51, 0.86);
 }
 
 /* Helper utilities that use variables (small, centralized helpers)
@@ -165,6 +165,17 @@
 }
 .focus\:ring-accent:focus {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 15%, transparent);
+}
+
+/* Native/mobile bottom navigation clears Android gesture and browser safe areas. */
+.mobile-bottom-nav {
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 768px) {
+  .mobile-bottom-nav {
+    display: none;
+  }
 }
 
 /* Additional color utilities for icons and text */
