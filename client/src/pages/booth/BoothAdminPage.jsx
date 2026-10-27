@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, lazy, Suspense } from "react";
+import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import api, { boothService } from "../../services/api";
+import { boothService } from "../../services/api";
 import { Alert } from "../../components/layout/Alert";
 import { LoadingButton, PageLoading } from "../../components/layout/Loading";
 import { useToast } from "../../components/layout/Toast";
@@ -8,10 +8,14 @@ import ConfirmModal from "../../components/layout/ConfirmModal";
 import Button from "../../components/layout/Button";
 import BackButton from "../../components/layout/BackButton";
 import Toggle from "../../components/layout/Toggle";
+import AppWatermark from "../../components/layout/AuthWatermarkBackground";
+import { shareBooth } from "../../services/shareService";
+import PullToRefresh from "../../components/layout/PullToRefresh";
+import { useRegisterModal } from "../../hooks/useRegisterModal";
 const QRCodeModal = lazy(() =>
   import("../../components/booth/QRCodeModal").then((m) => ({
-    default: m.QRCodeModal,
-  })),
+    default: m.QRCodeModal || m.default,
+  }))
 );
 
 // Helper function to convert ISO datetime to datetime-local format
@@ -74,6 +78,16 @@ const BoothAdminPage = () => {
     open: false,
     member: null,
   });
+
+  useRegisterModal(Boolean(qrModalData), () => setQrModalData(null));
+  useRegisterModal(showMenuDropdown, () => setShowMenuDropdown(false));
+  useRegisterModal(showShareModal, () => setShowShareModal(false));
+  useRegisterModal(showCloseBoothModal, () => setShowCloseBoothModal(false));
+  useRegisterModal(showReopenBoothModal, () => setShowReopenBoothModal(false));
+  useRegisterModal(showResetInviteModal, () => setShowResetInviteModal(false));
+  useRegisterModal(showDeleteBoothModal, () => setShowDeleteBoothModal(false));
+  useRegisterModal(candidateModal.open, () => setCandidateModal((prev) => ({ ...prev, open: false })));
+  useRegisterModal(memberActionModal.open, () => setMemberActionModal({ open: false, member: null }));
 
   const handleSaveCandidate = async ({ name, description }) => {
     try {
@@ -409,11 +423,21 @@ const BoothAdminPage = () => {
       setUpdating(true);
       setError("");
 
-      const payload = {
-        ...settings,
-        votingStartTime: settings.scheduled ? (settings.votingStartTime || null) : null,
-        votingEndTime: settings.scheduled ? (settings.votingEndTime || null) : null,
-      };
+      const payload = { ...settings };
+      if (settings.scheduled === true) {
+        payload.votingStartTime = settings.votingStartTime || null;
+        payload.votingEndTime = settings.votingEndTime || null;
+      } else if (settings.scheduled === false && (booth?.settings?.scheduled || booth?.settings?.votingEndTime)) {
+        payload.votingStartTime = null;
+        payload.votingEndTime = null;
+      } else {
+        if (booth?.settings?.votingStartTime && !settings.votingStartTime) {
+          payload.votingStartTime = booth.settings.votingStartTime;
+        }
+        if (booth?.settings?.votingEndTime && !settings.votingEndTime) {
+          payload.votingEndTime = booth.settings.votingEndTime;
+        }
+      }
 
       const response = await boothService.updateSettings(boothId, payload);
 
@@ -651,51 +675,29 @@ const BoothAdminPage = () => {
     try {
       await navigator.clipboard.writeText(text);
       addToast(message || "Copied to clipboard", "success");
-    } catch (err) {
+    } catch {
       addToast("Failed to copy to clipboard", "error");
-    }
-  };
-
-  // Inline share/copy feedback (used in invite card) — avoids using global toasts in that card
-  const [shareStatus, setShareStatus] = useState("");
-  const clearShareStatus = () => setTimeout(() => setShareStatus(""), 3500);
-
-  const copyAndShowInline = async (text, message) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setShareStatus(message || "Copied to clipboard");
-      clearShareStatus();
-    } catch (err) {
-      setShareStatus("Failed to copy to clipboard");
-      clearShareStatus();
     }
   };
 
   const handleShareInvite = async () => {
     if (!booth || !booth.inviteCode) return;
-    const joinLink = `${window.location.origin}/booth/join/${booth.inviteCode}`;
-    const message = `You're invited to join \"${booth.name}\"!\n\n${booth.description || ""}\n\nJoin with code: ${booth.inviteCode}\nOr open: ${joinLink}\n\nSee you there!`;
-
-    // Use native share when available (mobile), otherwise copy fallback
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `Join: ${booth.name}`,
-          text: message,
-          url: joinLink,
-        });
-        return;
-      } catch (err) {
-        // If user cancelled share, silently ignore. Otherwise fallback to copy.
-        if (err.name !== "AbortError") {
-          await copyToClipboard(message, "Invite message copied to clipboard");
-        }
-        return;
+    try {
+      const res = await shareBooth({
+        boothName: booth.name,
+        inviteCode: booth.inviteCode,
+        inviteLink: `${window.location.origin}/join/${booth.inviteCode}`,
+      });
+      if (res?.method === "clipboard") {
+        addToast("Invite link copied to clipboard", "success");
       }
+    } catch (err) {
+      console.warn("Share failed, falling back to copy:", err);
+      await copyToClipboard(
+        `${window.location.origin}/join/${booth.inviteCode}`,
+        "Invite link copied to clipboard"
+      );
     }
-
-    // Fallback: copy message to clipboard and notify
-    await copyToClipboard(message, "Invite message copied to clipboard");
   };
 
   const fetchActivity = async () => {
@@ -852,26 +854,22 @@ const BoothAdminPage = () => {
             {(settings.allowedEmailDomains &&
               settings.allowedEmailDomains.length > 0) ||
             settings.restrictByEmailDomain ? (
-              <span className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold bg-accent/10 text-accent border border-accent/20">
+              <span className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold bg-transparent text-cyan-600 dark:text-cyan-400 border border-cyan-500/50">
                 DOMAIN RESTRICTED
               </span>
             ) : null}
 
             {settings.scheduled &&
               (settings.votingStartTime || settings.votingEndTime) && (
-                <span className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold bg-secondary/10 text-secondary border border-secondary/20">
+                <span className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold bg-transparent text-sky-600 dark:text-sky-400 border border-sky-500/50">
                   SCHEDULED
                 </span>
               )}
             {countdownText && (
-              <span
-                style={{
-                  background: "#fee2e2",
-                  color: "#b91c1c",
-                  border: "1px solid #fecaca",
-                }}
-                className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold"
-              >
+              <span className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold bg-transparent text-red-600 dark:text-red-400 border border-red-500/60 dark:border-red-500/50 flex items-center gap-1.5 animate-pulse">
+                <svg className="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
                 {countdownText}
               </span>
             )}
@@ -939,22 +937,22 @@ const BoothAdminPage = () => {
           </div>
 
           {/* Status Toggle moved to header */}
-          {/* Tab Bar */}
+          {/* Tab Bar: separated pills */}
           <div
-            className="flex items-center gap-1 p-1 glass-card rounded-xl w-fit mx-auto animate-fadeIn mb-4"
+            className="flex items-center gap-2.5 w-fit mx-auto animate-fadeIn mb-4"
             style={{ "--stagger-index": 4 }}
           >
             <button
               onClick={() => handleTabChange("overview")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
                 activeTab === "overview"
-                  ? "bg-accent/20 text-accent border border-accent/30 shadow-sm"
-                  : "theme-muted hover:text-accent hover:bg-accent/10"
+                  ? "btn-theme text-on-primary shadow-sm"
+                  : "theme-surface border border-border theme-muted hover:theme-text shadow-2xs"
               }`}
             >
               <svg
                 className={`w-4 h-4 ${
-                  activeTab === "overview" ? "text-accent" : "text-accent/60"
+                  activeTab === "overview" ? "text-on-primary" : "text-cyan-600 dark:text-cyan-400"
                 }`}
                 fill="none"
                 stroke="currentColor"
@@ -971,15 +969,15 @@ const BoothAdminPage = () => {
             </button>
             <button
               onClick={() => handleTabChange("activity")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
                 activeTab === "activity"
-                  ? "bg-accent/20 text-accent border border-accent/30 shadow-sm"
-                  : "theme-muted hover:text-accent hover:bg-accent/10"
+                  ? "btn-theme text-on-primary shadow-sm"
+                  : "theme-surface border border-border theme-muted hover:theme-text shadow-2xs"
               }`}
             >
               <svg
                 className={`w-4 h-4 ${
-                  activeTab === "activity" ? "text-accent" : "text-accent/60"
+                  activeTab === "activity" ? "text-on-primary" : "text-cyan-600 dark:text-cyan-400"
                 }`}
                 fill="none"
                 stroke="currentColor"
@@ -1914,6 +1912,10 @@ const BoothAdminPage = () => {
                                       "error",
                                     );
                                     await fetchBoothDetails();
+                                    throw new Error(
+                                      response?.error ||
+                                        "Failed to save candidates",
+                                    );
                                   }
                                 } catch (err) {
                                   addToast(
@@ -2430,7 +2432,7 @@ const BoothAdminPage = () => {
         <div className="px-4 pt-2 mb-3 w-full max-w-full">
           <div className="theme-surface rounded-2xl border border-border p-4 shadow-sm">
             <div className="flex items-start gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-accent-50 text-accent border border-accent/20 flex items-center justify-center shrink-0 shadow-xs">
+              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 flex items-center justify-center shrink-0 shadow-xs">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 14l9-5-9-5-9 5 9 5z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
@@ -2461,7 +2463,7 @@ const BoothAdminPage = () => {
                   <button
                     type="button"
                     onClick={() => copyToClipboard(booth?.boothId, "Booth ID copied")}
-                    className="p-0.5 hover:text-accent shrink-0"
+                    className="p-1 -m-0.5 hover:text-accent shrink-0"
                     title="Copy Booth ID"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2470,12 +2472,12 @@ const BoothAdminPage = () => {
                   </button>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold btn-theme text-on-primary shadow-xs">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-transparent text-cyan-600 dark:text-cyan-400 border border-cyan-500/50">
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                     Creator
                   </span>
                   {countdownText && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-300 dark:border-red-800">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-transparent text-red-600 dark:text-red-400 border border-red-500/60 dark:border-red-500/50">
                       <svg className="w-3 h-3 animate-pulse text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                       {countdownText}
                     </span>
@@ -2486,9 +2488,9 @@ const BoothAdminPage = () => {
           </div>
         </div>
 
-        {/* Segmented Tab Bar: 4 columns with ZERO horizontal scroll */}
-        <div className="px-4 py-2.5 w-full max-w-full">
-          <div className="grid grid-cols-4 gap-1 sm:gap-1.5 w-full">
+        {/* Segmented Tab Bar: 4-column responsive grid matching user image media_1793114419171_d79482e9.png */}
+        <div className="px-4 py-2 w-full max-w-full">
+          <div className="grid grid-cols-4 gap-1.5 w-full">
             {[
               { id: "overview", label: "Overview" },
               { id: "members", label: "Members" },
@@ -2499,10 +2501,10 @@ const BoothAdminPage = () => {
                 key={tab.id}
                 type="button"
                 onClick={() => setMobileTab(tab.id)}
-                className={`py-1.5 px-1 rounded-full text-xs font-semibold text-center transition-all duration-150 truncate ${
+                className={`py-2 px-1 text-center rounded-full text-xs font-semibold truncate transition-all duration-150 ${
                   mobileTab === tab.id
                     ? "btn-theme text-on-primary shadow-sm"
-                    : "border border-border theme-surface theme-muted hover:theme-text"
+                    : "border border-border theme-surface theme-muted hover:theme-text shadow-2xs"
                 }`}
               >
                 {tab.label}
@@ -2517,7 +2519,7 @@ const BoothAdminPage = () => {
             {/* 3 Stat Cards in a row */}
             <div className="grid grid-cols-3 gap-2.5 px-4 my-2 w-full">
               <div className="theme-surface rounded-2xl border border-border p-3 text-center">
-                <div className="w-8 h-8 mx-auto mb-1.5 rounded-xl bg-accent-50 text-accent flex items-center justify-center">
+                <div className="w-8 h-8 mx-auto mb-1.5 rounded-xl bg-cyan-500/10 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 flex items-center justify-center">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                 </div>
                 <div className="text-xl font-bold theme-text">{booth?.totalVotes || 0}</div>
@@ -2525,7 +2527,7 @@ const BoothAdminPage = () => {
               </div>
 
               <div className="theme-surface rounded-2xl border border-border p-3 text-center">
-                <div className="w-8 h-8 mx-auto mb-1.5 rounded-xl bg-accent-50 text-accent flex items-center justify-center">
+                <div className="w-8 h-8 mx-auto mb-1.5 rounded-xl bg-cyan-500/10 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 flex items-center justify-center">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                 </div>
                 <div className="text-xl font-bold theme-text">{booth?.members?.length || 0}</div>
@@ -2533,7 +2535,7 @@ const BoothAdminPage = () => {
               </div>
 
               <div className="theme-surface rounded-2xl border border-border p-3 text-center">
-                <div className="w-8 h-8 mx-auto mb-1.5 rounded-xl bg-accent-50 text-accent flex items-center justify-center">
+                <div className="w-8 h-8 mx-auto mb-1.5 rounded-xl bg-cyan-500/10 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 flex items-center justify-center">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                 </div>
                 <div className="text-xl font-bold theme-text">{booth?.candidates?.length || 0}</div>
@@ -2882,19 +2884,31 @@ const BoothAdminPage = () => {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {member.hasVoted && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-semibold bg-accent-50 dark:bg-accent/15 text-accent border border-accent/20">
+                            <svg className="w-3 h-3 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                            </svg>
+                            Voted
+                          </span>
+                        )}
                         {member.user?.id === booth?.creator?.id || member.user?.id === booth?.creator ? (
-                          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-warning/15 text-warning border border-warning/30">
-                            Admin
+                          <span className="px-2.5 py-1 rounded-xl text-[11px] font-semibold bg-accent-50 dark:bg-accent/15 text-accent border border-accent/20">
+                            Creator
                           </span>
                         ) : (
                           <button
                             type="button"
-                            onClick={() => setMemberActionModal({ open: true, member })}
-                            className="p-1.5 rounded-full hover:bg-accent-50 text-muted hover:theme-text"
-                            aria-label="Member options"
+                            onClick={() => handleRemoveMember(member.user?.id || member.user?._id || member.id)}
+                            disabled={removingMembers.has(member.user?.id || member.user?._id)}
+                            className="p-1.5 rounded-xl text-error bg-error/10 hover:bg-error/20 border border-error/30 transition-all active:scale-95 disabled:opacity-50"
+                            aria-label="Delete member"
+                            title="Delete member"
                           >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" /></svg>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
                           </button>
                         )}
                       </div>
@@ -3198,14 +3212,17 @@ const BoothAdminPage = () => {
     );
   };
   return (
-    <div className="min-h-screen theme-bg">
+    <div className="min-h-screen theme-bg relative overflow-hidden">
+      <AppWatermark variant="shield" />
       {/* ── MOBILE ADMIN VIEW (md:hidden) ── */}
-      <div className="md:hidden">
-        {renderMobileAdmin()}
+      <div className="md:hidden relative z-10">
+        <PullToRefresh onRefresh={fetchBoothDetails}>
+          {renderMobileAdmin()}
+        </PullToRefresh>
       </div>
 
       {/* ── DESKTOP ADMIN VIEW (hidden md:block) ── */}
-      <div className="hidden md:block">
+      <div className="hidden md:block relative z-10">
         {renderDesktopAdmin()}
       </div>
 
@@ -3655,13 +3672,15 @@ const MobileDeleteBoothBottomSheet = ({ isOpen, onClose, onConfirm, loading, boo
 const MobileCandidateModal = ({ isOpen, onClose, onSave, mode, initialData, saving }) => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const wasOpenRef = useRef(false);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !wasOpenRef.current) {
       setName(initialData?.name || "");
       setDescription(initialData?.description || "");
     }
-  }, [isOpen, initialData]);
+    wasOpenRef.current = isOpen;
+  }, [isOpen, initialData?.name, initialData?.description]);
 
   if (!isOpen) return null;
 
@@ -3786,7 +3805,7 @@ const AddCandidateInline = ({ onAdd }) => {
       setName("");
       setDescription("");
       setOpen(false);
-    } catch (err) {
+    } catch {
       // onAdd should surface errors via toasts
     } finally {
       setAdding(false);

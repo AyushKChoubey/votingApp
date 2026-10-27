@@ -6,6 +6,9 @@ import { PageLoading } from "../../components/layout/Loading";
 import Button from "../../components/layout/Button";
 import BackButton from "../../components/layout/BackButton";
 import { useToast } from "../../components/layout/Toast";
+import AppWatermark from "../../components/layout/AuthWatermarkBackground";
+import PullToRefresh from "../../components/layout/PullToRefresh";
+import { useRegisterModal } from "../../hooks/useRegisterModal";
 
 const BoothResultsPage = () => {
   const { boothId } = useParams();
@@ -20,6 +23,10 @@ const BoothResultsPage = () => {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showBoothInfo, setShowBoothInfo] = useState(false);
   const [showMenuDropdown, setShowMenuDropdown] = useState(false);
+
+  useRegisterModal(showExportModal, () => setShowExportModal(false));
+  useRegisterModal(showMenuDropdown, () => setShowMenuDropdown(false));
+  useRegisterModal(showBoothInfo, () => setShowBoothInfo(false));
   const [countdownText, setCountdownText] = useState(null);
   const [copiedId, setCopiedId] = useState(false);
   const [expandDescription, setExpandDescription] = useState(false);
@@ -38,13 +45,9 @@ const BoothResultsPage = () => {
         setBooth(response.data.booth);
         setPermissions(response.data.permissions);
 
-        // Check if user can view results
-        if (
-          !response.data.permissions.isCreator &&
-          !response.data.permissions.hasVoted &&
-          !response.data.booth.settings?.resultsVisibleToVoters
-        ) {
-          setError("You need to vote or be the booth creator to view results");
+        // Only admin/creator can access the dedicated results page; regular voters only see the detail page results section
+        if (!response.data.permissions.isCreator) {
+          navigate(`/booth/${boothId}`, { replace: true });
           return;
         }
       } else {
@@ -121,7 +124,21 @@ const BoothResultsPage = () => {
     return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
   }
 
+  const escapeHtml = (unsafe) => {
+    if (unsafe === null || unsafe === undefined) return "";
+    return String(unsafe)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/\x27/g, "&#039;");
+  };
+
   const handlePrintResults = () => {
+    if (!permissions.isCreator) {
+      addToast("Only booth organizers can export results", "error");
+      return;
+    }
     try {
       setError("");
 
@@ -147,7 +164,7 @@ const BoothResultsPage = () => {
                 <!DOCTYPE html>
                 <html>
                 <head>
-                    <title>${booth?.name || "Booth"} - Result</title>
+                    <title>${escapeHtml(booth?.name || "Booth")} - Result</title>
                     <meta charset="UTF-8">
                     <style>
                         * {
@@ -397,10 +414,10 @@ const BoothResultsPage = () => {
                 <body>
                     <div class="print-container">
                         <div class="results-header">
-                          <div class="results-title">${booth?.name || "Voting Booth"}</div>
+                          <div class="results-title">${escapeHtml(booth?.name || "Voting Booth")}</div>
                           <div class="results-subtitle">Result</div>
                           <div class="meta-info">
-                            ID: ${booth?.boothId || booth?.id || ""} · Generated ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })} at ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                            ID: ${escapeHtml(booth?.boothId || booth?.id || "")} · Generated ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })} at ${new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
                           </div>
                         </div>
                         
@@ -428,9 +445,9 @@ const BoothResultsPage = () => {
                             ? `
                         <div class="winner-section">
                             <div class="winner-badge">🏆 Winner</div>
-                            <div class="winner-name">${winner.name}</div>
+                            <div class="winner-name">${escapeHtml(winner.name)}</div>
                             <div class="winner-stats">${winner.voteCount} votes · ${calculatePercentage(winner.voteCount, booth.totalVotes)}%</div>
-                            ${winner.description ? `<div style="margin-top: 12px; color: #92400e; font-size: 0.95rem;">${winner.description}</div>` : ""}
+                            ${winner.description ? `<div style="margin-top: 12px; color: #92400e; font-size: 0.95rem;">${escapeHtml(winner.description)}</div>` : ""}
                         </div>
                         `
                             : ""
@@ -453,8 +470,8 @@ const BoothResultsPage = () => {
                                     <div class="candidate-header">
                                         <div class="candidate-left">
                                             <span class="candidate-rank">${index + 1}</span>
-                                            <div class="candidate-name">${candidate.name}${isWinner ? '<span class="winner-crown">👑</span>' : ""}</div>
-                                            ${candidate.description ? `<div class="candidate-description">${candidate.description}</div>` : ""}
+                                            <div class="candidate-name">${escapeHtml(candidate.name)}${isWinner ? '<span class="winner-crown">👑</span>' : ""}</div>
+                                            ${candidate.description ? `<div class="candidate-description">${escapeHtml(candidate.description)}</div>` : ""}
                                         </div>
                                         <div class="candidate-votes">
                                             <div class="vote-count">${candidate.voteCount}</div>
@@ -675,14 +692,16 @@ const BoothResultsPage = () => {
                   </button>
                 )}
                 <div className="h-px bg-border my-1" />
-                <button
-                  type="button"
-                  onClick={() => { setShowMenuDropdown(false); setShowExportModal(true); }}
-                  className="w-full px-4 py-2.5 text-left text-xs font-semibold text-error hover:bg-error/10 flex items-center gap-2"
-                >
-                  <svg className="w-4 h-4 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                  Export as PDF
-                </button>
+                {permissions.isCreator && (
+                  <button
+                    type="button"
+                    onClick={() => { setShowMenuDropdown(false); setShowExportModal(true); }}
+                    className="w-full px-4 py-2.5 text-left text-xs font-semibold text-error hover:bg-error/10 flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    Export as PDF
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -703,8 +722,8 @@ const BoothResultsPage = () => {
                 <span
                   className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide uppercase shrink-0 ${
                     booth?.status === "active"
-                      ? "bg-success/15 text-success border border-success/30"
-                      : "bg-error/15 text-error border border-error/30"
+                      ? "bg-transparent text-emerald-600 dark:text-emerald-400 border border-emerald-500/50"
+                      : "bg-transparent text-red-600 dark:text-red-400 border border-red-500/50"
                   }`}
                 >
                   {booth?.status === "active" ? "Active" : "Closed"}
@@ -712,13 +731,13 @@ const BoothResultsPage = () => {
               </div>
               <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
                 {permissions.isCreator && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold btn-theme text-on-primary shadow-xs">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-transparent text-cyan-600 dark:text-cyan-400 border border-cyan-500/50">
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                     Creator
                   </span>
                 )}
                 {countdownText && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-300 dark:border-red-800">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-transparent text-red-600 dark:text-red-400 border border-red-500/60 dark:border-red-500/50">
                     <svg className="w-3 h-3 animate-pulse text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     {countdownText}
                   </span>
@@ -918,8 +937,10 @@ const BoothResultsPage = () => {
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                   Status
                 </span>
-                <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
-                  booth?.status === "active" ? "bg-success/15 text-success" : "bg-error/15 text-error"
+                <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] bg-transparent border ${
+                  booth?.status === "active"
+                    ? "text-emerald-600 dark:text-emerald-400 border-emerald-500/50"
+                    : "text-rose-600 dark:text-rose-400 border-rose-500/50"
                 }`}>
                   {booth?.status === "active" ? "Active" : "Closed"}
                 </span>
@@ -978,14 +999,16 @@ const BoothResultsPage = () => {
         </div>
 
         {/* Primary Action: Export as PDF */}
-        <button
-          type="button"
-          onClick={() => setShowExportModal(true)}
-          className="w-full py-3.5 rounded-2xl bg-error hover:bg-error/90 text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-md active:scale-95 transition-transform"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-          Export as PDF
-        </button>
+        {permissions.isCreator && (
+          <button
+            type="button"
+            onClick={() => setShowExportModal(true)}
+            className="w-full py-3.5 rounded-2xl bg-error hover:bg-error/90 text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-md active:scale-95 transition-transform"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            Export as PDF
+          </button>
+        )}
       </div>
     );
   };
@@ -994,14 +1017,17 @@ const BoothResultsPage = () => {
   const turnout = getTurnout();
 
   return (
-    <div className="min-h-screen theme-bg">
+    <div className="min-h-screen theme-bg relative overflow-hidden">
+      <AppWatermark variant="shield" />
       {/* ── MOBILE RESULTS VIEW (md:hidden) ── */}
-      <div className="md:hidden">
-        {renderMobileResults()}
+      <div className="md:hidden relative z-10">
+        <PullToRefresh onRefresh={fetchBoothDetails}>
+          {renderMobileResults()}
+        </PullToRefresh>
       </div>
 
       {/* ── DESKTOP RESULTS VIEW (hidden md:block) ── */}
-      <div className="hidden md:block py-4 sm:py-6 lg:py-8 px-3 sm:px-4 lg:px-8 relative overflow-hidden">
+      <div className="hidden md:block py-4 sm:py-6 lg:py-8 px-3 sm:px-4 lg:px-8 relative overflow-hidden z-10">
       {/* Animated Background Elements */}
       <div className="absolute top-0 right-0 -translate-y-12 translate-x-12 pointer-events-none float">
         <div
@@ -1533,7 +1559,7 @@ const BoothResultsPage = () => {
 const MobileExportResultsBottomSheet = ({ isOpen, onClose, onExport, loading }) => {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center animate-fadeIn" onClick={onClose}>
+    <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-end justify-center animate-fadeIn" onClick={onClose}>
       <div className="w-full max-w-lg theme-surface rounded-t-3xl p-6 pb-28 sm:pb-8 shadow-2xl border-t border-border animate-slideUp text-center" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-2">
           <div className="w-6" />

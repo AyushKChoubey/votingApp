@@ -4,6 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import { LoadingButton, PageLoading } from "../../components/layout/Loading";
 import { useToast } from "../../components/layout/Toast";
 import api from "../../services/api";
+import AppWatermark from "../../components/layout/AuthWatermarkBackground";
 
 const ProfilePage = () => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -342,7 +343,8 @@ const ProfilePage = () => {
       {/* ══════════════════════════════════════════════════════════════ */}
       {/* ── MOBILE VIEW ONLY (block md:hidden) Matching Image 1 ────── */}
       {/* ══════════════════════════════════════════════════════════════ */}
-      <div className="block md:hidden w-full max-w-lg mx-auto overflow-x-hidden px-4 pt-3 pb-24 animate-fadeIn">
+      <div className="block md:hidden w-full max-w-lg mx-auto overflow-x-hidden px-4 pt-3 pb-24 animate-fadeIn relative">
+        <AppWatermark variant="grid" />
         {/* Single Header: Back button + Title on Left, Settings gear on Top Right Corner */}
         <div className="flex items-center justify-between mb-4 pt-1">
           <div className="flex items-center gap-3">

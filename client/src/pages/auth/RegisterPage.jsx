@@ -154,7 +154,7 @@ const Register = () => {
       {/* ══════════════════════════════════════════════════════════════ */}
       {/* ── MOBILE VIEW ONLY (block md:hidden) - Matching Screen 2 ──── */}
       {/* ══════════════════════════════════════════════════════════════ */}
-      <div className="block md:hidden w-full max-w-md mx-auto min-h-screen theme-bg relative px-5 pt-8 pb-10 flex flex-col justify-between overflow-x-hidden animate-fadeIn">
+      <div className="md:hidden w-full max-w-md mx-auto min-h-[100dvh] theme-bg relative px-5 pt-8 pb-10 flex flex-col justify-between overflow-x-hidden animate-fadeIn">
         <AuthWatermarkBackground />
 
         <div className="relative z-10 w-full">
@@ -279,53 +279,93 @@ const Register = () => {
                 </button>
               </div>
 
-              {/* 4-bar Password Strength Meter from Screen 2 */}
+              {/* Password Strength Status Bar & Requirements */}
               {formData.password && (
-                <div className="flex items-center gap-2 mt-2">
-                  <div className="flex-1 flex gap-1.5 h-1.5">
-                    {[0, 1, 2, 3].map((idx) => {
-                      const count = [
-                        passwordRequirements.length,
-                        passwordRequirements.uppercase,
-                        passwordRequirements.lowercase,
-                        passwordRequirements.number,
-                      ].filter(Boolean).length;
-                      const active = idx < count;
-                      const color =
-                        count <= 1
-                          ? "bg-rose-500"
-                          : count <= 2
-                          ? "bg-amber-400"
-                          : count === 3
-                          ? "bg-sky-400"
-                          : "bg-emerald-500";
-                      return (
-                        <div
-                          key={idx}
-                          className={`flex-1 rounded-full transition-all duration-300 ${
-                            active ? color : "bg-border/60"
-                          }`}
-                        />
-                      );
-                    })}
-                  </div>
-                  <span className="text-[11px] font-bold text-emerald-500">
-                    {[
-                      passwordRequirements.length,
-                      passwordRequirements.uppercase,
-                      passwordRequirements.lowercase,
-                      passwordRequirements.number,
-                    ].filter(Boolean).length === 4
-                      ? "Strong"
-                      : [
+                <div className="mt-2 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 flex gap-1.5 h-1.5">
+                      {[0, 1, 2, 3].map((idx) => {
+                        const count = [
                           passwordRequirements.length,
                           passwordRequirements.uppercase,
                           passwordRequirements.lowercase,
                           passwordRequirements.number,
-                        ].filter(Boolean).length >= 2
-                      ? "Medium"
-                      : "Weak"}
-                  </span>
+                        ].filter(Boolean).length;
+                        const active = idx < count;
+                        const color =
+                          count <= 1
+                            ? "bg-rose-500"
+                            : count <= 2
+                            ? "bg-amber-400"
+                            : count === 3
+                            ? "bg-sky-400"
+                            : "bg-emerald-500";
+                        return (
+                          <div
+                            key={idx}
+                            className={`flex-1 rounded-full transition-all duration-300 ${
+                              active ? color : "bg-border/60"
+                            }`}
+                          />
+                        );
+                      })}
+                    </div>
+                    <span
+                      className={`text-[11px] font-bold ${
+                        [
+                          passwordRequirements.length,
+                          passwordRequirements.uppercase,
+                          passwordRequirements.lowercase,
+                          passwordRequirements.number,
+                        ].filter(Boolean).length === 4
+                          ? "text-emerald-500"
+                          : [
+                              passwordRequirements.length,
+                              passwordRequirements.uppercase,
+                              passwordRequirements.lowercase,
+                              passwordRequirements.number,
+                            ].filter(Boolean).length >= 2
+                          ? "text-amber-500"
+                          : "text-rose-500"
+                      }`}
+                    >
+                      {[
+                        passwordRequirements.length,
+                        passwordRequirements.uppercase,
+                        passwordRequirements.lowercase,
+                        passwordRequirements.number,
+                      ].filter(Boolean).length === 4
+                        ? "Strong"
+                        : [
+                            passwordRequirements.length,
+                            passwordRequirements.uppercase,
+                            passwordRequirements.lowercase,
+                            passwordRequirements.number,
+                          ].filter(Boolean).length >= 2
+                        ? "Medium"
+                        : "Weak"}
+                    </span>
+                  </div>
+
+                  {/* Requirements Status Lines below the status bar */}
+                  <div className="p-2.5 rounded-xl bg-gray-50/80 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 space-y-1.5">
+                    <div className={`flex items-center gap-1.5 text-[11px] ${passwordRequirements.length ? 'text-emerald-500 font-medium' : 'theme-muted'}`}>
+                      <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] ${passwordRequirements.length ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-500'}`}>✓</span>
+                      <span>At least 8 characters</span>
+                    </div>
+                    <div className={`flex items-center gap-1.5 text-[11px] ${passwordRequirements.uppercase ? 'text-emerald-500 font-medium' : 'theme-muted'}`}>
+                      <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] ${passwordRequirements.uppercase ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-500'}`}>✓</span>
+                      <span>One uppercase letter (A-Z)</span>
+                    </div>
+                    <div className={`flex items-center gap-1.5 text-[11px] ${passwordRequirements.lowercase ? 'text-emerald-500 font-medium' : 'theme-muted'}`}>
+                      <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] ${passwordRequirements.lowercase ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-500'}`}>✓</span>
+                      <span>One lowercase letter (a-z)</span>
+                    </div>
+                    <div className={`flex items-center gap-1.5 text-[11px] ${passwordRequirements.number ? 'text-emerald-500 font-medium' : 'theme-muted'}`}>
+                      <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] ${passwordRequirements.number ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-500'}`}>✓</span>
+                      <span>One number (0-9)</span>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -396,7 +436,6 @@ const Register = () => {
                 name="terms-mobile"
                 id="terms-mobile"
                 required
-                defaultChecked
                 className="rounded border-border text-accent focus:ring-accent w-4 h-4 mt-0.5"
               />
               <label htmlFor="terms-mobile" className="theme-muted leading-tight">
@@ -543,56 +582,88 @@ const Register = () => {
                                 </button>
                             </div>
                             {formData.password && (
-                                <div className="mt-2">
-                                    <p className="text-xs theme-muted mb-1.5">Password requirements:</p>
-                                    <div className="grid grid-cols-2 gap-2 text-xs">
-                                        <div className="flex items-center space-x-1">
-                                            {passwordRequirements.length ? (
-                                                <svg className="w-3 h-3 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                </svg>
-                                            ) : (
-                                                <svg className="w-3 h-3 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                                </svg>
-                                            )}
-                                            <span className={passwordRequirements.length ? 'text-green-600' : 'text-red-500'} title="At least 8 characters">8+ chars</span>
+                                <div className="mt-2 space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex-1 flex gap-1.5 h-1.5">
+                                            {[0, 1, 2, 3].map((idx) => {
+                                                const count = [
+                                                    passwordRequirements.length,
+                                                    passwordRequirements.uppercase,
+                                                    passwordRequirements.lowercase,
+                                                    passwordRequirements.number,
+                                                ].filter(Boolean).length;
+                                                const active = idx < count;
+                                                const color =
+                                                    count <= 1
+                                                        ? "bg-rose-500"
+                                                        : count <= 2
+                                                        ? "bg-amber-400"
+                                                        : count === 3
+                                                        ? "bg-sky-400"
+                                                        : "bg-emerald-500";
+                                                return (
+                                                    <div
+                                                        key={idx}
+                                                        className={`flex-1 rounded-full transition-all duration-300 ${
+                                                            active ? color : "bg-border/60"
+                                                        }`}
+                                                    />
+                                                );
+                                            })}
                                         </div>
-                                        <div className="flex items-center space-x-1">
-                                            {passwordRequirements.uppercase ? (
-                                                <svg className="w-3 h-3 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                </svg>
-                                            ) : (
-                                                <svg className="w-3 h-3 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                                </svg>
-                                            )}
-                                            <span className={passwordRequirements.uppercase ? 'text-green-600' : 'text-red-500'} title="Uppercase letter">A-Z</span>
+                                        <span
+                                            className={`text-[11px] font-bold ${
+                                                [
+                                                    passwordRequirements.length,
+                                                    passwordRequirements.uppercase,
+                                                    passwordRequirements.lowercase,
+                                                    passwordRequirements.number,
+                                                ].filter(Boolean).length === 4
+                                                    ? "text-emerald-500"
+                                                    : [
+                                                            passwordRequirements.length,
+                                                            passwordRequirements.uppercase,
+                                                            passwordRequirements.lowercase,
+                                                            passwordRequirements.number,
+                                                        ].filter(Boolean).length >= 2
+                                                    ? "text-amber-500"
+                                                    : "text-rose-500"
+                                            }`}
+                                        >
+                                            {[
+                                                passwordRequirements.length,
+                                                passwordRequirements.uppercase,
+                                                passwordRequirements.lowercase,
+                                                passwordRequirements.number,
+                                            ].filter(Boolean).length === 4
+                                                ? "Strong"
+                                                : [
+                                                        passwordRequirements.length,
+                                                        passwordRequirements.uppercase,
+                                                        passwordRequirements.lowercase,
+                                                        passwordRequirements.number,
+                                                    ].filter(Boolean).length >= 2
+                                                ? "Medium"
+                                                : "Weak"}
+                                        </span>
+                                    </div>
+
+                                    <div className="p-2.5 rounded-xl bg-gray-50/80 dark:bg-gray-800/50 border border-gray-200/60 dark:border-gray-700/60 space-y-1.5">
+                                        <div className={`flex items-center gap-1.5 text-xs ${passwordRequirements.length ? 'text-emerald-500 font-medium' : 'theme-muted'}`}>
+                                            <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] ${passwordRequirements.length ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-500'}`}>✓</span>
+                                            <span>At least 8 characters</span>
                                         </div>
-                                        <div className="flex items-center space-x-1">
-                                            {passwordRequirements.lowercase ? (
-                                                <svg className="w-3 h-3 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                </svg>
-                                            ) : (
-                                                <svg className="w-3 h-3 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                                </svg>
-                                            )}
-                                            <span className={passwordRequirements.lowercase ? 'text-green-600' : 'text-red-500'} title="Lowercase letter">a-z</span>
+                                        <div className={`flex items-center gap-1.5 text-xs ${passwordRequirements.uppercase ? 'text-emerald-500 font-medium' : 'theme-muted'}`}>
+                                            <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] ${passwordRequirements.uppercase ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-500'}`}>✓</span>
+                                            <span>One uppercase letter (A-Z)</span>
                                         </div>
-                                        <div className="flex items-center space-x-1">
-                                            {passwordRequirements.number ? (
-                                                <svg className="w-3 h-3 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                </svg>
-                                            ) : (
-                                                <svg className="w-3 h-3 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                                </svg>
-                                            )}
-                                            <span className={passwordRequirements.number ? 'text-green-600' : 'text-red-500'} title="Number">0-9</span>
+                                        <div className={`flex items-center gap-1.5 text-xs ${passwordRequirements.lowercase ? 'text-emerald-500 font-medium' : 'theme-muted'}`}>
+                                            <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] ${passwordRequirements.lowercase ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-500'}`}>✓</span>
+                                            <span>One lowercase letter (a-z)</span>
+                                        </div>
+                                        <div className={`flex items-center gap-1.5 text-xs ${passwordRequirements.number ? 'text-emerald-500 font-medium' : 'theme-muted'}`}>
+                                            <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] ${passwordRequirements.number ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-500'}`}>✓</span>
+                                            <span>One number (0-9)</span>
                                         </div>
                                     </div>
                                 </div>

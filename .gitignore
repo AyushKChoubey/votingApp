@@ -66,6 +66,10 @@ coverage/
 
 # Ignore all Markdown files
 *.md
-CAPACITOR_MOBILE_SETUP.md
 
-tests/
+tests
+
+# Cypress & Test artifacts
+cypress/videos/
+cypress/screenshots/
+tests/node_modules/

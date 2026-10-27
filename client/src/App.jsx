@@ -5,6 +5,8 @@ import {
   Route,
   Navigate,
   useLocation,
+  useNavigate,
+  useParams,
 } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Analytics } from "@vercel/analytics/react";
@@ -72,14 +74,30 @@ const queryClient = new QueryClient({
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return <PageLoading message="Checking authentication..." />;
   }
 
-  // If token is cleared or unauthenticated, land directly on home page
+  // If token is cleared or unauthenticated, preserve destination (especially for invites)
   if (!isAuthenticated || !localStorage.getItem("token")) {
-    return <Navigate to="/" replace />;
+    const targetUrl = location.pathname + location.search;
+    const isInviteOrBooth =
+      location.pathname.startsWith("/booth/join") ||
+      location.pathname.startsWith("/join/") ||
+      location.pathname.startsWith("/booth/");
+
+    if (isInviteOrBooth) {
+      return (
+        <Navigate
+          to={`/login?redirect=${encodeURIComponent(targetUrl)}`}
+          state={{ from: location }}
+          replace
+        />
+      );
+    }
+    return <Navigate to="/" state={{ from: location }} replace />;
   }
 
   return children;
@@ -99,7 +117,11 @@ const PublicRoute = ({ children }) => {
     // so authenticated users who landed here via a protected-route redirect go to their
     // intended destination instead of the dashboard.
     const params = new URLSearchParams(location.search);
-    const redirectParam = params.get("redirect");
+    const redirectParam =
+      params.get("redirect") ||
+      (location.state?.from?.pathname
+        ? location.state.from.pathname + (location.state.from.search || "")
+        : null);
     if (redirectParam) {
       try {
         const decoded = decodeURIComponent(redirectParam);
@@ -115,9 +137,21 @@ const PublicRoute = ({ children }) => {
   return children;
 };
 
+import { initBackHandler } from "./services/backHandler";
+
+const JoinRedirect = () => {
+  const { code } = useParams();
+  return <Navigate to={`/booth/join/${code || ""}`} replace />;
+};
+
 // App Routes Component (must be inside AuthProvider)
 const AppRoutes = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    initBackHandler(navigate);
+  }, [navigate]);
 
   // Track page views on route change
   useEffect(() => {
@@ -219,6 +253,7 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+      <Route path="/join/:code" element={<JoinRedirect />} />
 
       <Route
         path="/booth/:boothId"

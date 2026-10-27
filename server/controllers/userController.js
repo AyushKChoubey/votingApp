@@ -305,25 +305,15 @@ exports.login = async (req, res) => {
       user.sessions = [];
     }
 
-    const existingDeviceIndex = user.sessions.findIndex(
-      (s) => s.browser === browser && s.os === os && s.deviceType === deviceType
-    );
-
-    if (existingDeviceIndex !== -1) {
-      // Device already signed in previously: update sessionId and last active, DO NOT create duplicate
-      user.sessions[existingDeviceIndex].sessionId = sessionId;
-      user.sessions[existingDeviceIndex].lastActive = new Date();
-    } else {
-      // New device signed in: add one entry for this device
-      user.sessions.push({
-        sessionId,
-        browser,
-        os,
-        deviceType,
-        lastActive: new Date(),
-        createdAt: new Date(),
-      });
-    }
+    // Add unique session for this sign-in
+    user.sessions.push({
+      sessionId,
+      browser,
+      os,
+      deviceType,
+      lastActive: new Date(),
+      createdAt: new Date(),
+    });
 
     if (user.sessions.length > 20) {
       user.sessions = user.sessions.slice(-20);
@@ -334,7 +324,7 @@ exports.login = async (req, res) => {
     // Generate tokens
     const tokenExpiry = remember ? "7d" : "24h";
     const token = generateToken(user, { expiresIn: tokenExpiry, sessionId });
-    const refreshToken = generateRefreshToken(user);
+    const refreshToken = generateRefreshToken(user, { sessionId });
     // Set refresh token as an httpOnly cookie for secure refresh flow
     try {
       res.cookie("refreshToken", refreshToken, {
@@ -597,11 +587,20 @@ exports.refreshToken = async (req, res) => {
     // Blacklist the old refresh token (rotation — prevents reuse)
     blacklistRefreshToken(refreshToken);
 
-    // Generate new access token
-    const newToken = generateToken(user);
+    const sessionId = decoded.sessionId;
+    if (user.sessions && user.sessions.length > 0 && sessionId) {
+      const sIdx = user.sessions.findIndex((s) => s.sessionId === sessionId);
+      if (sIdx !== -1) {
+        user.sessions[sIdx].lastActive = new Date();
+        await user.save();
+      }
+    }
 
-    // Generate new refresh token (rotation)
-    const newRefreshToken = generateRefreshToken(user);
+    // Generate new access token preserving session
+    const newToken = generateToken(user, { sessionId });
+
+    // Generate new refresh token preserving session
+    const newRefreshToken = generateRefreshToken(user, { sessionId });
 
     // Set new access token cookie
     res.cookie("token", newToken, {
@@ -1255,21 +1254,14 @@ exports.getDevices = async (req, res) => {
       user.sessions = [];
     }
 
-    // Deduplicate any existing sessions: strictly 1 entry per device (deviceType + browser + os)
-    const deviceMap = new Map();
+    // Keep active sessions unique by sessionId
+    const sessionMap = new Map();
     for (const session of user.sessions) {
-      const key = `${session.deviceType || "desktop"}|${session.browser || "Web Browser"}|${session.os || "Unknown OS"}`;
-      if (!deviceMap.has(key)) {
-        deviceMap.set(key, session);
-      } else {
-        const existing = deviceMap.get(key);
-        // Keep the one with the most recent lastActive
-        if (new Date(session.lastActive) > new Date(existing.lastActive)) {
-          deviceMap.set(key, session);
-        }
+      if (session.sessionId) {
+        sessionMap.set(session.sessionId, session);
       }
     }
-    user.sessions = Array.from(deviceMap.values());
+    user.sessions = Array.from(sessionMap.values());
 
     // If completely empty, add exactly 1 entry for this current device
     if (user.sessions.length === 0) {
@@ -1285,16 +1277,22 @@ exports.getDevices = async (req, res) => {
       await user.save();
     }
 
-    // Find current device session
+    // Find current device session strictly by sessionId (do not match by device fingerprint)
     let currentSession = user.sessions.find(
       (s) => currentSessionId && s.sessionId === currentSessionId
     );
 
-    if (!currentSession) {
-      // Fallback: match by current device fingerprint
-      currentSession = user.sessions.find(
-        (s) => s.browser === browser && s.os === os && s.deviceType === deviceType
-      );
+    if (!currentSession && currentSessionId) {
+      currentSession = {
+        sessionId: currentSessionId,
+        browser,
+        os,
+        deviceType,
+        lastActive: new Date(),
+        createdAt: new Date(),
+      };
+      user.sessions.push(currentSession);
+      await user.save();
     }
 
     if (currentSession) {
@@ -1347,12 +1345,23 @@ exports.revokeOtherDevices = async (req, res) => {
     const { browser, os, deviceType } = parseUserAgent(req.headers["user-agent"]);
 
     if (user.sessions && user.sessions.length > 0) {
-      const current = user.sessions.find(
-        (s) => (currentSessionId && s.sessionId === currentSessionId) ||
-               (s.browser === browser && s.os === os && s.deviceType === deviceType)
-      ) || user.sessions[0];
-
-      user.sessions = [current];
+      if (currentSessionId) {
+        user.sessions = user.sessions.filter(
+          (s) => s.sessionId === currentSessionId
+        );
+      }
+      if (user.sessions.length === 0 && currentSessionId) {
+        user.sessions = [
+          {
+            sessionId: currentSessionId,
+            browser,
+            os,
+            deviceType,
+            lastActive: new Date(),
+            createdAt: new Date(),
+          },
+        ];
+      }
       await user.save();
     }
 

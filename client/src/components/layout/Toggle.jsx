@@ -26,8 +26,17 @@ const Toggle = ({
   id,
   className = "",
 }) => {
+  const handleContainerClick = (e) => {
+    if (e.target.closest && e.target.closest('button[role="switch"]')) {
+      return;
+    }
+    if (disabled || !onChange) return;
+    onChange(!checked);
+  };
+
   const handleClick = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     if (disabled || !onChange) return;
     onChange(!checked);
   };
@@ -96,7 +105,7 @@ const Toggle = ({
 
   return (
     <div
-      onClick={!disabled && onChange ? () => onChange(!checked) : undefined}
+      onClick={!disabled && onChange ? handleContainerClick : undefined}
       className={`flex items-center justify-between gap-3 ${
         disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"
       } ${className}`}

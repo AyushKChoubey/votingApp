@@ -4,12 +4,14 @@ import api from "../../services/api";
 import { Alert } from "../../components/layout/Alert";
 import { LoadingButton, PageLoading } from "../../components/layout/Loading";
 import BackButton from "../../components/layout/BackButton";
+import AppWatermark from "../../components/layout/AuthWatermarkBackground";
 
 export function CreateBooth() {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     maxMembers: 50,
+    votingType: "single",
     settings: {
       resultsVisibleToVoters: true,
       showLiveResults: false,
@@ -36,11 +38,12 @@ export function CreateBooth() {
   const [searchParams, setSearchParams] = useSearchParams();
   const currentStep = parseInt(searchParams.get("step")) || 1;
 
-  const setCurrentStep = (newStep) => {
-    if (newStep === 1) {
+  const setCurrentStep = (stepOrFn) => {
+    const nextStep = typeof stepOrFn === "function" ? stepOrFn(currentStep) : stepOrFn;
+    if (nextStep === 1) {
       setSearchParams({}, { replace: false });
     } else {
-      setSearchParams({ step: newStep.toString() }, { replace: false });
+      setSearchParams({ step: nextStep.toString() }, { replace: false });
     }
   };
 
@@ -262,12 +265,14 @@ export function CreateBooth() {
         name: formData.name.trim(),
         description: formData.description.trim(),
         maxMembers: parseInt(formData.maxMembers) || 50,
+        votingType: formData.votingType || "single",
         candidates: validCandidates.map((c) => ({
           name: c.name.trim(),
           description: c.description.trim(),
         })),
         settings: {
           ...formData.settings,
+          votingType: formData.votingType || "single",
           // Convert date strings to Date objects if they exist
           votingStartTime: formData.settings.votingStartTime
             ? new Date(formData.settings.votingStartTime)
@@ -407,12 +412,13 @@ export function CreateBooth() {
   const handlePrevStep = () => {
     setError("");
     if (currentStep > 1) {
-      setCurrentStep((prev) => prev - 1);
+      setCurrentStep(currentStep - 1);
     }
   };
 
   return (
     <div className="min-h-screen theme-bg py-4 sm:py-8 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      <AppWatermark variant="shield" />
       <div className="max-w-4xl mx-auto relative z-10">
         {/* Mobile Header: Back Button + Title (Mobile only) */}
         <div className="flex sm:hidden items-center gap-3 mb-6">

@@ -1,4 +1,42 @@
-import React, { useEffect, useState } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import React, { useEffect, useState, useRef, useCallback } from "react";
+import { sileo } from "sileo";
+
+const technicalPatterns = [
+  /mongo|mongoose|mongodb/i,
+  /database|econn|etimedout|enotfound|socket hang up/i,
+  /jwt|json web token|token expired|invalid token/i,
+  /passport|oauth2strategy|google strategy/i,
+  /cloudinary|mailjet|smtp|nodemailer/i,
+  /stack|syntaxerror|referenceerror|typeerror|uncaught/i,
+  /response structure|internal server error/i,
+  /status code (4\d\d|5\d\d)/i,
+];
+
+/**
+ * Ensures user-facing messages are clean, courteous, and non-technical
+ */
+export const formatGenericMessage = (msg, type = "info") => {
+  if (!msg) return "";
+  if (typeof msg !== "string") {
+    if (msg?.message && typeof msg.message === "string") {
+      return formatGenericMessage(msg.message, type);
+    }
+    return "An unexpected issue occurred. Please try again.";
+  }
+
+  const clean = msg.trim();
+
+  // If technical jargon is detected, provide a graceful user-friendly substitute
+  if (technicalPatterns.some((pattern) => pattern.test(clean))) {
+    if (type === "error" || type === "danger") {
+      return "We encountered an issue processing your request. Please try again shortly.";
+    }
+    return "Action could not be completed. Please refresh and try again.";
+  }
+
+  return clean;
+};
 
 const AlertIcon = ({ type }) => {
   const icons = {
@@ -26,86 +64,94 @@ const AlertIcon = ({ type }) => {
       <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 20 20">
         <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
       </svg>
-    )
+    ),
   };
 
   return icons[type] || icons.info;
 };
 
-const Alert = ({ 
-  type = 'info', 
-  title, 
-  message, 
-  onClose, 
-  autoClose = false, 
+export const Alert = ({
+  type = "info",
+  title,
+  message,
+  onClose,
+  autoClose = true,
   autoCloseDelay = 5000,
-  className = '',
-  animate = true 
+  className = "",
+  animate = true,
 }) => {
   const [isVisible, setIsVisible] = useState(true);
   const [isClosing, setIsClosing] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const timerRef = useRef(null);
 
-  useEffect(() => {
-    if (autoClose) {
-      const timer = setTimeout(() => {
-        handleClose();
-      }, autoCloseDelay);
-
-      return () => clearTimeout(timer);
-    }
-  }, [autoClose, autoCloseDelay]);
-
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setIsClosing(true);
     setTimeout(() => {
       setIsVisible(false);
-      onClose && onClose();
-    }, 300); // Wait for animation to complete
-  };
+      if (onClose) onClose();
+    }, 250);
+  }, [onClose]);
 
-  if (!isVisible) return null;
+  useEffect(() => {
+    if (autoClose && !isPaused) {
+      timerRef.current = setTimeout(() => {
+        handleClose();
+      }, autoCloseDelay);
+
+      return () => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+      };
+    }
+  }, [autoClose, autoCloseDelay, isPaused, handleClose]);
+
+  if (!isVisible || !message) return null;
+
+  const displayMessage = formatGenericMessage(message, type);
 
   // Modern color schemes using theme tokens
   const alertStyles = {
     success: {
-      container: 'bg-success-50 border-success text-success',
-      icon: 'text-success',
-      iconBg: 'bg-success/10'
+      container: "bg-success-50 border-success text-success",
+      icon: "text-success",
+      iconBg: "bg-success/10",
     },
     warning: {
-      container: 'bg-warning-50 border-warning text-warning',
-      icon: 'text-warning',
-      iconBg: 'bg-warning/10'
+      container: "bg-warning-50 border-warning text-warning",
+      icon: "text-warning",
+      iconBg: "bg-warning/10",
     },
     danger: {
-      container: 'bg-error-50 border-error text-error',
-      icon: 'text-error',
-      iconBg: 'bg-error/10'
+      container: "bg-error-50 border-error text-error",
+      icon: "text-error",
+      iconBg: "bg-error/10",
     },
     error: {
-      container: 'bg-error-50 border-error text-error',
-      icon: 'text-error',
-      iconBg: 'bg-error/10'
+      container: "bg-error-50 border-error text-error",
+      icon: "text-error",
+      iconBg: "bg-error/10",
     },
     info: {
-      container: 'bg-accent-50 border-accent theme-text',
-      icon: 'text-accent',
-      iconBg: 'bg-accent-100'
-    }
+      container: "bg-accent-50 border-accent theme-text",
+      icon: "text-accent",
+      iconBg: "bg-accent-100",
+    },
   };
 
   const currentStyle = alertStyles[type] || alertStyles.info;
 
   return (
-    <div 
+    <div
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
       className={`
         glass-card backdrop-blur
         ${currentStyle.container}
         border-l-4 rounded-xl
-        px-4 py-3 sm:px-5 sm:py-4
-        shadow-lg
+        px-4 py-3 sm:px-5 sm:py-3.5
+        shadow-md
         flex items-start gap-3 sm:gap-4
-        ${animate ? (isClosing ? 'animate-fadeOut' : 'animate-slideDown') : ''}
+        ${animate ? (isClosing ? "animate-fadeOut" : "animate-slideDown") : ""}
         transition-all duration-300
         ${className}
       `}
@@ -126,93 +172,43 @@ const Alert = ({
             {title}
           </h3>
         )}
-        {message && (
-          <div className="text-xs sm:text-sm theme-muted leading-relaxed">
-            {typeof message === 'string' ? (
-              <p>{message}</p>
-            ) : (
-              message
-            )}
-          </div>
-        )}
+        <div className="text-xs sm:text-sm theme-muted leading-relaxed font-medium">
+          {typeof displayMessage === "string" ? <p>{displayMessage}</p> : displayMessage}
+        </div>
       </div>
 
-      {/* Close button with modern styling */}
-      {onClose && (
-        <div className="flex-shrink-0">
-          <button
-            onClick={handleClose}
-            className="
-              inline-flex items-center justify-center
-              rounded-lg p-1.5 sm:p-2
-              theme-text hover:theme-surface
-              focus-ring
-              transition-all duration-200
-              interactive-scale
-            "
-            aria-label="Dismiss alert"
-          >
-            <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      )}
+      {/* Always render Close / Dismiss button */}
+      <div className="flex-shrink-0">
+        <button
+          type="button"
+          onClick={handleClose}
+          className="
+            inline-flex items-center justify-center
+            rounded-lg p-1.5 sm:p-2
+            theme-text hover:theme-surface
+            focus-ring
+            transition-all duration-200
+            interactive-scale
+            cursor-pointer
+          "
+          aria-label="Dismiss alert"
+        >
+          <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
     </div>
   );
 };
 
-// Toast notification system
-let toastId = 0;
-
+// Re-export Sileo for unified notifications
 export const toast = {
-  success: (message, options = {}) => showToast('success', message, options),
-  warning: (message, options = {}) => showToast('warning', message, options),
-  danger: (message, options = {}) => showToast('danger', message, options),
-  info: (message, options = {}) => showToast('info', message, options),
-};
-
-const showToast = (type, message, options) => {
-  const id = ++toastId;
-  const toastElement = document.createElement('div');
-  toastElement.id = `toast-${id}`;
-  
-  // Create toast container if it doesn't exist
-  let container = document.getElementById('toast-container');
-  if (!container) {
-    container = document.createElement('div');
-    container.id = 'toast-container';
-    container.className = 'fixed top-4 right-4 z-50 space-y-3 pointer-events-none max-w-md';
-    container.style.cssText = 'z-index: var(--z-tooltip, 1070);';
-    document.body.appendChild(container);
-  }
-
-  container.appendChild(toastElement);
-
-  // Use React to render the toast
-  import('react-dom/client').then(({ createRoot }) => {
-    const root = createRoot(toastElement);
-    root.render(
-      <Alert
-        type={type}
-        message={message}
-        autoClose={true}
-        autoCloseDelay={options.duration || 5000}
-        onClose={() => {
-          root.unmount();
-          container.removeChild(toastElement);
-          if (container.children.length === 0) {
-            document.body.removeChild(container);
-          }
-        }}
-        className="pointer-events-auto w-full sm:max-w-sm"
-        {...options}
-      />
-    );
-  });
-
-  return id;
+  success: (msg, opts) => sileo.success({ title: formatGenericMessage(msg, "success"), ...opts }),
+  warning: (msg, opts) => sileo.warning({ title: formatGenericMessage(msg, "warning"), ...opts }),
+  danger: (msg, opts) => sileo.error({ title: formatGenericMessage(msg, "danger"), ...opts }),
+  error: (msg, opts) => sileo.error({ title: formatGenericMessage(msg, "error"), ...opts }),
+  info: (msg, opts) => sileo.info({ title: formatGenericMessage(msg, "info"), ...opts }),
 };
 
 export default Alert;
-export { Alert };

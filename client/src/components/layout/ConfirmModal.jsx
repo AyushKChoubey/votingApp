@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useRegisterModal } from '../../hooks/useRegisterModal';
 
 export default function ConfirmModal({
   isOpen,
@@ -12,6 +13,7 @@ export default function ConfirmModal({
   onConfirm = () => {},
   onCancel = () => {}
 }) {
+  useRegisterModal(isOpen, onCancel);
   const [input, setInput] = useState('');
 
   useEffect(() => {
@@ -27,12 +29,14 @@ export default function ConfirmModal({
     : (canConfirm && !loading ? 'bg-red-600 hover:bg-red-700 font-semibold' : 'bg-red-300 cursor-not-allowed');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="theme-surface rounded-2xl shadow-xl max-w-lg w-full p-6 mx-4 border border-border">
+    <div className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 animate-fadeIn">
+      <div className="theme-surface rounded-t-3xl sm:rounded-2xl shadow-2xl max-w-lg w-full p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] sm:pb-6 border-t sm:border border-border animate-slideUp">
+        {/* Mobile Pull Indicator */}
+        <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto mb-4 sm:hidden" />
         <div className="flex items-start gap-4">
           <div className="flex-shrink-0 mt-1">
             {variant === 'primary' ? (
-              <div className="w-10 h-10 rounded-xl bg-accent-50 text-accent flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-cyan-500/10 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 flex items-center justify-center">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>

@@ -108,6 +108,11 @@ const boothSchema = new mongoose.Schema({
       type: Boolean,
       default: false,
     },
+    votingType: {
+      type: String,
+      enum: ["single", "multiple"],
+      default: "single",
+    },
 
     // Access Control
     requireApproval: {

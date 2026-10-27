@@ -73,6 +73,11 @@ const validateMaxMembers = (maxMembers) => {
   return !isNaN(num) && num >= 2 && num <= 10000;
 };
 
+exports.validateBoothName = validateBoothName;
+exports.validateDescription = validateDescription;
+exports.validateCandidates = validateCandidates;
+exports.validateMaxMembers = validateMaxMembers;
+
 // Create a new booth
 exports.createBooth = async (req, res) => {
   try {

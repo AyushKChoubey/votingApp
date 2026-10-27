@@ -15,7 +15,8 @@ import AuthWatermarkBackground from "../../../components/layout/AuthWatermarkBac
 const VerificationErrorPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const errorMessage = location.state?.message || "Verification failed.";
+  const searchParams = new URLSearchParams(location.search);
+  const errorMessage = location.state?.message || searchParams.get('message') || searchParams.get('error') || 'Verification failed.';
 
   const [email, setEmail] = useState("");
   const [isResending, setIsResending] = useState(false);
@@ -109,7 +110,7 @@ const VerificationErrorPage = () => {
       {/* ══════════════════════════════════════════════════════════════ */}
       {/* ── MOBILE VIEW ONLY (block md:hidden) - Matching Screen 8 ──── */}
       {/* ══════════════════════════════════════════════════════════════ */}
-      <div className="block md:hidden w-full max-w-md mx-auto min-h-screen theme-bg relative px-5 pt-10 pb-10 flex flex-col justify-between overflow-x-hidden animate-fadeIn">
+      <div className=" md:hidden w-full max-w-md mx-auto min-h-screen theme-bg relative px-5 pt-10 pb-10 flex flex-col justify-between overflow-x-hidden animate-fadeIn">
         <AuthWatermarkBackground />
 
         <div className="relative z-10 w-full flex-1 flex flex-col items-center justify-center text-center">
@@ -133,7 +134,7 @@ const VerificationErrorPage = () => {
             Something Went Wrong
           </h1>
           <p className="text-xs theme-muted leading-relaxed px-4 max-w-xs mb-6">
-            This link may have expired or something went wrong on our end. Please try again.
+            {errorMessage}
           </p>
 
           {error && (
@@ -227,7 +228,7 @@ const VerificationErrorPage = () => {
 
         {/* Error code subtext at bottom */}
         <div className="relative z-10 text-center text-[11px] theme-muted pt-4">
-          Error 400
+          {location.state?.code || location.state?.status ? `Error ${location.state.code || location.state.status}` : "Verification Error"}
         </div>
       </div>
 

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/layout/Button';
 import ThemeToggle from '../components/layout/ThemeToggle';
+import AppWatermark from '../components/layout/AuthWatermarkBackground';
 
 const HomePage = () => {
   const { isAuthenticated } = useAuth();
@@ -23,6 +24,7 @@ const HomePage = () => {
 
       {/* Hero Section - Modern & Engaging */}
       <div className="relative overflow-hidden">
+        <AppWatermark variant="waves" />
         <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-12 pb-16 sm:pt-20 sm:pb-24">
           <div className="text-center stagger-children">
             {/* Feature Badge */}

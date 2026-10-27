@@ -7,6 +7,7 @@ import { LoadingButton, PageLoading } from "../../components/layout/Loading";
 import { useToast } from "../../components/layout/Toast";
 import api from "../../services/api";
 import appPackage from "../../../package.json";
+import AppWatermark from "../../components/layout/AuthWatermarkBackground";
 
 const SettingsPage = () => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -33,6 +34,10 @@ const SettingsPage = () => {
   const { theme, toggleTheme, isDark } = useTheme();
   const [showMobilePasswordModal, setShowMobilePasswordModal] = useState(false);
   const [showMobileDeleteModal, setShowMobileDeleteModal] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordChangeSuccess, setPasswordChangeSuccess] = useState(false);
   const isGoogleAccount = Boolean(user?.authProvider === "google" || user?.googleId);
 
   // Account deletion state
@@ -198,12 +203,18 @@ const SettingsPage = () => {
         confirmNewPassword: passwordForm.confirmNewPassword,
       });
 
-      setPasswordForm({
-        currentPassword: "",
-        newPassword: "",
-        confirmNewPassword: "",
-      });
+      setPasswordChangeSuccess(true);
       addToast("Password changed successfully!", "success");
+
+      setTimeout(() => {
+        setShowMobilePasswordModal(false);
+        setPasswordChangeSuccess(false);
+        setPasswordForm({
+          currentPassword: "",
+          newPassword: "",
+          confirmNewPassword: "",
+        });
+      }, 1200);
     } catch (err) {
       addToast(
         err.response?.data?.error || "Failed to change password",
@@ -214,8 +225,10 @@ const SettingsPage = () => {
     }
   };
 
-  const handleDeleteAccount = async () => {
-    if (!deletePassword.trim()) {
+  const handleDeleteAccount = async (e) => {
+    if (e?.preventDefault) e.preventDefault();
+
+    if (!isGoogleAccount && !deletePassword.trim()) {
       addToast(
         "Please enter your password to confirm account deletion",
         "error",
@@ -227,7 +240,7 @@ const SettingsPage = () => {
 
     try {
       await api.delete("/api/user/account", {
-        data: { password: deletePassword },
+        data: isGoogleAccount ? {} : { password: deletePassword },
       });
 
       await logout();
@@ -263,7 +276,8 @@ const SettingsPage = () => {
       {/* ══════════════════════════════════════════════════════════════ */}
       {/* ── MOBILE SETTINGS VIEW (block md:hidden) */}
       {/* ══════════════════════════════════════════════════════════════ */}
-      <div className="block md:hidden w-full max-w-lg mx-auto overflow-x-hidden px-4 pt-3 pb-24 animate-fadeIn">
+      <div className="block md:hidden w-full max-w-lg mx-auto overflow-x-hidden px-4 pt-3 pb-24 animate-fadeIn relative">
+        <AppWatermark variant="grid" />
         {/* Single Header: Back button + Title (No redundant title) */}
         <div className="flex items-center gap-3 mb-5 pt-1">
           <button
@@ -624,7 +638,17 @@ const SettingsPage = () => {
               <div className="w-10 h-1 rounded-full bg-border mx-auto mb-4" />
               <h2 className="text-lg font-bold theme-text mb-4">Change Password</h2>
 
-              {isGoogleAccount ? (
+              {passwordChangeSuccess ? (
+                <div className="py-8 text-center animate-fadeIn">
+                  <div className="w-16 h-16 rounded-full bg-emerald-500/15 text-emerald-500 mx-auto flex items-center justify-center mb-4 ring-8 ring-emerald-500/10">
+                    <svg className="w-8 h-8 animate-pop" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-bold theme-text mb-1">Password Changed!</h3>
+                  <p className="text-xs theme-muted">Your security credentials have been updated successfully.</p>
+                </div>
+              ) : isGoogleAccount ? (
                 <div className="text-center py-3">
                   <div className="w-14 h-14 rounded-2xl bg-blue-500/10 text-blue-500 mx-auto mb-3 flex items-center justify-center">
                     <svg className="w-7 h-7" viewBox="0 0 24 24">
@@ -658,43 +682,164 @@ const SettingsPage = () => {
                 <form onSubmit={handlePasswordChange} className="space-y-3.5">
                 <div>
                   <label className="text-xs font-bold theme-text mb-1 block">Current Password</label>
-                  <input
-                    type="password"
-                    value={passwordForm.currentPassword}
-                    onChange={(e) => setPasswordForm((prev) => ({ ...prev, currentPassword: e.target.value }))}
-                    required
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-border theme-surface theme-text text-sm focus:outline-none focus:border-accent"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showCurrentPassword ? "text" : "password"}
+                      value={passwordForm.currentPassword}
+                      onChange={(e) => setPasswordForm((prev) => ({ ...prev, currentPassword: e.target.value }))}
+                      required
+                      placeholder="Enter current password"
+                      className="w-full px-3.5 py-2.5 pr-10 rounded-xl border border-border theme-surface theme-text text-sm focus:outline-none focus:border-accent"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors cursor-pointer"
+                      aria-label={showCurrentPassword ? "Hide password" : "Show password"}
+                    >
+                      {showCurrentPassword ? (
+                        <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 <div>
                   <label className="text-xs font-bold theme-text mb-1 block">New Password</label>
-                  <input
-                    type="password"
-                    value={passwordForm.newPassword}
-                    onChange={(e) => setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))}
-                    required
-                    minLength={8}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-border theme-surface theme-text text-sm focus:outline-none focus:border-accent"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showNewPassword ? "text" : "password"}
+                      value={passwordForm.newPassword}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setPasswordForm((prev) => ({ ...prev, newPassword: val }));
+                        setPasswordRequirements({
+                          length: val.length >= 8,
+                          uppercase: /[A-Z]/.test(val),
+                          lowercase: /[a-z]/.test(val),
+                          number: /\d/.test(val),
+                        });
+                      }}
+                      required
+                      minLength={8}
+                      placeholder="Enter new secure password"
+                      className="w-full px-3.5 py-2.5 pr-10 rounded-xl border border-border theme-surface theme-text text-sm focus:outline-none focus:border-accent"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors cursor-pointer"
+                      aria-label={showNewPassword ? "Hide password" : "Show password"}
+                    >
+                      {showNewPassword ? (
+                        <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                  {/* Live Password Requirements Checking */}
+                  <div className="grid grid-cols-2 gap-1.5 mt-2">
+                    <div className={`flex items-center gap-1.5 text-[11px] ${passwordRequirements.length ? 'text-emerald-500 font-medium' : 'theme-muted'}`}>
+                      <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] ${passwordRequirements.length ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-500'}`}>✓</span>
+                      8+ characters
+                    </div>
+                    <div className={`flex items-center gap-1.5 text-[11px] ${passwordRequirements.uppercase ? 'text-emerald-500 font-medium' : 'theme-muted'}`}>
+                      <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] ${passwordRequirements.uppercase ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-500'}`}>✓</span>
+                      One uppercase
+                    </div>
+                    <div className={`flex items-center gap-1.5 text-[11px] ${passwordRequirements.lowercase ? 'text-emerald-500 font-medium' : 'theme-muted'}`}>
+                      <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] ${passwordRequirements.lowercase ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-500'}`}>✓</span>
+                      One lowercase
+                    </div>
+                    <div className={`flex items-center gap-1.5 text-[11px] ${passwordRequirements.number ? 'text-emerald-500 font-medium' : 'theme-muted'}`}>
+                      <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] ${passwordRequirements.number ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-500'}`}>✓</span>
+                      One number
+                    </div>
+                  </div>
                 </div>
 
                 <div>
                   <label className="text-xs font-bold theme-text mb-1 block">Confirm New Password</label>
-                  <input
-                    type="password"
-                    value={passwordForm.confirmNewPassword}
-                    onChange={(e) => setPasswordForm((prev) => ({ ...prev, confirmNewPassword: e.target.value }))}
-                    required
-                    minLength={8}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-border theme-surface theme-text text-sm focus:outline-none focus:border-accent"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={passwordForm.confirmNewPassword}
+                      onChange={(e) => setPasswordForm((prev) => ({ ...prev, confirmNewPassword: e.target.value }))}
+                      required
+                      minLength={8}
+                      placeholder="Re-enter new password"
+                      className={`w-full px-3.5 py-2.5 pr-10 rounded-xl border theme-surface theme-text text-sm focus:outline-none transition-colors ${
+                        passwordForm.confirmNewPassword
+                          ? passwordForm.newPassword === passwordForm.confirmNewPassword
+                            ? 'border-emerald-500 focus:border-emerald-500'
+                            : 'border-red-500 focus:border-red-500'
+                          : 'border-border focus:border-accent'
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors cursor-pointer"
+                      aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                    >
+                      {showConfirmPassword ? (
+                        <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                  {/* Live Password Match Checking */}
+                  {passwordForm.confirmNewPassword && (
+                    <div className="mt-1.5 flex items-center gap-1.5 text-xs">
+                      {passwordForm.newPassword === passwordForm.confirmNewPassword ? (
+                        <span className="text-emerald-500 font-medium flex items-center gap-1">
+                          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                          Passwords match
+                        </span>
+                      ) : (
+                        <span className="text-red-500 font-medium flex items-center gap-1">
+                          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                          Passwords do not match
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <button
                   type="submit"
-                  disabled={passwordLoading}
-                  className="w-full py-3.5 rounded-2xl btn-theme text-on-primary font-bold text-sm shadow-md mt-2 active:scale-[0.98] transition-all disabled:opacity-50"
+                  disabled={
+                    passwordLoading ||
+                    (passwordForm.confirmNewPassword && passwordForm.newPassword !== passwordForm.confirmNewPassword) ||
+                    !passwordRequirements.length ||
+                    !passwordRequirements.uppercase ||
+                    !passwordRequirements.lowercase ||
+                    !passwordRequirements.number
+                  }
+                  className="w-full py-3.5 rounded-2xl btn-theme text-on-primary font-bold text-sm shadow-md mt-2 active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
                 >
                   {passwordLoading ? "Changing Password..." : "Update Password"}
                 </button>
@@ -702,7 +847,7 @@ const SettingsPage = () => {
                 <button
                   type="button"
                   onClick={() => setShowMobilePasswordModal(false)}
-                  className="w-full py-2.5 text-center text-sm theme-muted hover:theme-text font-semibold active:scale-[0.98] transition-all"
+                  className="w-full py-2.5 text-center text-sm theme-muted hover:theme-text font-semibold active:scale-[0.98] transition-all cursor-pointer"
                 >
                   Cancel
                 </button>

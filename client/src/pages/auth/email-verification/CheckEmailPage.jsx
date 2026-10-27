@@ -136,7 +136,7 @@ const CheckEmailPage = () => {
       {/* ══════════════════════════════════════════════════════════════ */}
       {/* ── MOBILE VIEW ONLY (block md:hidden) - Matching Screen 6 ──── */}
       {/* ══════════════════════════════════════════════════════════════ */}
-      <div className="block md:hidden w-full max-w-md mx-auto min-h-screen theme-bg relative px-5 pt-8 pb-10 flex flex-col justify-between overflow-x-hidden animate-fadeIn">
+      <div className=" md:hidden w-full max-w-md mx-auto min-h-screen theme-bg relative px-5 pt-8 pb-10 flex flex-col justify-between overflow-x-hidden animate-fadeIn">
         <AuthWatermarkBackground />
 
         <div className="relative z-10 w-full">
@@ -168,7 +168,7 @@ const CheckEmailPage = () => {
             </h1>
             <p className="text-xs theme-muted leading-relaxed px-4">
               We sent a verification link to{" "}
-              <span className="font-bold theme-text">{email || "your email"}</span>. Tap the link to activate your account.
+              <span className="font-bold theme-text">{email ? maskEmail(email) : "your email"}</span>. Tap the link to activate your account.
             </p>
           </div>
 

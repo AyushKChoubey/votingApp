@@ -1,20 +1,41 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Capacitor } from "@capacitor/core";
 import api, { boothService } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../components/layout/Toast";
 import { PageLoading } from "../../components/layout/Loading";
 import BackButton from "../../components/layout/BackButton";
+import AppWatermark from "../../components/layout/AuthWatermarkBackground";
+import { WebQRScannerModal } from "../../components/booth/WebQRScannerModal";
+import { useRegisterModal } from "../../hooks/useRegisterModal";
+import {
+  scanQRCodeNative,
+  decodeQRFromImageFile,
+  parseInviteCode,
+} from "../../services/qrScannerService";
+
+const QRCodeModal = lazy(() =>
+  import("../../components/booth/QRCodeModal").then((m) => ({
+    default: m.QRCodeModal,
+  })),
+);
 
 const JoinBoothPage = () => {
   const [inviteCode, setInviteCode] = useState("");
   const [booth, setBooth] = useState(null);
-  const [activeTab, setActiveTab] = useState("code"); // "code" is first, "qr" is second
+  const [activeTab, setActiveTab] = useState("qr"); // QR scanning is primary (1st), code is 2nd
 
   const [loading, setLoading] = useState(false);
   const [joining, setJoining] = useState(false);
-  const [error, setError] = useState("");
+  const [_error, setError] = useState("");
   const [pendingRequest, setPendingRequest] = useState(false);
+  const [qrModalData, setQrModalData] = useState(null);
+  const [showWebScanner, setShowWebScanner] = useState(false);
+
+  useRegisterModal(Boolean(qrModalData), () => setQrModalData(null));
+  useRegisterModal(showWebScanner, () => setShowWebScanner(false));
+  const fileInputRef = useRef(null);
   const socketRef = useRef(null);
   const boothRef = useRef(null);
   const copyTimeoutRef = useRef(null);
@@ -62,10 +83,9 @@ const JoinBoothPage = () => {
           msg = err.message || "Invalid invite code";
         }
 
-        setError(msg);
         try {
           addToast(msg, "error");
-        } catch (e) {
+        } catch {
           // ignore
         }
         setBooth(null);
@@ -101,10 +121,11 @@ const JoinBoothPage = () => {
       };
       const msg =
         errorMessages[errorParam] || "An error occurred while joining the booth";
-      setError(msg);
       try {
         addToast(msg, "error");
-      } catch (e) {}
+      } catch {
+        // ignore
+      }
     }
   }, [code, searchParams, isLoading, isAuthenticated, navigate, addToast, checkInviteCode]);
 
@@ -119,7 +140,9 @@ const JoinBoothPage = () => {
           clearTimeout(copyTimeoutRef.current);
           copyTimeoutRef.current = null;
         }
-      } catch (e) {}
+      } catch {
+        // ignore
+      }
     };
   }, []);
 
@@ -180,7 +203,9 @@ const JoinBoothPage = () => {
                       );
                       try {
                         socketRef.current.disconnect();
-                      } catch (e) {}
+                      } catch {
+                        // ignore
+                      }
                       socketRef.current = null;
                       navigate(`/booth/${payloadBoothId}`);
                     } else if (payload.status === "rejected") {
@@ -191,7 +216,9 @@ const JoinBoothPage = () => {
                       setPendingRequest(false);
                       try {
                         socketRef.current.disconnect();
-                      } catch (e) {}
+                      } catch {
+                        // ignore
+                      }
                       socketRef.current = null;
                     }
                   } catch (innerErr) {
@@ -209,7 +236,6 @@ const JoinBoothPage = () => {
           navigate(`/booth/${boothIdentifier}?joined=true`);
         }
       } else {
-        setError(response.error || "Failed to join booth");
         addToast(response.error || "Failed to join booth", "error");
       }
     } catch (err) {
@@ -232,18 +258,90 @@ const JoinBoothPage = () => {
     }
   };
 
+  const downloadQRCode = () => {
+    const canvas = document.querySelector("canvas");
+    if (canvas) {
+      const url = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.download = `booth-${qrModalData?.inviteCode || "qr"}.png`;
+      link.href = url;
+      link.click();
+      addToast("QR Code downloaded", "success");
+    }
+  };
+
+  // Launch camera scan (Capacitor ML Kit native on Android/iOS, Web camera modal on web)
+  const handleOpenCameraScan = async () => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const res = await scanQRCodeNative();
+        if (res.success && res.code) {
+          setInviteCode(res.code);
+          addToast(`Detected booth code: ${res.code}`, "success");
+          await checkInviteCode(res.code);
+        } else if (res.invalidCode) {
+          addToast("Scanned QR code does not match a valid VoteBooth invite.", "error");
+        } else if (res.permissionDenied) {
+          addToast("Camera permission denied. Please allow camera access in app settings.", "error");
+        } else if (res.error) {
+          addToast(res.error, "error");
+        }
+      } catch (err) {
+        console.error("Native scan error:", err);
+        addToast("Failed to launch camera scanner", "error");
+      }
+    } else {
+      setShowWebScanner(true);
+    }
+  };
+
+  // Web camera scan success
+  const handleWebScanSuccess = async (scannedRaw) => {
+    setShowWebScanner(false);
+    const parsed = parseInviteCode(scannedRaw);
+    if (parsed) {
+      setInviteCode(parsed);
+      addToast(`Detected booth code: ${parsed}`, "success");
+      await checkInviteCode(parsed);
+    } else {
+      addToast("Scanned QR code is not a valid VoteBooth invite.", "error");
+    }
+  };
+
+  // Gallery image picked & decoded
+  const handleImageFilePicked = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setLoading(true);
+    try {
+      const res = await decodeQRFromImageFile(file);
+      if (res.success && res.code) {
+        setInviteCode(res.code);
+        addToast(`Decoded invite code: ${res.code}`, "success");
+        await checkInviteCode(res.code);
+      } else if (res.invalidCode) {
+        addToast("Image contains a QR code, but it is not a valid VoteBooth invite.", "error");
+      } else if (res.noQRCodeFound) {
+        addToast("No QR code detected in the selected image. Please try a clearer picture.", "warning");
+      } else if (res.error) {
+        addToast(res.error, "error");
+      }
+    } catch (err) {
+      console.error("Gallery decode error:", err);
+      addToast("Failed to decode QR code from image", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (isLoading) {
     return <PageLoading message="Loading..." />;
   }
 
-  const candidateColors = [
-    "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-    "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
-    "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-  ];
-
   return (
-    <div className="w-full max-w-lg mx-auto overflow-x-hidden px-4 pt-3 pb-28 sm:pb-12 animate-fadeIn">
+    <div className="w-full max-w-lg mx-auto overflow-x-hidden px-4 pt-3 pb-28 sm:pb-12 animate-fadeIn relative">
+      <AppWatermark variant="shield" />
       {/* ── STATE 1: ENTER CODE / SCAN QR (Matching Screen 1) ── */}
       {!booth ? (
         <div>
@@ -272,15 +370,29 @@ const JoinBoothPage = () => {
             </div>
           </div>
 
-          {/* Tabs: Code first, QR second with Coming Soon pill */}
-          <div className="grid grid-cols-2 gap-1.5 p-1.5 rounded-2xl bg-black/5 dark:bg-white/5 border border-border mb-5">
+          {/* Pill-Style Tabs: QR first, Code second (separated, no common filled connection) */}
+          <div className="grid grid-cols-2 gap-2.5 mb-5">
+            <button
+              type="button"
+              onClick={() => setActiveTab("qr")}
+              className={`py-2.5 px-4 rounded-full font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all ${
+                activeTab === "qr"
+                  ? "btn-theme text-on-primary shadow-sm"
+                  : "theme-surface border border-border theme-muted hover:theme-text shadow-2xs"
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+              </svg>
+              <span>Scan QR</span>
+            </button>
             <button
               type="button"
               onClick={() => setActiveTab("code")}
-              className={`py-3 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all ${
+              className={`py-2.5 px-4 rounded-full font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all ${
                 activeTab === "code"
                   ? "btn-theme text-on-primary shadow-sm"
-                  : "theme-muted hover:theme-text"
+                  : "theme-surface border border-border theme-muted hover:theme-text shadow-2xs"
               }`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -288,34 +400,22 @@ const JoinBoothPage = () => {
               </svg>
               <span>Enter Code</span>
             </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("qr")}
-              className={`py-3 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all ${
-                activeTab === "qr"
-                  ? "btn-theme text-on-primary shadow-sm"
-                  : "theme-muted hover:theme-text"
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-              </svg>
-              <span>Scan QR</span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold shrink-0 ${
-                activeTab === "qr"
-                  ? "bg-white/25 text-white"
-                  : "bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700"
-              }`}>
-                Soon
-              </span>
-            </button>
           </div>
+
+          {/* Hidden File Input for Gallery QR Scan */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleImageFilePicked}
+          />
 
           {/* TAB 1: Enter Code */}
           {activeTab === "code" && (
             <div className="theme-surface rounded-3xl border border-border p-6 shadow-sm mb-4 animate-fadeIn">
               <div className="text-center mb-6">
-                <div className="w-16 h-16 rounded-full bg-accent-50 text-accent border border-accent/20 flex items-center justify-center mx-auto mb-3 shadow-xs">
+                <div className="w-16 h-16 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 flex items-center justify-center mx-auto mb-3 shadow-xs">
                   <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                   </svg>
@@ -376,32 +476,30 @@ const JoinBoothPage = () => {
             </div>
           )}
 
-          {/* TAB 2: Scan QR (Matching Screen 1 Mockup) */}
+          {/* TAB 2: Scan QR (Native Google ML Kit / Web Camera + Gallery) */}
           {activeTab === "qr" && (
             <div className="theme-surface rounded-3xl border border-border p-6 shadow-sm mb-4 text-center animate-fadeIn">
-              <div className="w-16 h-16 rounded-full bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-800 flex items-center justify-center mx-auto mb-3">
+              <div className="w-16 h-16 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 flex items-center justify-center mx-auto mb-3">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </div>
-              <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700 mb-2">
-                Coming Soon
-              </div>
               <h3 className="text-base font-bold theme-text mb-1">Scan a Booth QR Code</h3>
               <p className="text-xs theme-muted max-w-xs mx-auto mb-5 leading-relaxed">
-                Point your camera at the QR code to join the booth instantly.
+                Scan with your camera or select a QR image to verify and join instantly.
               </p>
 
               <button
                 type="button"
-                onClick={() => addToast("Camera scanner is coming soon! Please use the Enter Code tab.", "info")}
-                className="w-full py-3.5 rounded-2xl btn-theme text-on-primary font-bold text-sm shadow-md flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                onClick={handleOpenCameraScan}
+                disabled={loading}
+                className="w-full py-3.5 rounded-2xl btn-theme text-on-primary font-bold text-sm shadow-md flex items-center justify-center gap-2 active:scale-95 transition-transform disabled:opacity-50"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                 </svg>
-                <span>Open Camera</span>
+                <span>{loading ? "Processing..." : "Open Camera"}</span>
               </button>
 
               <div className="flex items-center my-4">
@@ -412,11 +510,12 @@ const JoinBoothPage = () => {
 
               <button
                 type="button"
-                onClick={() => addToast("Scan from gallery is coming soon! Please use the Enter Code tab.", "info")}
-                className="w-full p-3.5 rounded-2xl border border-border theme-surface hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between transition-colors"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={loading}
+                className="w-full p-3.5 rounded-2xl border border-border theme-surface hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between transition-colors disabled:opacity-50"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600 flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
@@ -433,9 +532,13 @@ const JoinBoothPage = () => {
             </div>
           )}
 
-          {/* Yellow Tip Card matching mockup */}
-          <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex items-start gap-3 text-xs text-amber-950 dark:text-amber-200 shadow-xs">
-            <span className="text-base shrink-0 leading-none">💡</span>
+          {/* Clean Tip Card without emojis */}
+          <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-cyan-500/30 flex items-start gap-2.5 text-xs text-slate-700 dark:text-slate-300 shadow-xs">
+            <div className="w-5 h-5 rounded-md bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0 mt-0.5">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
             <span className="leading-relaxed font-medium">You can also ask the booth admin for the invite code if you don't have a QR code.</span>
           </div>
         </div>
@@ -460,41 +563,72 @@ const JoinBoothPage = () => {
           {/* Booth Header Card */}
           <div className="theme-surface rounded-2xl border border-border p-4 mb-4 shadow-sm">
             <div className="flex items-start gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-800 flex items-center justify-center shrink-0 shadow-xs">
+              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 flex items-center justify-center shrink-0 shadow-xs">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 14l9-5-9-5-9 5 9 5z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
                 </svg>
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2 mb-0.5">
+                {/* Top Row: Title on Left, Status Badge & QR on Right */}
+                <div className="flex items-start justify-between gap-2 mb-1.5">
                   <h2 className="text-base font-bold theme-text truncate">{booth.name}</h2>
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide uppercase shrink-0 ${
-                      booth.status === "active"
-                        ? "bg-success/15 text-success border border-success/30"
-                        : "bg-error/15 text-error border border-error/30"
-                    }`}
-                  >
-                    {booth.status === "active" ? "Active" : "Closed"}
-                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {booth.status === "active" ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-transparent text-emerald-600 dark:text-emerald-400 border border-emerald-500/50">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        Active
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-transparent text-rose-600 dark:text-rose-400 border border-rose-500/50">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                        Closed
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setQrModalData({
+                          inviteCode: booth.inviteCode || inviteCode,
+                          boothName: booth.name,
+                          inviteLink: `${window.location.origin}/join/${booth.inviteCode || inviteCode}`,
+                        })
+                      }
+                      className="w-7 h-7 rounded-lg border border-cyan-500/40 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-500/10 flex items-center justify-center transition-colors"
+                      title="View QR Code"
+                      aria-label="View QR Code"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5 text-xs theme-muted mb-2">
-                  <span>Booth ID: {booth.boothId}</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(booth.boothId);
-                      addToast("Booth ID copied", "success");
-                    }}
-                    className="p-0.5 hover:text-accent"
-                    title="Copy Booth ID"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                  </button>
+
+                {/* Metadata Row: Creator on Left, Booth ID on Right */}
+                <div className="flex items-center justify-between gap-2 text-xs theme-muted mb-2">
+                  <span className="truncate">Created by {booth.creator?.name || "Booth Admin"}</span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="font-mono text-[11px] px-1.5 py-0.5 rounded-md border border-border uppercase tracking-wide">
+                      ID {booth.boothId}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(booth.boothId);
+                        addToast("Booth ID copied", "success");
+                      }}
+                      className="p-1 rounded-md text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-cyan-500/10 transition-colors"
+                      title="Copy Booth ID"
+                      aria-label="Copy Booth ID"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
+
                 {booth.description && (
                   <p className="text-xs theme-muted leading-relaxed">
                     {booth.description}
@@ -555,11 +689,10 @@ const JoinBoothPage = () => {
               </div>
               <div className="space-y-2.5">
                 {booth.candidates.map((candidate, idx) => {
-                  const color = candidateColors[idx % candidateColors.length];
                   const initial = candidate.name ? candidate.name.charAt(0).toUpperCase() : "C";
                   return (
                     <div key={candidate._id || candidate.id || idx} className="flex items-center gap-3 p-2.5 rounded-xl border border-border">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${color}`}>
+                      <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 bg-cyan-500/10 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
                         {initial}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -577,7 +710,7 @@ const JoinBoothPage = () => {
 
           {/* Pending Approval notice if applicable */}
           {pendingRequest && (
-            <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-950 dark:text-amber-200 text-xs mb-4 text-center font-medium shadow-xs">
+            <div className="p-4 rounded-2xl bg-cyan-500/10 dark:bg-cyan-500/15 border border-cyan-500/30 text-cyan-800 dark:text-cyan-200 text-xs mb-4 text-center font-medium shadow-xs">
               Your request has been submitted and is awaiting approval from the organizer.
             </div>
           )}
@@ -604,6 +737,25 @@ const JoinBoothPage = () => {
             </div>
           )}
         </div>
+      )}
+
+      {/* Web Camera QR Scanner Modal */}
+      <WebQRScannerModal
+        isOpen={showWebScanner}
+        onClose={() => setShowWebScanner(false)}
+        onScanSuccess={handleWebScanSuccess}
+        onError={(msg) => addToast(msg, "error")}
+      />
+
+      {/* QR Code Modal for sharing/viewing */}
+      {qrModalData && (
+        <Suspense fallback={null}>
+          <QRCodeModal
+            data={qrModalData}
+            onClose={() => setQrModalData(null)}
+            onDownload={downloadQRCode}
+          />
+        </Suspense>
       )}
     </div>
   );

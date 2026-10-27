@@ -203,12 +203,16 @@ const generateToken = (userData, options = {}) => {
 };
 
 // Function to generate refresh token
-const generateRefreshToken = (userData) => {
+const generateRefreshToken = (userData, options = {}) => {
+  const sessionId = options.sessionId || userData.sessionId;
   const payload = {
     id: userData.id || userData._id,
     type: "refresh",
+    sessionId,
     jti: crypto.randomUUID(),
   };
+
+  const { sessionId: _, ...jwtOptions } = options;
 
   return jwt.sign(
     payload,
@@ -216,6 +220,7 @@ const generateRefreshToken = (userData) => {
     {
       expiresIn: "7d",
       issuer: "voting-app",
+      ...jwtOptions,
     },
   );
 };

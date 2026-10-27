@@ -4,6 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import ThemeToggle from "./ThemeToggle";
 import BackButton from "./BackButton";
 import packageJson from "../../../package.json";
+import { useRegisterModal } from "../../hooks/useRegisterModal";
 
 // ── Service health banner ────────────────────────────────────────────────────
 const ServiceBanner = () => {
@@ -149,6 +150,7 @@ const ServiceBanner = () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const Navigation = ({ isMenuOpen, setIsMenuOpen }) => {
+  useRegisterModal(isMenuOpen, () => setIsMenuOpen(false));
   const { user, isAuthenticated, logout } = useAuth();
   const menuRef = useRef(null);
   const mobileMenuRef = useRef(null);
@@ -220,7 +222,7 @@ const Navigation = ({ isMenuOpen, setIsMenuOpen }) => {
   const userNavItems = [{ path: "/dashboard", label: "Dashboard" }];
 
   return (
-    <nav className="hidden md:block theme-surface shadow-sm border-b border-border sticky top-0 z-40">
+    <nav className={`theme-surface shadow-sm border-b border-border sticky top-0 z-40 ${isAuthenticated ? "hidden md:block" : ""}`}>
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
         <style>{`
               /* Hide username and slightly reduce avatar in the narrow mid breakpoint (767px - 840px)
@@ -413,34 +415,19 @@ const Navigation = ({ isMenuOpen, setIsMenuOpen }) => {
           {/* Mobile header: branding and theme only. Navigation lives below. */}
           <div className="md:hidden flex items-center space-x-2">
             <ThemeToggle />
-            <span className="hidden">
-            {isAuthenticated && (
-              <>
-                <Link
-                  to="/user/settings"
-                  className="p-2 theme-muted hover:text-accent hover:bg-accent-50 rounded-lg transition-colors focus-ring"
-                  aria-label="Open settings"
-                  title="Settings"
-                >
-                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 15.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1-1.8 1.8-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5v.1h-2.6v-.1a1.7 1.7 0 00-1-1.5 1.7 1.7 0 00-.3-1.9l-.1.1-1.8-1.8.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H6v-2.6h.1a1.7 1.7 0 001.5-1 1.7 1.7 0 00-.3-1.9l-.1-.1L9 6.6l.1.1a1.7 1.7 0 001.9.3 1.7 1.7 0 001-1.5v-.1h2.6v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1 1.8 1.8-.1.1a1.7 1.7 0 00-.3 1.9 1.7 1.7 0 001.5 1h.1V14h-.1a1.7 1.7 0 00-1.5 1z" />
-                  </svg>
-                </Link>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="p-2 theme-muted hover:text-error hover:bg-error-50 rounded-lg transition-colors focus-ring"
-                  aria-label="Sign out"
-                  title="Sign out"
-                >
-                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 17l5-5-5-5M15 12H3m8 8h8a2 2 0 002-2V6a2 2 0 00-2-2h-8" />
-                  </svg>
-                </button>
-              </>
+            {!isAuthenticated && (
+              <button
+                type="button"
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="p-2 theme-muted hover:text-accent hover:bg-accent-50 rounded-lg transition-colors focus-ring"
+                aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+                aria-expanded={isMenuOpen}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
+                </svg>
+              </button>
             )}
-            </span>
           </div>
         </div>
 
@@ -833,6 +820,41 @@ const Footer = () => {
 const MobileBottomNav = () => {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+
+  useEffect(() => {
+    const handleViewportChange = () => {
+      if (window.visualViewport) {
+        const heightDiff = window.innerHeight - window.visualViewport.height;
+        setIsKeyboardOpen(heightDiff > 140);
+      }
+    };
+
+    const handleFocusIn = (e) => {
+      if (window.innerWidth < 768 && e.target && e.target.matches("input, textarea, select")) {
+        setIsKeyboardOpen(true);
+      }
+    };
+
+    const handleFocusOut = () => {
+      setTimeout(() => {
+        const active = document.activeElement;
+        if (!active || !active.matches("input, textarea, select")) {
+          setIsKeyboardOpen(false);
+        }
+      }, 100);
+    };
+
+    window.visualViewport?.addEventListener("resize", handleViewportChange);
+    document.addEventListener("focusin", handleFocusIn);
+    document.addEventListener("focusout", handleFocusOut);
+
+    return () => {
+      window.visualViewport?.removeEventListener("resize", handleViewportChange);
+      document.removeEventListener("focusin", handleFocusIn);
+      document.removeEventListener("focusout", handleFocusOut);
+    };
+  }, []);
 
   const isAuth = isAuthenticated && Boolean(localStorage.getItem("token"));
 
@@ -855,7 +877,9 @@ const MobileBottomNav = () => {
   return (
     <nav
       aria-label="Mobile navigation"
-      className="mobile-bottom-nav fixed bottom-0 inset-x-0 z-[70] md:hidden theme-surface border-t border-border shadow-[0_-4px_16px_rgba(15,23,42,0.08)]"
+      className={`mobile-bottom-nav fixed bottom-0 inset-x-0 z-[70] md:hidden theme-surface border-t border-border shadow-[0_-4px_16px_rgba(15,23,42,0.08)] pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] transition-all duration-200 ${
+        isKeyboardOpen ? "translate-y-full opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
+      }`}
     >
       <div className="grid grid-cols-5 max-w-lg mx-auto px-1 pt-2">
         {items.map((item) => {
@@ -874,7 +898,7 @@ const MobileBottomNav = () => {
               to={item.path}
               aria-current={active ? "page" : undefined}
               className={`${item.prominent ? "relative -mt-6" : ""} min-h-12 flex flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-semibold transition-colors ${
-                active ? "text-accent bg-accent-50" : "theme-muted hover:text-accent"
+                active ? "text-accent bg-cyan-500/10 dark:bg-cyan-500/15" : "theme-muted hover:text-accent"
               }`}
             >
               <span className={item.prominent ? "flex h-14 w-14 items-center justify-center rounded-full bg-primary text-on-primary shadow-[0_8px_20px_rgba(21,94,117,0.35)] ring-4 ring-[var(--color-surface)]" : ""}>
@@ -906,14 +930,14 @@ const Layout = ({ children, showFooter = true }) => {
   ].includes(location.pathname);
 
   if (isAuthPage) {
-    return <div className="min-h-screen bg-gray-50">{children}</div>;
+    return <div className="min-h-screen theme-bg">{children}</div>;
   }
 
   return (
     <div className="min-h-screen theme-bg flex flex-col overflow-x-hidden w-full">
       <Navigation isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} />
       <ServiceBanner />
-      <main className={`flex-1 ${isAuthenticated ? "pb-20 md:pb-0" : ""} overflow-x-hidden w-full`}>
+      <main className="flex-1 pb-24 md:pb-0 overflow-x-hidden w-full">
         {children}
       </main>
       {showFooter && <div className={isAuthenticated ? "hidden md:block" : ""}><Footer /></div>}

@@ -72,6 +72,22 @@ button,
   }
 }
 
+@keyframes drawCheck {
+  0% {
+    stroke-dashoffset: 40;
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 /* Utility classes for animations */
 .animate-fadeIn {
   animation: fadeIn 0.3s ease-out;
@@ -83,6 +99,12 @@ button,
 
 .animate-scaleIn {
   animation: scaleIn 0.2s ease-out;
+}
+
+.animate-drawCheck {
+  stroke-dasharray: 40;
+  stroke-dashoffset: 0;
+  animation: drawCheck 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
 }
 
 /* Loading skeleton shimmer effect */
@@ -106,3 +128,63 @@ button,
   );
   animation: shimmer 2s infinite;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Sileo Toast Overrides (Mobile Boundaries, Stacking & Multi-line Wrapping)   */
+/* -------------------------------------------------------------------------- */
+[data-sileo-viewport] {
+  z-index: 9999 !important;
+  max-width: 100vw !important;
+  box-sizing: border-box !important;
+  padding: 0.75rem !important;
+}
+
+[data-sileo-toast] {
+  width: min(350px, calc(100vw - 1.5rem)) !important;
+  max-width: calc(100vw - 1.5rem) !important;
+  box-sizing: border-box !important;
+}
+
+[data-sileo-header] {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+[data-sileo-header-inner] {
+  white-space: normal !important;
+  word-break: break-word !important;
+  max-width: 100% !important;
+}
+
+[data-sileo-title] {
+  white-space: normal !important;
+  word-break: break-word !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  line-height: 1.25rem !important;
+  font-size: 0.8125rem !important;
+}
+
+[data-sileo-description] {
+  white-space: normal !important;
+  word-break: break-word !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  line-height: 1.125rem !important;
+}
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+

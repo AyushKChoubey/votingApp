@@ -130,7 +130,7 @@ const EmailVerifiedPage = () => {
       {/* ══════════════════════════════════════════════════════════════ */}
       {/* ── MOBILE VIEW ONLY (block md:hidden) - Verifying State ───── */}
       {/* ══════════════════════════════════════════════════════════════ */}
-      <div className="block md:hidden w-full max-w-md mx-auto min-h-screen theme-bg relative px-5 pt-12 pb-10 flex flex-col justify-center items-center overflow-x-hidden animate-fadeIn">
+      <div className=" md:hidden w-full max-w-md mx-auto min-h-screen theme-bg relative px-5 pt-12 pb-10 flex flex-col justify-center items-center overflow-x-hidden animate-fadeIn">
         <AuthWatermarkBackground />
 
         <div className="relative z-10 w-full text-center">
@@ -184,7 +184,7 @@ const EmailVerifiedPage = () => {
       {/* ══════════════════════════════════════════════════════════════ */}
       {/* ── MOBILE VIEW ONLY (block md:hidden) - Matching Screen 7 ──── */}
       {/* ══════════════════════════════════════════════════════════════ */}
-      <div className="block md:hidden w-full max-w-md mx-auto min-h-screen theme-bg relative px-5 pt-10 pb-10 flex flex-col justify-between overflow-x-hidden animate-fadeIn">
+      <div className=" md:hidden w-full max-w-md mx-auto min-h-screen theme-bg relative px-5 pt-10 pb-10 flex flex-col justify-between overflow-x-hidden animate-fadeIn">
         <AuthWatermarkBackground />
 
         <div className="relative z-10 w-full flex-1 flex flex-col items-center justify-center text-center">

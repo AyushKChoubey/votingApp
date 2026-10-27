@@ -98,10 +98,7 @@ function Login() {
         }
       } else {
         // Display error from login result
-        const errorMsg =
-          result.error && result.error.includes("Invalid email or password")
-            ? "Invalid email or password. Password does not match our records."
-            : result.error || "Login failed. Please check your credentials.";
+        const errorMsg = result.error || "Invalid email or password. Please check your credentials.";
         setError(errorMsg);
       }
     } catch (err) {
@@ -122,7 +119,7 @@ function Login() {
       {/* ══════════════════════════════════════════════════════════════ */}
       {/* ── MOBILE VIEW ONLY (block md:hidden) - Matching Screen 1 ──── */}
       {/* ══════════════════════════════════════════════════════════════ */}
-      <div className="block md:hidden w-full max-w-md mx-auto min-h-screen theme-bg relative px-5 pt-8 pb-10 flex flex-col justify-between overflow-x-hidden animate-fadeIn">
+      <div className="md:hidden w-full max-w-md mx-auto min-h-[100dvh] theme-bg relative px-5 pt-8 pb-10 flex flex-col justify-between overflow-x-hidden animate-fadeIn">
         <AuthWatermarkBackground />
 
         <div className="relative z-10 w-full">
