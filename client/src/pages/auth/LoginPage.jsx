@@ -46,6 +46,22 @@ function Login() {
       setError("Your session has expired. Please log in again.");
     }
 
+    // Handle OAuth and redirect error parameters
+    const errorParam = searchParams.get("error");
+    if (errorParam) {
+      if (errorParam === "oauth_failed") {
+        setError("Google authentication failed. Please try again or use your password.");
+      } else if (errorParam === "invalid_oauth_state") {
+        setError("Sign-in session expired or invalid. Please try logging in again.");
+      } else if (errorParam === "oauth_cancelled") {
+        setError("Google sign-in was cancelled.");
+      } else if (errorParam === "session_expired") {
+        setError("Your session has expired. Please log in again.");
+      } else if (errorParam === "session_revoked") {
+        setError("Your session has been signed out.");
+      }
+    }
+
     // Check for success or error message from location state (e.g. from password reset or email verification)
     if (location.state?.message) {
       if (location.state.type === "error") {
@@ -277,7 +293,7 @@ function Login() {
         {/* Footer Link */}
         <div className="relative z-10 text-center pt-6 text-xs theme-muted">
           Don't have an account?{" "}
-          <Link to="/register" className="font-bold text-accent hover:underline">
+          <Link to={`/register${location.search}`} className="font-bold text-accent hover:underline">
             Sign up
           </Link>
         </div>
@@ -569,7 +585,7 @@ function Login() {
             <p className="text-sm theme-muted">
               Don't have an account?{" "}
               <Link
-                to="/register"
+                to={`/register${location.search}`}
                 className="text-accent hover:text-accent/80 font-semibold transition-colors "
               >
                 Sign up

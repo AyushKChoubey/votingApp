@@ -2,7 +2,6 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/layout/Button';
-import ThemeToggle from '../components/layout/ThemeToggle';
 import AppWatermark from '../components/layout/AuthWatermarkBackground';
 
 const HomePage = () => {
@@ -10,18 +9,6 @@ const HomePage = () => {
 
   return (
     <div className="min-h-screen theme-bg">
-      <div className="md:hidden flex items-center justify-between px-4 pt-4">
-        <Link to="/" className="flex items-center gap-3" aria-label="Go to home">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl btn-theme shadow-sm">
-            <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </span>
-          <span className="text-xl font-bold theme-text">VoteBooth</span>
-        </Link>
-        <ThemeToggle />
-      </div>
-
       {/* Hero Section - Modern & Engaging */}
       <div className="relative overflow-hidden">
         <AppWatermark variant="waves" />

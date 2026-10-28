@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { LoadingButton } from '../../components/layout/Loading';
 import { Alert } from '../../components/layout/Alert';
@@ -126,7 +126,13 @@ const Register = () => {
             }
             
             if (result.success) {
-                navigate('/dashboard');
+                if (redirectUrl) {
+                    navigate(redirectUrl);
+                } else if (inviteCode) {
+                    navigate(`/booth/join/${inviteCode}`);
+                } else {
+                    navigate('/dashboard');
+                }
             } else {
                 // Handle specific error cases
                 if (result.error && result.error.includes('Email already registered')) {
@@ -483,7 +489,7 @@ const Register = () => {
         {/* Footer Link */}
         <div className="relative z-10 text-center pt-6 text-xs theme-muted">
           Already have an account?{" "}
-          <Link to="/login" className="font-bold text-accent hover:underline">
+          <Link to={`/login${location.search}`} className="font-bold text-accent hover:underline">
             Sign in
           </Link>
         </div>
@@ -787,7 +793,7 @@ const Register = () => {
                         <p className="text-sm theme-muted">
                             Already have an account?{' '}
                             <Link 
-                                to="/login" 
+                                to={`/login${location.search}`} 
                                 className="text-accent hover:text-accent/80 font-semibold transition-colors"
                             >
                                 Sign in

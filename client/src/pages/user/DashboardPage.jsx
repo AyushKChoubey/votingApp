@@ -739,7 +739,7 @@ function Dashboard() {
                 to={`/booth/${booth.boothId || booth.id}`}
                 className="flex items-center gap-3 rounded-xl theme-surface border border-border px-3 py-3"
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-500/10 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent-50 dark:bg-accent/15 text-accent border border-accent/20">
                   <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                     <path strokeLinecap="round" strokeLinejoin="round" d={
                       idx === 0
@@ -978,7 +978,7 @@ function CreatedBoothCard({
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center gap-2 min-w-0">
-            <div className="w-7 h-7 rounded-lg border border-cyan-500/30 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0">
+            <div className="w-7 h-7 rounded-lg border border-accent/20 bg-accent-50 text-accent dark:bg-accent/15 flex items-center justify-center shrink-0">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
@@ -989,7 +989,7 @@ function CreatedBoothCard({
           <button
             type="button"
             onClick={() => onCopyInviteCode(booth.inviteCode)}
-            className="p-1.5 -mr-1 rounded-lg text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-cyan-500/10 transition-colors"
+            className="p-1.5 -mr-1 rounded-lg text-slate-400 hover:text-accent hover:bg-accent-50 dark:hover:bg-accent/10 transition-colors"
             title="Copy invite code"
             aria-label="Copy invite code"
           >
@@ -1002,7 +1002,7 @@ function CreatedBoothCard({
         {/* 3 Stat Columns with squircle icon badges matching Image 1 */}
         <div className="grid grid-cols-3 gap-2 py-2 px-2.5 rounded-xl border border-border bg-black/[0.02] dark:bg-white/[0.02] mb-3">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="w-8 h-8 rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0 shadow-2xs">
+            <div className="w-8 h-8 rounded-xl border border-accent/20 bg-accent-50 text-accent dark:bg-accent/15 flex items-center justify-center shrink-0 shadow-2xs">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
@@ -1014,7 +1014,7 @@ function CreatedBoothCard({
           </div>
 
           <div className="flex items-center gap-2 min-w-0">
-            <div className="w-8 h-8 rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0 shadow-2xs">
+            <div className="w-8 h-8 rounded-xl border border-accent/20 bg-accent-50 text-accent dark:bg-accent/15 flex items-center justify-center shrink-0 shadow-2xs">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
@@ -1026,7 +1026,7 @@ function CreatedBoothCard({
           </div>
 
           <div className="flex items-center gap-2 min-w-0">
-            <div className="w-8 h-8 rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0 shadow-2xs">
+            <div className="w-8 h-8 rounded-xl border border-accent/20 bg-accent-50 text-accent dark:bg-accent/15 flex items-center justify-center shrink-0 shadow-2xs">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
@@ -1074,7 +1074,7 @@ function CreatedBoothCard({
               e.stopPropagation();
               onShowQRCode(booth.inviteCode, booth.name);
             }}
-            className="w-9 h-9 rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-500/20 flex items-center justify-center transition-colors"
+            className="w-9 h-9 rounded-xl border border-accent/20 bg-accent-50 text-accent dark:bg-accent/15 hover:bg-accent-100 dark:hover:bg-accent/25 flex items-center justify-center transition-colors"
             title="View QR Code"
             aria-label="View QR Code"
           >
@@ -1086,7 +1086,7 @@ function CreatedBoothCard({
           <button
             type="button"
             onClick={handleShareClick}
-            className="w-9 h-9 rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-500/20 flex items-center justify-center transition-colors"
+            className="w-9 h-9 rounded-xl border border-accent/20 bg-accent-50 text-accent dark:bg-accent/15 hover:bg-accent-100 dark:hover:bg-accent/25 flex items-center justify-center transition-colors"
             title="Share booth"
             aria-label="Share booth"
           >
@@ -1182,7 +1182,7 @@ function JoinedBoothCard({ booth }) {
         {/* 3 Stat Columns with squircle icon badges matching Image 1 */}
         <div className="grid grid-cols-3 gap-2 py-2 px-2.5 rounded-xl border border-border bg-black/[0.02] dark:bg-white/[0.02] mb-3">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="w-8 h-8 rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0 shadow-2xs">
+            <div className="w-8 h-8 rounded-xl border border-accent/20 bg-accent-50 text-accent dark:bg-accent/15 flex items-center justify-center shrink-0 shadow-2xs">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
@@ -1194,7 +1194,7 @@ function JoinedBoothCard({ booth }) {
           </div>
 
           <div className="flex items-center gap-2 min-w-0">
-            <div className="w-8 h-8 rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0 shadow-2xs">
+            <div className="w-8 h-8 rounded-xl border border-accent/20 bg-accent-50 text-accent dark:bg-accent/15 flex items-center justify-center shrink-0 shadow-2xs">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
@@ -1206,7 +1206,7 @@ function JoinedBoothCard({ booth }) {
           </div>
 
           <div className="flex items-center gap-2 min-w-0">
-            <div className="w-8 h-8 rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0 shadow-2xs">
+            <div className="w-8 h-8 rounded-xl border border-accent/20 bg-accent-50 text-accent dark:bg-accent/15 flex items-center justify-center shrink-0 shadow-2xs">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
               </svg>
@@ -1230,7 +1230,7 @@ function JoinedBoothCard({ booth }) {
 
         {/* Info Banner if Closed and user didn't vote */}
         {isClosed && !hasVoted && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-cyan-500/40 bg-transparent text-cyan-700 dark:text-cyan-300 text-xs font-medium mb-3">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-accent/30 bg-accent-50/50 dark:bg-accent/10 text-accent text-xs font-medium mb-3">
             <svg className="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>

@@ -119,7 +119,7 @@ export function WebQRScannerModal({ isOpen, onClose, onScanSuccess, onError }) {
       {/* Header bar */}
       <div className="w-full max-w-md flex items-center justify-between text-white pt-2 pb-4">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-accent/20 text-accent border border-accent/30 flex items-center justify-center">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
             </svg>
@@ -163,7 +163,7 @@ export function WebQRScannerModal({ isOpen, onClose, onScanSuccess, onError }) {
       </div>
 
       {/* Viewfinder Area */}
-      <div className="relative w-full max-w-sm aspect-square rounded-3xl overflow-hidden border-2 border-cyan-500/30 bg-black flex items-center justify-center shadow-2xl">
+      <div className="relative w-full max-w-sm aspect-square rounded-3xl overflow-hidden border-2 border-accent/30 bg-black flex items-center justify-center shadow-2xl">
         <video
           ref={videoRef}
           className="w-full h-full object-cover"

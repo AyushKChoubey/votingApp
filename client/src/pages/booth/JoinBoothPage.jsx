@@ -415,7 +415,7 @@ const JoinBoothPage = () => {
           {activeTab === "code" && (
             <div className="theme-surface rounded-3xl border border-border p-6 shadow-sm mb-4 animate-fadeIn">
               <div className="text-center mb-6">
-                <div className="w-16 h-16 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 flex items-center justify-center mx-auto mb-3 shadow-xs">
+                <div className="w-16 h-16 rounded-full bg-accent-50 dark:bg-accent/15 text-accent border border-accent/20 flex items-center justify-center mx-auto mb-3 shadow-xs">
                   <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                   </svg>
@@ -479,7 +479,7 @@ const JoinBoothPage = () => {
           {/* TAB 2: Scan QR (Native Google ML Kit / Web Camera + Gallery) */}
           {activeTab === "qr" && (
             <div className="theme-surface rounded-3xl border border-border p-6 shadow-sm mb-4 text-center animate-fadeIn">
-              <div className="w-16 h-16 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 flex items-center justify-center mx-auto mb-3">
+              <div className="w-16 h-16 rounded-full bg-accent-50 dark:bg-accent/15 text-accent border border-accent/20 flex items-center justify-center mx-auto mb-3">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -515,7 +515,7 @@ const JoinBoothPage = () => {
                 className="w-full p-3.5 rounded-2xl border border-border theme-surface hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between transition-colors disabled:opacity-50"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-xl bg-accent-50 dark:bg-accent/15 text-accent border border-accent/20 flex items-center justify-center">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
@@ -533,8 +533,8 @@ const JoinBoothPage = () => {
           )}
 
           {/* Clean Tip Card without emojis */}
-          <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-cyan-500/30 flex items-start gap-2.5 text-xs text-slate-700 dark:text-slate-300 shadow-xs">
-            <div className="w-5 h-5 rounded-md bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0 mt-0.5">
+          <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-accent/20 flex items-start gap-2.5 text-xs text-slate-700 dark:text-slate-300 shadow-xs">
+            <div className="w-5 h-5 rounded-md bg-accent-50 dark:bg-accent/15 text-accent border border-accent/20 flex items-center justify-center shrink-0 mt-0.5">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -563,7 +563,7 @@ const JoinBoothPage = () => {
           {/* Booth Header Card */}
           <div className="theme-surface rounded-2xl border border-border p-4 mb-4 shadow-sm">
             <div className="flex items-start gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 flex items-center justify-center shrink-0 shadow-xs">
+              <div className="w-12 h-12 rounded-2xl bg-accent-50 dark:bg-accent/15 text-accent border border-accent/20 flex items-center justify-center shrink-0 shadow-xs">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 14l9-5-9-5-9 5 9 5z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
@@ -594,7 +594,7 @@ const JoinBoothPage = () => {
                           inviteLink: `${window.location.origin}/join/${booth.inviteCode || inviteCode}`,
                         })
                       }
-                      className="w-7 h-7 rounded-lg border border-cyan-500/40 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-500/10 flex items-center justify-center transition-colors"
+                      className="w-7 h-7 rounded-lg border border-accent/20 text-accent hover:bg-accent-50 dark:hover:bg-accent/15 flex items-center justify-center transition-colors"
                       title="View QR Code"
                       aria-label="View QR Code"
                     >
@@ -618,7 +618,7 @@ const JoinBoothPage = () => {
                         navigator.clipboard.writeText(booth.boothId);
                         addToast("Booth ID copied", "success");
                       }}
-                      className="p-1 rounded-md text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-cyan-500/10 transition-colors"
+                      className="p-1 rounded-md text-slate-400 hover:text-accent hover:bg-accent-50 dark:hover:bg-accent/15 transition-colors"
                       title="Copy Booth ID"
                       aria-label="Copy Booth ID"
                     >
@@ -692,7 +692,7 @@ const JoinBoothPage = () => {
                   const initial = candidate.name ? candidate.name.charAt(0).toUpperCase() : "C";
                   return (
                     <div key={candidate._id || candidate.id || idx} className="flex items-center gap-3 p-2.5 rounded-xl border border-border">
-                      <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 bg-cyan-500/10 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
+                      <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 bg-accent-50 dark:bg-accent/15 text-accent border border-accent/20">
                         {initial}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -710,7 +710,7 @@ const JoinBoothPage = () => {
 
           {/* Pending Approval notice if applicable */}
           {pendingRequest && (
-            <div className="p-4 rounded-2xl bg-cyan-500/10 dark:bg-cyan-500/15 border border-cyan-500/30 text-cyan-800 dark:text-cyan-200 text-xs mb-4 text-center font-medium shadow-xs">
+            <div className="p-4 rounded-2xl bg-accent-50 dark:bg-accent/15 border border-accent/30 text-accent text-xs mb-4 text-center font-medium shadow-xs">
               Your request has been submitted and is awaiting approval from the organizer.
             </div>
           )}

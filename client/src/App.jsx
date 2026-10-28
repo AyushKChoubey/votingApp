@@ -83,21 +83,13 @@ const ProtectedRoute = ({ children }) => {
   // If token is cleared or unauthenticated, preserve destination (especially for invites)
   if (!isAuthenticated || !localStorage.getItem("token")) {
     const targetUrl = location.pathname + location.search;
-    const isInviteOrBooth =
-      location.pathname.startsWith("/booth/join") ||
-      location.pathname.startsWith("/join/") ||
-      location.pathname.startsWith("/booth/");
-
-    if (isInviteOrBooth) {
-      return (
-        <Navigate
-          to={`/login?redirect=${encodeURIComponent(targetUrl)}`}
-          state={{ from: location }}
-          replace
-        />
-      );
-    }
-    return <Navigate to="/" state={{ from: location }} replace />;
+    return (
+      <Navigate
+        to={`/login?redirect=${encodeURIComponent(targetUrl)}`}
+        state={{ from: location }}
+        replace
+      />
+    );
   }
 
   return children;

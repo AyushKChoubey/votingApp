@@ -180,31 +180,35 @@ if (!sessionSecret) {
 }
 
 // Session configuration for OAuth
-app.use(
-  session({
-    secret: sessionSecret,
-    resave: false,
-    saveUninitialized: false,
-    store: MongoStore.create({
-      mongoUrl:
-        process.env.NODE_ENV === "production"
-          ? process.env.MONGODB_URI
-          : process.env.MONGODB_URI_LOCAL ||
-            "mongodb://localhost:27017/votingApp",
-      touchAfter: 24 * 3600, // lazy session update
-      ttl: 24 * 60 * 60, // = 24 hours. Default session expiration time
-      autoRemove: "native", // Default - let MongoDB handle expired sessions
-      crypto: {
-        secret: sessionSecret,
-      },
-    }),
-    cookie: {
-      secure: process.env.NODE_ENV === "production", // HTTPS only in production
-      httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+const sessionConfig = {
+  secret: sessionSecret,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === "production",
+    httpOnly: true,
+    sameSite: "lax",
+    maxAge: 24 * 60 * 60 * 1000,
+  },
+};
+
+if (process.env.NODE_ENV !== "test") {
+  sessionConfig.store = MongoStore.create({
+    mongoUrl:
+      process.env.NODE_ENV === "production"
+        ? process.env.MONGODB_URI
+        : process.env.MONGODB_URI_LOCAL ||
+          "mongodb://localhost:27017/votingApp",
+    touchAfter: 24 * 3600,
+    ttl: 24 * 60 * 60,
+    autoRemove: "native",
+    crypto: {
+      secret: sessionSecret,
     },
-  }),
-);
+  });
+}
+
+app.use(session(sessionConfig));
 
 // Initialize Passport
 app.use(passport.initialize());
@@ -440,6 +444,8 @@ const closeServerGracefully = async (signal) => {
 process.on("SIGTERM", () => closeServerGracefully("SIGTERM"));
 process.on("SIGINT", () => closeServerGracefully("SIGINT"));
 
-startServer();
+if (require.main === module) {
+  startServer();
+}
 
 module.exports = app;

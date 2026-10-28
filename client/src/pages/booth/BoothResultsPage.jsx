@@ -619,11 +619,11 @@ const BoothResultsPage = () => {
     const maxVote = sortedCandidates[0]?.voteCount || 0;
 
     const candidateColors = [
-      { bg: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300", bar: "bg-cyan-600" },
-      { bg: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300", bar: "bg-purple-600" },
-      { bg: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300", bar: "bg-emerald-600" },
-      { bg: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300", bar: "bg-amber-600" },
-      { bg: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300", bar: "bg-rose-600" },
+      { bg: "bg-accent-50 dark:bg-accent/15 text-accent border border-accent/20", bar: "bg-accent" },
+      { bg: "bg-primary-50 dark:bg-primary-950/40 text-primary border border-primary/20", bar: "bg-primary" },
+      { bg: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20", bar: "bg-emerald-500" },
+      { bg: "bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-500/20", bar: "bg-amber-500" },
+      { bg: "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-500/20", bar: "bg-rose-500" },
     ];
 
     const copyBoothId = () => {
@@ -729,10 +729,23 @@ const BoothResultsPage = () => {
                   {booth?.status === "active" ? "Active" : "Closed"}
                 </span>
               </div>
+              <div className="flex items-center gap-1.5 text-xs theme-muted mb-2 font-mono">
+                <span>Booth ID: {booth?.boothId || booth?.id}</span>
+                <button
+                  type="button"
+                  onClick={copyBoothId}
+                  className="p-1 -m-0.5 hover:text-accent transition-colors shrink-0"
+                  title="Copy Booth ID"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </button>
+              </div>
               <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
                 {permissions.isCreator && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-transparent text-cyan-600 dark:text-cyan-400 border border-cyan-500/50">
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/30">
+                    <svg className="w-3 h-3 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                     Creator
                   </span>
                 )}
@@ -969,7 +982,7 @@ const BoothResultsPage = () => {
             </div>
             <div className="w-full bg-black/5 dark:bg-white/10 rounded-full h-2 overflow-hidden">
               <div
-                className="bg-cyan-600 h-2 rounded-full transition-all duration-500"
+                className="bg-accent h-2 rounded-full transition-all duration-500"
                 style={{ width: `${turnout}%` }}
               />
             </div>
@@ -1079,7 +1092,7 @@ const BoothResultsPage = () => {
             </span>
 
             {permissions.isCreator && (
-              <span className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold bg-accent/10 text-accent border border-accent/20">
+              <span className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/30">
                 CREATOR
               </span>
             )}

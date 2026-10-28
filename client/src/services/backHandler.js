@@ -19,6 +19,58 @@ export function registerModalClose(closeFn) {
   };
 }
 
+/**
+ * Parses deep link URLs into internal client router paths.
+ * Supports custom schemes (votebooth://) and web URLs.
+ * @param {string} rawUrl - The incoming deep link URL
+ * @returns {string|null} - The application route or null if unrecognized
+ */
+export function parseDeepLink(rawUrl) {
+  if (!rawUrl || typeof rawUrl !== "string") return null;
+
+  // 1. Android Deep Link handling for Google OAuth (votebooth://auth/callback?token=...)
+  if (rawUrl.includes("auth/callback")) {
+    const queryIndex = rawUrl.indexOf("?");
+    const search = queryIndex !== -1 ? rawUrl.slice(queryIndex) : "";
+    return `/auth/callback${search}`;
+  }
+
+  // 2. Custom scheme join link: votebooth://join/:code or votebooth://booth/join/:code
+  const joinMatch = rawUrl.match(/votebooth:\/\/(?:booth\/)?join\/([A-Za-z0-9_-]+)/i);
+  if (joinMatch) {
+    const code = joinMatch[1].toUpperCase();
+    const queryIndex = rawUrl.indexOf("?");
+    const search = queryIndex !== -1 ? rawUrl.slice(queryIndex) : "";
+    return `/booth/join/${code}${search}`;
+  }
+
+  // 3. Custom scheme direct booth view: votebooth://booth/:id or votebooth://b/:id
+  const boothMatch = rawUrl.match(/votebooth:\/\/(?:booth|b)\/([A-Za-z0-9_-]+)/i);
+  if (boothMatch) {
+    const boothId = boothMatch[1];
+    const queryIndex = rawUrl.indexOf("?");
+    const search = queryIndex !== -1 ? rawUrl.slice(queryIndex) : "";
+    return `/booth/${boothId}${search}`;
+  }
+
+  // 4. Universal / App Links: https://.../join/:code or /booth/join/:code
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.pathname.startsWith("/join/")) {
+      const code = parsed.pathname.replace("/join/", "").split("/")[0].toUpperCase();
+      return `/booth/join/${code}${parsed.search}`;
+    }
+    if (parsed.pathname.startsWith("/booth/join/")) {
+      return `${parsed.pathname}${parsed.search}`;
+    }
+    if (parsed.pathname.startsWith("/booth/")) {
+      return `${parsed.pathname}${parsed.search}`;
+    }
+  } catch (e) {}
+
+  return null;
+}
+
 let isInitialized = false;
 
 /**
@@ -74,22 +126,22 @@ export function initBackHandler(navigate) {
       }
     });
 
-    // 2. Android Deep Link handling for Google OAuth (votebooth://auth/callback?token=...)
+    // 2. Android Deep Link handling (OAuth, Booth Join, Booth Detail)
     App.addListener("appUrlOpen", (event) => {
-      if (event?.url && event.url.includes("auth/callback")) {
+      if (event?.url) {
         try {
-          const queryIndex = event.url.indexOf("?");
-          const search = queryIndex !== -1 ? event.url.slice(queryIndex) : "";
-          if (navigate) {
-            navigate(`/auth/callback${search}`, { replace: true });
-          } else {
-            window.location.href = `/auth/callback${search}`;
+          const targetRoute = parseDeepLink(event.url);
+          if (targetRoute) {
+            if (navigate) {
+              navigate(targetRoute, { replace: true });
+            } else {
+              window.location.href = targetRoute;
+            }
           }
         } catch (err) {
-          console.error("Failed to route OAuth callback deep link:", err);
+          console.error("Failed to route deep link:", err);
         }
       }
     });
   }
 }
-

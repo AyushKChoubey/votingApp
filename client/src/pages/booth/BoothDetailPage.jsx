@@ -455,11 +455,11 @@ const BoothDetailPage = () => {
     const turnout = totalMembers > 0 ? Math.min(100, Math.round((voted / totalMembers) * 100)) : 0;
 
     const candidateColors = [
-      { bg: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300", bar: "bg-cyan-600" },
-      { bg: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300", bar: "bg-purple-600" },
-      { bg: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300", bar: "bg-emerald-600" },
-      { bg: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300", bar: "bg-amber-600" },
-      { bg: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300", bar: "bg-rose-600" },
+      { bg: "bg-accent-50 dark:bg-accent/15 text-accent border border-accent/20", bar: "bg-accent" },
+      { bg: "bg-primary-50 dark:bg-primary-950/40 text-primary border border-primary/20", bar: "bg-primary" },
+      { bg: "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20", bar: "bg-emerald-500" },
+      { bg: "bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-500/20", bar: "bg-amber-500" },
+      { bg: "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-500/20", bar: "bg-rose-500" },
     ];
 
     const desc = booth?.description || "";
@@ -491,7 +491,7 @@ const BoothDetailPage = () => {
         {/* Booth Header Card (Matching Admin Page: Icon, Name, Status, ID, Badges) */}
         <div className="theme-surface rounded-2xl border border-border p-4 shadow-sm mb-3">
           <div className="flex items-start gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 flex items-center justify-center shrink-0 shadow-xs">
+            <div className="w-12 h-12 rounded-2xl bg-accent-50 dark:bg-accent/15 text-accent border border-accent/20 flex items-center justify-center shrink-0 shadow-xs">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 14l9-5-9-5-9 5 9 5z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
@@ -529,14 +529,14 @@ const BoothDetailPage = () => {
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
                 {permissions.isCreator && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-transparent text-cyan-600 dark:text-cyan-400 border border-cyan-500/50">
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/30">
+                    <svg className="w-3 h-3 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                     Creator
                   </span>
                 )}
                 {permissions.hasVoted && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-transparent text-sky-600 dark:text-sky-400 border border-sky-500/50">
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-accent-50 dark:bg-accent/15 text-accent border border-accent/20">
+                    <svg className="w-3 h-3 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                     Voted
                   </span>
                 )}
@@ -601,7 +601,7 @@ const BoothDetailPage = () => {
                         onClick={() => setSelectedCandidate(idx)}
                         className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
                           isSelected
-                            ? "border-cyan-500 bg-cyan-500/10 dark:bg-cyan-500/15 shadow-sm"
+                            ? "border-accent bg-accent-50 dark:bg-accent/15 shadow-sm"
                             : "border-border hover:bg-black/5 dark:hover:bg-white/5"
                         }`}
                       >
@@ -805,7 +805,7 @@ const BoothDetailPage = () => {
               <div className="space-y-2.5 text-xs">
                 <div className="flex items-center justify-between">
                   <span className="theme-muted flex items-center gap-1.5">
-                    <svg className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" /></svg>
+                    <svg className="w-3.5 h-3.5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" /></svg>
                     Booth ID
                   </span>
                   <div className="flex items-center gap-1 font-mono font-bold theme-text">
@@ -819,7 +819,7 @@ const BoothDetailPage = () => {
                       {copiedCode ? (
                         <span className="text-[10px] text-success font-semibold">Copied!</span>
                       ) : (
-                        <svg className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                        <svg className="w-3.5 h-3.5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
                       )}
                     </button>
                   </div>
@@ -827,7 +827,7 @@ const BoothDetailPage = () => {
 
                 <div className="flex items-center justify-between">
                   <span className="theme-muted flex items-center gap-1.5">
-                    <svg className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                    <svg className="w-3.5 h-3.5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                     Creator
                   </span>
                   <span className="font-semibold theme-text">{booth?.creator?.name || "Creator"}</span>
@@ -835,7 +835,7 @@ const BoothDetailPage = () => {
 
                 <div className="flex items-center justify-between">
                   <span className="theme-muted flex items-center gap-1.5">
-                    <svg className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    <svg className="w-3.5 h-3.5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                     Created Date
                   </span>
                   <span className="theme-text">{formatDate(booth?.createdAt)}</span>
@@ -843,7 +843,7 @@ const BoothDetailPage = () => {
 
                 <div className="flex items-center justify-between">
                   <span className="theme-muted flex items-center gap-1.5">
-                    <svg className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                    <svg className="w-3.5 h-3.5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                     Capacity
                   </span>
                   <span className="font-semibold theme-text">{totalMembers} / {maxMembersDisplay}</span>
@@ -851,7 +851,7 @@ const BoothDetailPage = () => {
 
                 <div className="flex items-center justify-between">
                   <span className="theme-muted flex items-center gap-1.5">
-                    <svg className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <svg className="w-3.5 h-3.5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     Status
                   </span>
                   <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] bg-transparent border uppercase tracking-wider ${
@@ -890,7 +890,7 @@ const BoothDetailPage = () => {
               <div className="theme-surface rounded-2xl border border-border p-4 shadow-xs mt-3">
                 <div className="flex items-center justify-between mb-3">
                   <div className="text-xs font-bold theme-text uppercase tracking-wider flex items-center gap-1.5">
-                    <svg className="w-4 h-4 text-cyan-600 dark:text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                     </svg>
                     Members ({booth.members.length})
@@ -907,7 +907,7 @@ const BoothDetailPage = () => {
                       className="flex items-center justify-between p-2.5 rounded-xl border border-border/70 theme-surface"
                     >
                       <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
-                        <div className="w-8 h-8 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 font-bold text-xs flex items-center justify-center shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-accent-50 dark:bg-accent/15 text-accent border border-accent/20 font-bold text-xs flex items-center justify-center shrink-0">
                           {member.user?.name?.charAt(0)?.toUpperCase() || "M"}
                         </div>
                         <div className="min-w-0 flex-1">
@@ -922,8 +922,8 @@ const BoothDetailPage = () => {
 
                       <div className="flex items-center gap-1.5 shrink-0">
                         {member.hasVoted ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-transparent text-sky-600 dark:text-sky-400 border border-sky-500/50">
-                            <svg className="w-3 h-3 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-accent-50 dark:bg-accent/15 text-accent border border-accent/20">
+                            <svg className="w-3 h-3 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                             </svg>
                             Voted
@@ -1030,13 +1030,13 @@ const BoothDetailPage = () => {
             </span>
 
             {permissions.isCreator && (
-              <span className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold bg-transparent text-cyan-600 dark:text-cyan-400 border border-cyan-500/50">
+              <span className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/30">
                 CREATOR
               </span>
             )}
 
             {permissions.hasVoted && (
-              <span className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold bg-transparent text-sky-600 dark:text-sky-400 border border-sky-500/50">
+              <span className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold bg-accent-50 dark:bg-accent/15 text-accent border border-accent/20">
                 VOTED
               </span>
             )}
@@ -1337,8 +1337,8 @@ const BoothDetailPage = () => {
             )}
 
             {/* Results Preview */}
-            {(permissions.hasVoted || !permissions.canVote) &&
-              booth?.settings?.resultsVisibleToVoters && (
+            {(permissions.hasVoted || !permissions.canVote || permissions.isCreator) &&
+              canViewResults && (
                 <div
                   className="glass-card p-4 sm:p-6 lg:p-8 hover:shadow-xl transition-all duration-300 animate-fadeIn"
                   style={{ "--stagger-index": 4 }}

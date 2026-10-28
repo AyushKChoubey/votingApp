@@ -220,9 +220,10 @@ const Navigation = ({ isMenuOpen, setIsMenuOpen }) => {
   ];
 
   const userNavItems = [{ path: "/dashboard", label: "Dashboard" }];
+  const isAuth = isAuthenticated || Boolean(localStorage.getItem("token"));
 
   return (
-    <nav className={`theme-surface shadow-sm border-b border-border sticky top-0 z-40 ${isAuthenticated ? "hidden md:block" : ""}`}>
+    <nav className={`theme-surface shadow-sm border-b border-border sticky top-0 z-40 ${isAuth ? "hidden md:block" : ""}`}>
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
         <style>{`
               /* Hide username and slightly reduce avatar in the narrow mid breakpoint (767px - 840px)
@@ -863,7 +864,7 @@ const MobileBottomNav = () => {
         { key: "home", path: "/dashboard", label: "Home", icon: "M3 10.5L12 3l9 7.5V21h-6v-6H9v6H3v-10.5z" },
         { key: "booths", path: "/dashboard?view=booths", label: "My Booths", icon: "M4 5h16v14H4V5zm4 4h8M8 13h5" },
         { key: "create", path: "/booth/create", label: "Create", icon: "M12 5v14M5 12h14", prominent: true },
-        { key: "join", path: "/booth/join", label: "Join", icon: "M9 15l6-6m-3-3h3a3 3 0 013 3v3m-6 6H9a3 3 0 01-3-3v-3" },
+        { key: "join", path: "/booth/join", label: "Join", icon: "M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" },
         { key: "profile", path: "/user/profile", label: "Profile", icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" },
       ]
     : [
@@ -897,12 +898,12 @@ const MobileBottomNav = () => {
               key={item.path}
               to={item.path}
               aria-current={active ? "page" : undefined}
-              className={`${item.prominent ? "relative -mt-6" : ""} min-h-12 flex flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-semibold transition-colors ${
-                active ? "text-accent bg-cyan-500/10 dark:bg-cyan-500/15" : "theme-muted hover:text-accent"
+              className={`${item.prominent ? "relative -mt-4" : ""} min-h-12 flex flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-semibold transition-colors ${
+                active ? "text-accent bg-accent-50 dark:bg-accent/15" : "theme-muted hover:text-accent"
               }`}
             >
-              <span className={item.prominent ? "flex h-14 w-14 items-center justify-center rounded-full bg-primary text-on-primary shadow-[0_8px_20px_rgba(21,94,117,0.35)] ring-4 ring-[var(--color-surface)]" : ""}>
-                <svg className={item.prominent ? "h-7 w-7" : "h-5 w-5"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+              <span className={item.prominent ? "flex h-11 w-11 items-center justify-center rounded-full btn-theme text-on-primary shadow-[0_6px_16px_rgba(21,94,117,0.35)] ring-4 ring-[var(--color-surface)]" : ""}>
+                <svg className={item.prominent ? "h-5 w-5" : "h-[22px] w-[22px]"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
                 </svg>
               </span>

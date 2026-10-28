@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { Capacitor } from "@capacitor/core";
+import { Browser } from "@capacitor/browser";
 import { PageLoading } from "../../components/layout/Loading";
 import { useAuth } from "../../context/AuthContext";
 
@@ -10,6 +12,11 @@ const OAuthCallback = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    // Dismiss any active Chrome Custom Tab upon landing on callback
+    if (Capacitor.isNativePlatform()) {
+      Browser.close().catch(() => {});
+    }
+
     // Extract token from URL query parameters
     const params = new URLSearchParams(location.search);
     const token = params.get("token");

@@ -263,6 +263,10 @@ exports.createBooth = async (req, res) => {
       }
     }
 
+    // Ensure votingType is set properly ('single' | 'multiple')
+    const rawVotingType = req.body.votingType || processedSettings.votingType;
+    processedSettings.votingType = rawVotingType === "multiple" ? "multiple" : "single";
+
     // Validate time settings
     if (processedSettings.votingStartTime && processedSettings.votingEndTime) {
       const sTime =

@@ -36,7 +36,7 @@ export default function ConfirmModal({
         <div className="flex items-start gap-4">
           <div className="flex-shrink-0 mt-1">
             {variant === 'primary' ? (
-              <div className="w-10 h-10 rounded-xl bg-cyan-500/10 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-accent-50 dark:bg-accent/15 text-accent border border-accent/20 flex items-center justify-center">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>

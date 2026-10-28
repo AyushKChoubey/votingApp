@@ -587,12 +587,31 @@ exports.refreshToken = async (req, res) => {
     // Blacklist the old refresh token (rotation — prevents reuse)
     blacklistRefreshToken(refreshToken);
 
-    const sessionId = decoded.sessionId;
-    if (user.sessions && user.sessions.length > 0 && sessionId) {
-      const sIdx = user.sessions.findIndex((s) => s.sessionId === sessionId);
-      if (sIdx !== -1) {
-        user.sessions[sIdx].lastActive = new Date();
-        await user.save();
+    let sessionId = decoded.sessionId;
+    if (user.sessions && user.sessions.length > 0) {
+      if (sessionId) {
+        const sIdx = user.sessions.findIndex((s) => s.sessionId === sessionId);
+        if (sIdx !== -1) {
+          user.sessions[sIdx].lastActive = new Date();
+          await user.save();
+        } else {
+          user.sessions.push({
+            sessionId,
+            lastActive: new Date(),
+            createdAt: new Date(),
+          });
+          await user.save();
+        }
+      } else {
+        sessionId = user.sessions[user.sessions.length - 1]?.sessionId || crypto.randomUUID();
+        if (!user.sessions.some((s) => s.sessionId === sessionId)) {
+          user.sessions.push({
+            sessionId,
+            lastActive: new Date(),
+            createdAt: new Date(),
+          });
+          await user.save();
+        }
       }
     }
 
@@ -1349,6 +1368,8 @@ exports.revokeOtherDevices = async (req, res) => {
         user.sessions = user.sessions.filter(
           (s) => s.sessionId === currentSessionId
         );
+      } else {
+        user.sessions = [];
       }
       if (user.sessions.length === 0 && currentSessionId) {
         user.sessions = [

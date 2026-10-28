@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App as CapacitorApp } from '@capacitor/app'
+import { Browser } from '@capacitor/browser'
 import './index.css'
 import App from './App.jsx'
 
@@ -12,6 +13,11 @@ createRoot(document.getElementById('root')).render(
 
 const handleAppUrl = (url) => {
   try {
+    // Dismiss any active Chrome Custom Tab immediately upon deep link arrival
+    if (url.includes('auth/callback')) {
+      Browser.close().catch(() => {})
+    }
+
     const callbackUrl = new URL(url)
     const route =
       callbackUrl.protocol === 'votebooth:' && callbackUrl.host === 'auth'

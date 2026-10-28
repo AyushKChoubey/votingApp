@@ -117,7 +117,7 @@ export default function PullToRefresh({
             top: `calc(env(safe-area-inset-top, 0px) + ${Math.max(16, pullY)}px)`,
           }}
         >
-          <div className="w-10 h-10 rounded-xl bg-accent-50 dark:bg-accent/15 text-accent border border-accent/20 shadow-md flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-accent-50 dark:bg-accent/15 text-accent shadow-md flex items-center justify-center">
             <svg
               className={`w-5 h-5 ${
                 isRefreshing ? "animate-spin" : ""

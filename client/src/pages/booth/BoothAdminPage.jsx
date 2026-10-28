@@ -384,6 +384,7 @@ const BoothAdminPage = () => {
         const srvSettings = response.data.booth.settings || {};
 
         // Ensure UI flags reflect existing settings
+        const hasSchedule = Boolean(srvSettings.scheduled || srvSettings.votingStartTime || srvSettings.votingEndTime);
         setSettings({
           ...srvSettings,
           votingStartTime: toDatetimeLocal(srvSettings.votingStartTime),
@@ -391,10 +392,7 @@ const BoothAdminPage = () => {
           restrictByEmailDomain:
             Array.isArray(srvSettings.allowedEmailDomains) &&
             srvSettings.allowedEmailDomains.length > 0,
-          // show schedule toggle when any schedule values exist
-          scheduled: srvSettings.scheduled !== undefined
-            ? Boolean(srvSettings.scheduled && (srvSettings.votingStartTime || srvSettings.votingEndTime))
-            : !!(srvSettings.votingStartTime || srvSettings.votingEndTime),
+          scheduled: hasSchedule,
         });
 
         if (!response.data?.permissions?.isCreator) {
@@ -425,18 +423,11 @@ const BoothAdminPage = () => {
 
       const payload = { ...settings };
       if (settings.scheduled === true) {
-        payload.votingStartTime = settings.votingStartTime || null;
-        payload.votingEndTime = settings.votingEndTime || null;
-      } else if (settings.scheduled === false && (booth?.settings?.scheduled || booth?.settings?.votingEndTime)) {
+        payload.votingStartTime = settings.votingStartTime || booth?.settings?.votingStartTime || null;
+        payload.votingEndTime = settings.votingEndTime || booth?.settings?.votingEndTime || null;
+      } else if (settings.scheduled === false) {
         payload.votingStartTime = null;
         payload.votingEndTime = null;
-      } else {
-        if (booth?.settings?.votingStartTime && !settings.votingStartTime) {
-          payload.votingStartTime = booth.settings.votingStartTime;
-        }
-        if (booth?.settings?.votingEndTime && !settings.votingEndTime) {
-          payload.votingEndTime = booth.settings.votingEndTime;
-        }
       }
 
       const response = await boothService.updateSettings(boothId, payload);
@@ -461,7 +452,7 @@ const BoothAdminPage = () => {
     if (countdownText === "Voting ended") return true;
     const endTime = settings?.votingEndTime || booth?.settings?.votingEndTime;
     if (endTime) {
-      const end = new Date(endTime);
+        const end = new Date(endTime);
       if (!isNaN(end.getTime()) && new Date() >= end) {
         return true;
       }
@@ -854,7 +845,7 @@ const BoothAdminPage = () => {
             {(settings.allowedEmailDomains &&
               settings.allowedEmailDomains.length > 0) ||
             settings.restrictByEmailDomain ? (
-              <span className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold bg-transparent text-cyan-600 dark:text-cyan-400 border border-cyan-500/50">
+              <span className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold bg-accent-50 dark:bg-accent/15 text-accent border border-accent/20">
                 DOMAIN RESTRICTED
               </span>
             ) : null}
@@ -952,7 +943,7 @@ const BoothAdminPage = () => {
             >
               <svg
                 className={`w-4 h-4 ${
-                  activeTab === "overview" ? "text-on-primary" : "text-cyan-600 dark:text-cyan-400"
+                  activeTab === "overview" ? "text-on-primary" : "text-accent"
                 }`}
                 fill="none"
                 stroke="currentColor"
@@ -977,7 +968,7 @@ const BoothAdminPage = () => {
             >
               <svg
                 className={`w-4 h-4 ${
-                  activeTab === "activity" ? "text-on-primary" : "text-cyan-600 dark:text-cyan-400"
+                  activeTab === "activity" ? "text-on-primary" : "text-accent"
                 }`}
                 fill="none"
                 stroke="currentColor"
@@ -1923,6 +1914,7 @@ const BoothAdminPage = () => {
                                     "error",
                                   );
                                   await fetchBoothDetails();
+                                  throw err;
                                 }
                               }}
                             />
@@ -2432,7 +2424,7 @@ const BoothAdminPage = () => {
         <div className="px-4 pt-2 mb-3 w-full max-w-full">
           <div className="theme-surface rounded-2xl border border-border p-4 shadow-sm">
             <div className="flex items-start gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 flex items-center justify-center shrink-0 shadow-xs">
+              <div className="w-12 h-12 rounded-2xl bg-accent-50 dark:bg-accent/15 text-accent border border-accent/20 flex items-center justify-center shrink-0 shadow-xs">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 14l9-5-9-5-9 5 9 5z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
@@ -2472,8 +2464,8 @@ const BoothAdminPage = () => {
                   </button>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-transparent text-cyan-600 dark:text-cyan-400 border border-cyan-500/50">
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/30">
+                    <svg className="w-3 h-3 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                     Creator
                   </span>
                   {countdownText && (
@@ -2519,7 +2511,7 @@ const BoothAdminPage = () => {
             {/* 3 Stat Cards in a row */}
             <div className="grid grid-cols-3 gap-2.5 px-4 my-2 w-full">
               <div className="theme-surface rounded-2xl border border-border p-3 text-center">
-                <div className="w-8 h-8 mx-auto mb-1.5 rounded-xl bg-cyan-500/10 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 flex items-center justify-center">
+                <div className="w-8 h-8 mx-auto mb-1.5 rounded-xl bg-accent-50 dark:bg-accent/15 text-accent border border-accent/20 flex items-center justify-center">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                 </div>
                 <div className="text-xl font-bold theme-text">{booth?.totalVotes || 0}</div>
@@ -2527,7 +2519,7 @@ const BoothAdminPage = () => {
               </div>
 
               <div className="theme-surface rounded-2xl border border-border p-3 text-center">
-                <div className="w-8 h-8 mx-auto mb-1.5 rounded-xl bg-cyan-500/10 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 flex items-center justify-center">
+                <div className="w-8 h-8 mx-auto mb-1.5 rounded-xl bg-accent-50 dark:bg-accent/15 text-accent border border-accent/20 flex items-center justify-center">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                 </div>
                 <div className="text-xl font-bold theme-text">{booth?.members?.length || 0}</div>
@@ -2535,7 +2527,7 @@ const BoothAdminPage = () => {
               </div>
 
               <div className="theme-surface rounded-2xl border border-border p-3 text-center">
-                <div className="w-8 h-8 mx-auto mb-1.5 rounded-xl bg-cyan-500/10 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 flex items-center justify-center">
+                <div className="w-8 h-8 mx-auto mb-1.5 rounded-xl bg-accent-50 dark:bg-accent/15 text-accent border border-accent/20 flex items-center justify-center">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                 </div>
                 <div className="text-xl font-bold theme-text">{booth?.candidates?.length || 0}</div>
@@ -2543,12 +2535,12 @@ const BoothAdminPage = () => {
               </div>
             </div>
 
-            {/* 3) REDESIGNED VOTER ACCESS & INVITE CODE CARD (No redundancy, Reset Code on the card itself, clear purpose) */}
+            {/* 3) VOTER INVITE CODE CARD (Matching Booth Card style) */}
             <div className="mx-4 mt-3 theme-surface rounded-2xl border border-border p-4 shadow-sm w-[calc(100%-2rem)] max-w-full">
               {/* Header with Title, Description, and Reset Code Button */}
               <div className="flex items-start justify-between gap-2 mb-3">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-8 h-8 rounded-xl bg-accent-50 text-accent border border-accent/20 flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-xl bg-accent-50 dark:bg-accent/15 text-accent border border-accent/20 flex items-center justify-center shrink-0">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                     </svg>
@@ -2573,23 +2565,27 @@ const BoothAdminPage = () => {
                 </button>
               </div>
 
-              {/* Monospace Code Display Box with One-Click Copy */}
-              <div className="p-3 rounded-xl border border-accent/25 bg-accent-50/40 flex items-center justify-between mb-3">
-                <div className="flex flex-col min-w-0 pr-2">
-                  <span className="text-[10px] font-bold text-accent uppercase tracking-wider">Join Code</span>
-                  <span className="font-mono text-xl font-extrabold tracking-widest theme-text select-all">
-                    {booth?.inviteCode}
-                  </span>
+              {/* Invite Code Box matching Booth Card */}
+              <div className="rounded-xl px-3 py-2.5 border border-border bg-black/[0.02] dark:bg-white/[0.02] flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-7 h-7 rounded-lg border border-accent/20 bg-accent-50 text-accent dark:bg-accent/15 flex items-center justify-center shrink-0">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <span className="text-xs theme-muted">Invite code</span>
+                  <span className="text-xs sm:text-sm font-bold font-mono theme-text tracking-wider">{booth?.inviteCode}</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => copyToClipboard(booth?.inviteCode, "Invite code copied")}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl btn-theme text-on-primary text-xs font-semibold shadow-xs hover:shadow-md active:scale-95 transition-all shrink-0"
+                  className="p-1.5 -mr-1 rounded-lg text-slate-400 hover:text-accent hover:bg-accent-50 dark:hover:bg-accent/10 transition-colors"
+                  title="Copy invite code"
+                  aria-label="Copy invite code"
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                   </svg>
-                  Copy Code
                 </button>
               </div>
 
@@ -2894,13 +2890,13 @@ const BoothAdminPage = () => {
                           </span>
                         )}
                         {member.user?.id === booth?.creator?.id || member.user?.id === booth?.creator ? (
-                          <span className="px-2.5 py-1 rounded-xl text-[11px] font-semibold bg-accent-50 dark:bg-accent/15 text-accent border border-accent/20">
+                          <span className="px-2.5 py-1 rounded-xl text-[11px] font-semibold bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/30">
                             Creator
                           </span>
                         ) : (
                           <button
                             type="button"
-                            onClick={() => handleRemoveMember(member.user?.id || member.user?._id || member.id)}
+                            onClick={() => setMemberActionModal({ open: true, member })}
                             disabled={removingMembers.has(member.user?.id || member.user?._id)}
                             className="p-1.5 rounded-xl text-error bg-error/10 hover:bg-error/20 border border-error/30 transition-all active:scale-95 disabled:opacity-50"
                             aria-label="Delete member"

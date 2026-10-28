@@ -14,7 +14,7 @@ if (!mongoURL) {
 }
 
 // Set up MongoDB connection
-mongoose.connect(mongoURL).catch((err) => {
+if (process.env.NODE_ENV !== "test") mongoose.connect(mongoURL).catch((err) => {
   console.error("❌ MongoDB initial connection error:", err);
   process.exit(1);
 });

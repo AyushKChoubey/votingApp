@@ -519,7 +519,7 @@ const SettingsPage = () => {
 
         {/* App Version at the very end from package.json */}
         <div className="text-center text-xs theme-muted pt-6 pb-2">
-          VoteBooth v{appPackage?.version || "2.6.5"}
+          VoteBooth v{appPackage?.version || "2.7.0"}
         </div>
 
         {/* Manage Devices Sheet (Mobile) */}
